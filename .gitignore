@@ -1,0 +1,32 @@
+# Bagimliliklar
+node_modules/
+
+# Build ciktilari
+dist/
+build/
+*.tsbuildinfo
+
+# Ortam degiskenleri - ASLA commit edilmez
+.env
+.env.local
+.env.production
+
+# Loglar
+logs/
+*.log
+npm-debug.log*
+
+# Gelistirme veritabani (PGlite) - sadece yerel makine
+.devdata/
+
+# Deploy paketi (build sirasinda uretilir, repoda tutulmaz)
+deploy/app/
+deploy/installers/
+*.zip
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+Thumbs.db
+desktop.ini
