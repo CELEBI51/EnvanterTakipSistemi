@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  it_staff
+  viewer
+}
+
+enum HardwareStatus {
+  Hazir        @map("Hazır")
+  Kullanimda   @map("Kullanımda")
+  Arizali      @map("Arızalı")
+  Serviste     @map("Serviste")
+  KullanimDisi @map("Kullanım Dışı")
+}
+
+enum AssignmentStatus {
+  Aktif
+  KismiIade  @map("Kısmi İade")
+  IadeEdildi @map("İade Edildi")
+}
+
+model User {
+  id                 String   @id @default(uuid()) @db.Uuid
+  fullName           String   @map("full_name")
+  email              String   @unique
+  passwordHash       String   @map("password_hash")
+  role               Role
+  mustChangePassword Boolean  @default(true) @map("must_change_password")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  createdHardware    Hardware[]
+  createdAssignments Assignment[]
+
+  @@map("users")
+}
+
+model Employee {
+  id        String   @id @default(uuid()) @db.Uuid
+  fullName  String   @map("full_name")
+  tcNo      String   @unique @map("tc_no") @db.Char(11)
+  department String
+  phone     String?
+  email     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  assignments Assignment[]
+
+  @@index([tcNo])
+  @@index([department])
+  @@map("employees")
+}
+
+model Hardware {
+  id          String         @id @default(uuid()) @db.Uuid
+  category    String
+  brand       String
+  model       String
+  serialNo    String         @map("serial_no")
+  demirbasNo  String         @unique @map("demirbas_no")
+  specs       Json?          @db.JsonB
+  status      HardwareStatus @default(Hazir)
+  createdById String         @map("created_by") @db.Uuid
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  assignedSoftware Software[]
+  assignmentItems  AssignmentItem[]
+  returnItems      ReturnItem[]
+
+  @@index([status])
+  @@index([category])
+  @@map("hardware")
+}
+
+model Software {
+  id                 String    @id @default(uuid()) @db.Uuid
+  name               String
+  licenseKey         String    @map("license_key")
+  startDate          DateTime  @map("start_date")
+  endDate            DateTime  @map("end_date")
+  assignedHardwareId String?   @map("assigned_hardware_id") @db.Uuid
+  assignedHardware   Hardware? @relation(fields: [assignedHardwareId], references: [id])
+  notes              String?
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  @@index([endDate])
+  @@map("software")
+}
+
+model Assignment {
+  id           String           @id @default(uuid()) @db.Uuid
+  teslimEden   String           @map("teslim_eden")
+  employeeId   String           @map("employee_id") @db.Uuid
+  employee     Employee         @relation(fields: [employeeId], references: [id])
+  teslimTarihi DateTime         @map("teslim_tarihi")
+  status       AssignmentStatus @default(Aktif)
+  pdfUrl       String?          @map("pdf_url")
+  createdById  String           @map("created_by") @db.Uuid
+  createdBy    User             @relation(fields: [createdById], references: [id])
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  items   AssignmentItem[]
+  returns Return[]
+
+  @@index([employeeId])
+  @@index([status])
+  @@map("assignments")
+}
+
+model AssignmentItem {
+  id           String     @id @default(uuid()) @db.Uuid
+  assignmentId String     @map("assignment_id") @db.Uuid
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  hardwareId   String     @map("hardware_id") @db.Uuid
+  hardware     Hardware   @relation(fields: [hardwareId], references: [id])
+  returned     Boolean    @default(false)
+  returnDate   DateTime?  @map("return_date")
+
+  @@map("assignment_items")
+}
+
+model Return {
+  id           String     @id @default(uuid()) @db.Uuid
+  assignmentId String     @map("assignment_id") @db.Uuid
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  teslimAlanIc String     @map("teslim_alan_ic")
+  tarih        DateTime
+  notes        String?
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  items ReturnItem[]
+
+  @@map("returns")
+}
+
+model ReturnItem {
+  id           String         @id @default(uuid()) @db.Uuid
+  returnId     String         @map("return_id") @db.Uuid
+  return       Return         @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  hardwareId   String         @map("hardware_id") @db.Uuid
+  hardware     Hardware       @relation(fields: [hardwareId], references: [id])
+  resultStatus HardwareStatus @map("result_status")
+
+  @@map("return_items")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  type      String
+  relatedId String?  @map("related_id")
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
