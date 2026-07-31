@@ -1,68 +1,67 @@
 import prisma from '../../config/db.js';
 
 export const createHardware = async (data, userId) => {
-  const { category, brand, model, serial_no, mode, demirbas_no, specs } = data;
+  const {
+    category,
+    brand,
+    model,
+    serial_no,
+    demirbas_no,
+    warranty_start_date,
+    warranty_end_date,
+    warrantyStartDate,
+    warrantyEndDate,
+    specs,
+  } = data;
 
-  return await prisma.$transaction(async (tx) => {
-    let finalDemirbasNo = '';
+  const finalDemirbasNo = demirbas_no ? demirbas_no.trim() : '';
 
-    if (mode === 'new') {
-      const year = new Date().getFullYear();
-      const prefix = `DMB-${year}-`;
+  if (!finalDemirbasNo) {
+    const error = new Error('Demirbaş numarası zorunludur.');
+    error.statusCode = 400;
+    throw error;
+  }
 
-      // Find highest demirbas_no for the current year
-      const highestItem = await tx.hardware.findFirst({
-        where: {
-          demirbasNo: {
-            startsWith: prefix,
-          },
-        },
-        orderBy: {
-          demirbasNo: 'desc',
-        },
-      });
+  // 1. Veritabanına gitmeden önce demirbaş no mükerrerlik ön-kontrolü
+  const existing = await prisma.hardware.findUnique({
+    where: { demirbasNo: finalDemirbasNo },
+  });
 
-      let nextSequence = 1;
-      if (highestItem && highestItem.demirbasNo) {
-        const parts = highestItem.demirbasNo.split('-');
-        const lastNumStr = parts[parts.length - 1];
-        const lastNum = parseInt(lastNumStr, 10);
-        if (!isNaN(lastNum)) {
-          nextSequence = lastNum + 1;
-        }
-      }
+  if (existing) {
+    const error = new Error(`Bu demirbaş numarası (${finalDemirbasNo}) zaten kayıtlı, lütfen farklı bir numara girin.`);
+    error.statusCode = 409;
+    throw error;
+  }
 
-      finalDemirbasNo = `${prefix}${String(nextSequence).padStart(4, '0')}`;
-    } else {
-      finalDemirbasNo = demirbas_no.trim();
+  const startDateVal = warranty_start_date !== undefined ? warranty_start_date : warrantyStartDate;
+  const endDateVal = warranty_end_date !== undefined ? warranty_end_date : warrantyEndDate;
 
-      // Check if demirbas_no already exists
-      const existing = await tx.hardware.findUnique({
-        where: { demirbasNo: finalDemirbasNo },
-      });
-
-      if (existing) {
-        const error = new Error('Bu demirbaş no zaten kayıtlı.');
-        error.statusCode = 409;
-        throw error;
-      }
-    }
-
-    const newItem = await tx.hardware.create({
+  try {
+    const newItem = await prisma.hardware.create({
       data: {
         category,
-        brand,
-        model,
-        serialNo: serial_no || '',
+        brand: brand.trim(),
+        model: model && model.trim() !== '' ? model.trim() : null,
+        serialNo: serial_no ? serial_no.trim() : '',
         demirbasNo: finalDemirbasNo,
         specs: specs || null,
         status: 'Hazir',
+        warrantyStartDate: startDateVal && startDateVal.trim() !== '' ? new Date(startDateVal) : null,
+        warrantyEndDate: endDateVal && endDateVal.trim() !== '' ? new Date(endDateVal) : null,
         createdById: userId,
       },
     });
 
     return newItem;
-  });
+  } catch (err) {
+    // 2. Çift güvence: Veritabanı seviyesindeki unique constraint yakalama (P2002)
+    if (err.code === 'P2002') {
+      const error = new Error(`Bu demirbaş numarası (${finalDemirbasNo}) zaten kayıtlı, lütfen farklı bir numara girin.`);
+      error.statusCode = 409;
+      throw error;
+    }
+    throw err;
+  }
 };
 
 export const listHardware = async ({ page = 1, pageSize = 10, category, status, q }) => {
@@ -151,16 +150,28 @@ export const updateHardware = async (id, data) => {
     throw error;
   }
 
+  const startDateVal = data.warranty_start_date !== undefined ? data.warranty_start_date : data.warrantyStartDate;
+  const endDateVal = data.warranty_end_date !== undefined ? data.warranty_end_date : data.warrantyEndDate;
+
+  const updateData = {};
+
+  if (data.category !== undefined) updateData.category = data.category;
+  if (data.brand !== undefined) updateData.brand = data.brand.trim();
+  if (data.model !== undefined) updateData.model = data.model && data.model.trim() !== '' ? data.model.trim() : null;
+  if (data.serial_no !== undefined) updateData.serialNo = data.serial_no ? data.serial_no.trim() : '';
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.specs !== undefined) updateData.specs = data.specs;
+
+  if (startDateVal !== undefined) {
+    updateData.warrantyStartDate = startDateVal && startDateVal.trim() !== '' ? new Date(startDateVal) : null;
+  }
+  if (endDateVal !== undefined) {
+    updateData.warrantyEndDate = endDateVal && endDateVal.trim() !== '' ? new Date(endDateVal) : null;
+  }
+
   const updated = await prisma.hardware.update({
     where: { id },
-    data: {
-      category: data.category !== undefined ? data.category : existing.category,
-      brand: data.brand !== undefined ? data.brand : existing.brand,
-      model: data.model !== undefined ? data.model : existing.model,
-      serialNo: data.serial_no !== undefined ? data.serial_no : existing.serialNo,
-      status: data.status !== undefined ? data.status : existing.status,
-      specs: data.specs !== undefined ? data.specs : existing.specs,
-    },
+    data: updateData,
   });
 
   return updated;

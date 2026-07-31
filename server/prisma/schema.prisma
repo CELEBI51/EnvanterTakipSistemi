@@ -60,18 +60,20 @@ model Employee {
 }
 
 model Hardware {
-  id          String         @id @default(uuid()) @db.Uuid
-  category    String
-  brand       String
-  model       String
-  serialNo    String         @map("serial_no")
-  demirbasNo  String         @unique @map("demirbas_no")
-  specs       Json?          @db.JsonB
-  status      HardwareStatus @default(Hazir)
-  createdById String         @map("created_by") @db.Uuid
-  createdBy   User           @relation(fields: [createdById], references: [id])
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
+  id                String         @id @default(uuid()) @db.Uuid
+  category          String
+  brand             String
+  model             String?
+  serialNo          String         @map("serial_no")
+  demirbasNo        String         @unique @map("demirbas_no")
+  specs             Json?          @db.JsonB
+  status            HardwareStatus @default(Hazir)
+  warrantyStartDate DateTime?      @map("warranty_start_date")
+  warrantyEndDate   DateTime?      @map("warranty_end_date")
+  createdById       String         @map("created_by") @db.Uuid
+  createdBy         User           @relation(fields: [createdById], references: [id])
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
 
   assignedSoftware Software[]
   assignmentItems  AssignmentItem[]
