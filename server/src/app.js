@@ -6,6 +6,7 @@ import userRoutes from './modules/users/users.routes.js';
 import hardwareRoutes from './modules/hardware/hardware.routes.js';
 import softwareRoutes from './modules/software/software.routes.js';
 import reportsRoutes from './modules/reports/reports.routes.js';
+import accessoryRoutes from './modules/accessories/accessories.routes.js';
 
 const app = express();
 
@@ -22,11 +23,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Auth, User, Hardware, Software ve Reports Modülleri API Rotaları
+// Auth, User, Hardware, Software, Reports ve Accessories Modülleri API Rotaları
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/hardware', hardwareRoutes);
 app.use('/api/software', softwareRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/accessories', accessoryRoutes);
 
 export default app;

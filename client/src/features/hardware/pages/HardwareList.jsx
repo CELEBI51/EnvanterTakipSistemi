@@ -3,30 +3,24 @@ import {
   Package,
   Plus,
   Search,
-  Filter,
   ChevronLeft,
   ChevronRight,
   Eye,
-  Tag,
   Cpu,
-  RefreshCw,
+  Barcode,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
 import AddHardwareModal from '../components/AddHardwareModal';
 import HardwareDetailModal from '../components/HardwareDetailModal';
+import BarcodePrintModal from '../../../components/common/BarcodePrintModal';
 
 const CATEGORIES = [
   'Tümü',
   'Desktop',
   'Laptop',
-  'Yazıcı',
-  'Mouse',
-  'Klavye',
-  'Kulaklık',
   'Monitör',
-  'Depolama Birimi',
-  'Kamera',
+  'Yazıcı',
   'Diğer',
 ];
 
@@ -68,27 +62,29 @@ export default function HardwareList() {
   const [selectedHardwareId, setSelectedHardwareId] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  const canEdit = user?.role === 'admin' || user?.role === 'it_staff';
+  // Barcode Print Modal
+  const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+  const [barcodeModalData, setBarcodeModalData] = useState(null);
 
-  const fetchHardware = async () => {
+  const canAdd = user?.role === 'admin' || user?.role === 'it_staff';
+
+  const fetchHardwareList = async () => {
     setLoading(true);
     setError('');
-
-    const params = new URLSearchParams();
-    params.append('page', page);
-    params.append('pageSize', '10');
-
-    if (selectedCategory && selectedCategory !== 'Tümü') {
-      params.append('category', selectedCategory);
-    }
-    if (selectedStatus) {
-      params.append('status', selectedStatus);
-    }
-    if (searchQuery.trim()) {
-      params.append('q', searchQuery.trim());
-    }
-
     try {
+      const params = new URLSearchParams();
+      params.append('page', page);
+
+      if (selectedCategory !== 'Tümü') {
+        params.append('category', selectedCategory);
+      }
+      if (selectedStatus) {
+        params.append('status', selectedStatus);
+      }
+      if (searchQuery.trim()) {
+        params.append('q', searchQuery.trim());
+      }
+
       const res = await fetch(`http://localhost:5000/api/hardware?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -98,7 +94,7 @@ export default function HardwareList() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || 'Donanım verileri çekilemedi.');
+        throw new Error(data.message || 'Ürün listesi alınamadı.');
       }
 
       setItems(data.data.items || []);
@@ -112,78 +108,63 @@ export default function HardwareList() {
   };
 
   useEffect(() => {
-    fetchHardware();
-  }, [token, page, selectedCategory, selectedStatus]);
+    fetchHardwareList();
+  }, [page, selectedCategory, selectedStatus]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setPage(1);
-    fetchHardware();
+    fetchHardwareList();
+  };
+
+  const openBarcodeModal = (e, hw) => {
+    e.stopPropagation();
+    setBarcodeModalData({
+      demirbasNo: hw.demirbasNo,
+      brand: hw.brand,
+      model: hw.model,
+    });
+    setIsBarcodeModalOpen(true);
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm">
+    <div className="space-y-6 animate-fade-in">
+      {/* Top Action Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-[#1E2534]">Donanım Envanteri</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Toplam {totalCount} adet donanım kaydı bulunuyor.
+          <h1 className="font-heading text-xl sm:text-2xl font-bold text-[#1E2534] tracking-tight">
+            Bilgisayar & Ekipman Envanteri
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Şirket bünyesindeki masaüstü, laptop, monitör ve yazıcı donanımlarını yönetin.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        {canAdd && (
           <button
-            onClick={fetchHardware}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-slate-700 bg-white hover:bg-slate-50 text-xs font-semibold transition-colors"
+            onClick={() => setIsAddModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] active:bg-[#3566AD] text-white text-xs sm:text-sm font-bold shadow-xs transition-all cursor-pointer shrink-0 self-start sm:self-auto"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Yenile
+            <Plus className="w-4 h-4" />
+            Yeni Ürün Ekle
           </button>
-
-          {canEdit && (
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] text-white text-xs font-bold shadow-sm transition-all"
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              Yeni Ürün Ekle
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-4">
-        {/* Search */}
-        <form onSubmit={handleSearchSubmit} className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Marka, model, seri no veya demirbaş no ara..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-[#E2E8F0] text-xs text-[#1E2534] placeholder:text-slate-400 focus:outline-hidden focus:border-[#4F8FE0] focus:ring-1 focus:ring-[#4F8FE0]"
-          />
-        </form>
-
-        {/* Category Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400 hidden sm:block" />
-          <select
-            value={selectedCategory}
-            onChange={(e) => {
-              setSelectedCategory(e.target.value);
-              setPage(1);
-            }}
-            className="px-3 py-2 rounded-xl border border-[#E2E8F0] text-xs font-medium text-[#1E2534] focus:outline-hidden focus:border-[#4F8FE0]"
-          >
-            {CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat === 'Tümü' ? 'Tüm Kategoriler' : cat}
-              </option>
-            ))}
-          </select>
+      <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-3">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Marka, model, seri no veya demirbaş no ara..."
+              className="w-full pl-10 pr-4 py-2 rounded-xl border border-[#E2E8F0] text-xs font-medium text-[#1E2534] placeholder-slate-400 focus:outline-hidden focus:border-[#4F8FE0] focus:ring-1 focus:ring-[#4F8FE0]"
+            />
+          </div>
 
           {/* Status Filter */}
           <select
@@ -192,7 +173,7 @@ export default function HardwareList() {
               setSelectedStatus(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 rounded-xl border border-[#E2E8F0] text-xs font-medium text-[#1E2534] focus:outline-hidden focus:border-[#4F8FE0]"
+            className="px-3.5 py-2 rounded-xl border border-[#E2E8F0] text-xs font-medium text-[#1E2534] focus:outline-hidden focus:border-[#4F8FE0] focus:ring-1 focus:ring-[#4F8FE0] bg-white cursor-pointer"
           >
             {STATUSES.map((st) => (
               <option key={st.value} value={st.value}>
@@ -200,111 +181,166 @@ export default function HardwareList() {
               </option>
             ))}
           </select>
+
+          <button
+            type="submit"
+            className="px-4 py-2 rounded-xl bg-[#1E2534] hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer"
+          >
+            Ara
+          </button>
+        </form>
+
+        {/* Category Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+          {CATEGORIES.map((cat) => {
+            const isActive = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-[#4F8FE0] text-white shadow-2xs'
+                    : 'bg-[#F0F4F8] text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {error && (
+      {/* Main Table Content */}
+      {loading ? (
+        <div className="py-20 text-center text-xs text-slate-400 font-medium">
+          Donanım envanteri yükleniyor...
+        </div>
+      ) : error ? (
         <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium">
           {error}
-        </div>
-      )}
-
-      {/* Hardware Grid - Responsive Grid: Mobilde 1, tablette 2, masaüstünde 3-4 sütun */}
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="h-48 bg-white rounded-2xl border border-slate-200 animate-pulse p-4 space-y-3"
-            >
-              <div className="h-4 bg-slate-100 rounded-md w-2/3"></div>
-              <div className="h-8 bg-slate-100 rounded-md"></div>
-              <div className="h-4 bg-slate-100 rounded-md w-1/2"></div>
-            </div>
-          ))}
         </div>
       ) : items.length === 0 ? (
         <EmptyState
           icon={Package}
-          title="Donanım Bulunamadı"
-          description="Arama kıstaslarınıza uyan herhangi bir demirbaş kaydı bulunamadı."
+          title="Ürün Bulunamadı"
+          description="Aradığınız kriterlere uygun donanım kaydı bulunmamaktadır."
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {items.map((hw) => {
-            const badge = STATUS_BADGES[hw.status] || {
-              label: hw.status,
-              bg: 'bg-slate-100 text-slate-700 border-slate-200',
-            };
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#1E2534] text-white text-xs uppercase tracking-wider font-heading">
+                  <th className="py-3.5 px-4 font-bold">Demirbaş No</th>
+                  <th className="py-3.5 px-4 font-bold">Kategori</th>
+                  <th className="py-3.5 px-4 font-bold">Marka / Model</th>
+                  <th className="py-3.5 px-4 font-bold">Seri No</th>
+                  <th className="py-3.5 px-4 font-bold">Özellikler (Specs)</th>
+                  <th className="py-3.5 px-4 font-bold text-center">Durum</th>
+                  <th className="py-3.5 px-4 font-bold text-right">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {items.map((hw) => {
+                  const badge = STATUS_BADGES[hw.status] || {
+                    label: hw.status,
+                    bg: 'bg-slate-100 text-slate-700 border-slate-200',
+                  };
 
-            return (
-              <div
-                key={hw.id}
-                onClick={() => {
-                  setSelectedHardwareId(hw.id);
-                  setIsDetailModalOpen(true);
-                }}
-                className="group relative bg-white rounded-2xl border border-[#E2E8F0] shadow-xs hover:shadow-md hover:border-[#4F8FE0]/50 transition-all cursor-pointer overflow-hidden flex flex-col justify-between"
-              >
-                {/* Asset Tag Visual Accent (Etiket Delik/Nokta Detayı) */}
-                <div className="absolute top-0 left-0 bottom-0 w-2.5 bg-[#1E2534] group-hover:bg-[#4F8FE0] transition-colors flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-white/70"></div>
-                </div>
+                  const specsText = hw.specs
+                    ? [hw.specs.cpu, hw.specs.ram, hw.specs.gpu].filter(Boolean).join(' • ')
+                    : null;
 
-                <div className="p-4 pl-5 space-y-3">
-                  {/* Top: Demirbaş No & Badge */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="font-mono text-xs font-bold text-[#1E2534] tracking-wider block bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/80">
-                        {hw.demirbasNo}
-                      </span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-1">
-                        {hw.category}
-                      </span>
-                    </div>
-
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg}`}
+                  return (
+                    <tr
+                      key={hw.id}
+                      onClick={() => {
+                        setSelectedHardwareId(hw.id);
+                        setIsDetailModalOpen(true);
+                      }}
+                      className="hover:bg-slate-50/80 transition-colors cursor-pointer"
                     >
-                      {badge.label}
-                    </span>
-                  </div>
+                      {/* Demirbaş No */}
+                      <td className="py-3.5 px-4">
+                        <span className="font-mono text-xs font-bold text-[#1E2534] bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/80">
+                          {hw.demirbasNo}
+                        </span>
+                      </td>
 
-                  {/* Brand & Model */}
-                  <div>
-                    <h3 className="font-heading text-sm font-bold text-[#1E2534] group-hover:text-[#4F8FE0] transition-colors">
-                      {hw.brand}{hw.model ? ` ${hw.model}` : ''}
-                    </h3>
-                    {hw.serialNo && (
-                      <p className="text-[11px] font-mono text-slate-400 mt-0.5 truncate">
-                        S/N: {hw.serialNo}
-                      </p>
-                    )}
-                  </div>
+                      {/* Kategori */}
+                      <td className="py-3.5 px-4 text-slate-600 font-semibold">{hw.category}</td>
 
-                  {/* Specs Quick Info (If Available) */}
-                  {hw.specs && (hw.specs.cpu || hw.specs.ram) && (
-                    <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500 font-medium border-t border-slate-100">
-                      <Cpu className="w-3.5 h-3.5 text-[#4F8FE0] shrink-0" />
-                      <span className="truncate">
-                        {[hw.specs.cpu, hw.specs.ram].filter(Boolean).join(' • ')}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                      {/* Marka / Model */}
+                      <td className="py-3.5 px-4">
+                        <span className="font-bold text-[#1E2534]">
+                          {hw.brand}{hw.model ? ` ${hw.model}` : ''}
+                        </span>
+                      </td>
 
-                {/* Card Footer Action */}
-                <div className="px-4 pl-5 py-2.5 bg-[#F0F4F8]/50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <span className="text-[11px] text-slate-400">Detayları Gör</span>
-                  <Eye className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#1E2534] transition-colors" />
-                </div>
-              </div>
-            );
-          })}
+                      {/* Seri No */}
+                      <td className="py-3.5 px-4 font-mono text-slate-500">
+                        {hw.serialNo || '-'}
+                      </td>
+
+                      {/* Specs */}
+                      <td className="py-3.5 px-4 text-slate-600">
+                        {specsText ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-600 bg-slate-100/70 px-2 py-0.5 rounded-md font-medium">
+                            <Cpu className="w-3 h-3 text-[#4F8FE0] shrink-0" />
+                            {specsText}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 font-mono text-[11px]">-</span>
+                        )}
+                      </td>
+
+                      {/* Durum Rozeti */}
+                      <td className="py-3.5 px-4 text-center">
+                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${badge.bg}`}>
+                          {badge.label}
+                        </span>
+                      </td>
+
+                      {/* İşlemler */}
+                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => openBarcodeModal(e, hw)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:text-[#4F8FE0] hover:border-[#4F8FE0] text-[11px] font-bold shadow-2xs transition-colors cursor-pointer"
+                            title="Barkod Etiketi Yazdır"
+                          >
+                            <Barcode className="w-3.5 h-3.5 text-[#4F8FE0]" />
+                            <span>Barkod</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedHardwareId(hw.id);
+                              setIsDetailModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#1E2534] hover:text-white text-slate-700 text-[11px] font-semibold transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Detay</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* Pagination Controls - Sabit 10 Kayıt / Sayfa */}
+      {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between bg-white px-4 py-3 rounded-2xl border border-[#E2E8F0] shadow-sm text-xs font-semibold">
           <div className="text-slate-500">
@@ -316,47 +352,55 @@ export default function HardwareList() {
             <button
               disabled={page === 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
-              <ChevronLeft className="w-4 h-4" />
-              Önceki
+              <ChevronLeft className="w-4 h-4" /> Önceki
             </button>
+
             <button
               disabled={page === totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
-              Sonraki
-              <ChevronRight className="w-4 h-4" />
+              Sonraki <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Modals */}
-      {isAddModalOpen && (
-        <AddHardwareModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onSuccess={() => {
-            setIsAddModalOpen(false);
-            setPage(1);
-            fetchHardware();
-          }}
-        />
-      )}
+      {/* Add Hardware Modal */}
+      <AddHardwareModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => {
+          setIsAddModalOpen(false);
+          fetchHardwareList();
+        }}
+      />
 
-      {isDetailModalOpen && (
-        <HardwareDetailModal
-          hardwareId={selectedHardwareId}
-          isOpen={isDetailModalOpen}
-          onClose={() => setIsDetailModalOpen(false)}
-          onUpdate={() => {
-            fetchHardware();
+      {/* Detail Modal */}
+      <HardwareDetailModal
+        hardwareId={selectedHardwareId}
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedHardwareId(null);
+        }}
+        onUpdate={fetchHardwareList}
+        onDelete={fetchHardwareList}
+      />
+
+      {/* Barcode Print Modal */}
+      {barcodeModalData && (
+        <BarcodePrintModal
+          isOpen={isBarcodeModalOpen}
+          onClose={() => {
+            setIsBarcodeModalOpen(false);
+            setBarcodeModalData(null);
           }}
-          onDelete={() => {
-            fetchHardware();
-          }}
+          demirbasNo={barcodeModalData.demirbasNo}
+          brand={barcodeModalData.brand}
+          model={barcodeModalData.model}
         />
       )}
     </div>

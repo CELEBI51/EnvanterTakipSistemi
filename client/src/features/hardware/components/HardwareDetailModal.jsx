@@ -9,10 +9,12 @@ import {
   ShieldCheck,
   CheckCircle2,
   Clock,
+  Barcode,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
+import BarcodePrintModal from '../../../components/common/BarcodePrintModal';
 
 const STATUS_OPTIONS = [
   { label: 'Hazır (Boşta)', value: 'Hazir', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -33,6 +35,9 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Barcode Print Modal State
+  const [isBarcodePrintModalOpen, setIsBarcodePrintModalOpen] = useState(false);
 
   const canEdit = user?.role === 'admin' || user?.role === 'it_staff';
 
@@ -161,7 +166,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
             ) : (
               hardware && (
                 <>
-                  {/* Top Bar: Durum Seçimi & Sil Butonu */}
+                  {/* Top Bar: Durum Seçimi, Barkod Butonu & Sil Butonu */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#F0F4F8] rounded-xl border border-slate-200">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-700">Güncel Durum:</span>
@@ -186,15 +191,27 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                       )}
                     </div>
 
-                    {canEdit && (
+                    <div className="flex items-center gap-2">
+                      {/* Barkod Yazdır (Tüm Roller Erişebilir) */}
                       <button
-                        onClick={() => setShowConfirmDelete(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors self-start sm:self-auto cursor-pointer"
+                        type="button"
+                        onClick={() => setIsBarcodePrintModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-[#1E2534] bg-white hover:bg-slate-100 border border-slate-300 transition-colors shadow-2xs cursor-pointer"
                       >
-                        <Trash2 className="w-4 h-4" />
-                        Ürünü Sil
+                        <Barcode className="w-4 h-4 text-[#4F8FE0]" />
+                        Barkod Yazdır
                       </button>
-                    )}
+
+                      {canEdit && (
+                        <button
+                          onClick={() => setShowConfirmDelete(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors self-start sm:self-auto cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Ürünü Sil
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Genel Bilgiler Grid */}
@@ -408,6 +425,17 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
         onConfirm={handleDeleteConfirmed}
         onCancel={() => setShowConfirmDelete(false)}
       />
+
+      {/* Barcode Print Modal */}
+      {hardware && (
+        <BarcodePrintModal
+          isOpen={isBarcodePrintModalOpen}
+          onClose={() => setIsBarcodePrintModalOpen(false)}
+          demirbasNo={hardware.demirbasNo}
+          brand={hardware.brand}
+          model={hardware.model}
+        />
+      )}
     </>
   );
 }

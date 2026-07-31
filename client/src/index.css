@@ -109,3 +109,26 @@ body {
 .font-heading {
   font-family: var(--font-heading);
 }
+
+/* @media print kuralı - Barkod ve Zimmet tutanağı yazdırma için */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible !important;
+  }
+  .print-area {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    border-color: #000000 !important;
+  }
+}

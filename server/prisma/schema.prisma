@@ -36,21 +36,23 @@ model User {
   mustChangePassword Boolean  @default(true) @map("must_change_password")
   createdAt          DateTime @default(now()) @map("created_at")
 
-  createdHardware    Hardware[]
-  createdAssignments Assignment[]
+  createdHardware           Hardware[]
+  createdAssignments        Assignment[]
+  createdAccessories        Accessory[]
+  createdAccessoryMovements AccessoryStockMovement[]
 
   @@map("users")
 }
 
 model Employee {
-  id        String   @id @default(uuid()) @db.Uuid
-  fullName  String   @map("full_name")
-  tcNo      String   @unique @map("tc_no") @db.Char(11)
+  id         String   @id @default(uuid()) @db.Uuid
+  fullName   String   @map("full_name")
+  tcNo       String   @unique @map("tc_no") @db.Char(11)
   department String
-  phone     String?
-  email     String?
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
+  phone      String?
+  email      String?
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   assignments Assignment[]
 
@@ -165,4 +167,41 @@ model Notification {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("notifications")
+}
+
+model Accessory {
+  id                String   @id @default(uuid()) @db.Uuid
+  name              String
+  category          String
+  brand             String?
+  totalQuantity     Int      @default(0) @map("total_quantity")
+  availableQuantity Int      @default(0) @map("available_quantity")
+  assignedQuantity  Int      @default(0) @map("assigned_quantity")
+  outOfUseQuantity  Int      @default(0) @map("out_of_use_quantity")
+  minThreshold      Int?     @map("min_threshold")
+  notes             String?
+  createdById       String   @map("created_by") @db.Uuid
+  createdBy         User     @relation(fields: [createdById], references: [id])
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  stockMovements AccessoryStockMovement[]
+
+  @@index([category])
+  @@map("accessories")
+}
+
+model AccessoryStockMovement {
+  id          String    @id @default(uuid()) @db.Uuid
+  accessoryId String    @map("accessory_id") @db.Uuid
+  accessory   Accessory @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+  type        String
+  quantity    Int
+  note        String?
+  createdById String    @map("created_by") @db.Uuid
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([accessoryId])
+  @@map("accessory_stock_movements")
 }
