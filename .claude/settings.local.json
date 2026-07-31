@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm run build -w \"@entanter/shared\")",
+      "PowerShell(npm run typecheck -w \"@entanter/api\" 2>&1)",
+      "Bash(npm run *)",
+      "Bash(curl -s -i http://localhost:3001/api/health)",
+      "Bash(curl -s http://localhost:3001/api/yok)",
+      "Read(//tmp/**)",
+      "Bash(taskkill //F //IM node.exe //FI \"WINDOWTITLE eq *\")",
+      "Bash(ps -W)",
+      "Bash(netstat -ano)",
+      "PowerShell(foreach \\($procId in 15732, 15112\\) { try { Stop-Process -Id $procId -Force -ErrorAction Stop; Write-Output \"PID $procId durduruldu\" } catch { Write-Output \"PID $procId zaten yok\" } }; Start-Sleep -Milliseconds 800; $listening = Get-NetTCPConnection -LocalPort 3001 -State Listen -ErrorAction SilentlyContinue; if \\($null -eq $listening\\) { Write-Output \"Port 3001 serbest\" } else { Write-Output \"Port 3001 hala dinleniyor\" })",
+      "PowerShell(npm install -D \"@electric-sql/pglite\" -w \"@entanter/api\" 2>&1)",
+      "PowerShell(npm install -D \"@electric-sql/pglite-socket\" -w \"@entanter/api\" 2>&1)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s http://localhost:3001/api/health)",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"yanlis\"}')",
+      "Bash(curl -s -i -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"aJq46FQYmpTTu96AAiQc7\"}' -c /tmp/cookies.txt)",
+      "Bash(grep -vE \"^Query:|^CREATE|^\\\\s*$\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X DELETE http://localhost:3001/api/staff/1 -H \"Content-Type: application/json\")",
+      "Bash(curl -s -X DELETE http://localhost:3001/api/staff/1)",
+      "PowerShell(npm run typecheck -w \"@entanter/web\" 2>&1)",
+      "Bash(xargs echo \"woff2 sayisi:\")",
+      "Bash(curl -s \"http://localhost:3010/../../../apps/api/.env\")",
+      "Bash(curl -s -o /dev/null -w \"durum=%{http_code} boyut=%{size_download}\\\\n\" \"http://localhost:3010/%2e%2e%2f%2e%2e%2f%2e%2e%2fapps%2fapi%2f.env\")",
+      "Bash(curl -s \"http://localhost:3010/%2e%2e%2f%2e%2e%2f%2e%2e%2fapps%2fapi%2f.env\")",
+      "Bash(curl -s --path-as-is -o /dev/null -w \"durum=%{http_code} boyut=%{size_download}\\\\n\" \"http://localhost:3010/../../app/api/.env\")",
+      "Bash(curl -s --path-as-is \"http://localhost:3010/../../app/api/.env\")",
+      "Bash(curl -s -o /dev/null -w \"boyut=%{size_download}\\\\n\" http://localhost:3010/)"
+    ]
+  }
+}

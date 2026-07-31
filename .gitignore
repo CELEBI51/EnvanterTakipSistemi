@@ -1,27 +1,40 @@
-# Node modules
+# Bagimliliklar
 node_modules/
 **/node_modules/
 
-# Environment variables
-.env
-.env.local
-**/.env
-
-# Build & Output directories
+# Build ciktilari
 dist/
 **/dist/
 build/
 **/build/
+*.tsbuildinfo
 
-# Logs & Temporary files
+# Ortam degiskenleri - ASLA commit edilmez
+.env
+.env.local
+.env.production
+**/.env
+
+# Loglar
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pino-*.log
 
-# OS & Editor files
+# Gelistirme veritabani (PGlite) - sadece yerel makine
+.devdata/
+
+# Deploy paketi (build sirasinda uretilir, repoda tutulmaz)
+deploy/app/
+deploy/installers/
+*.zip
+
+# Editor / OS
 .DS_Store
-Thumbs.db
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 .idea/
+Thumbs.db
+desktop.ini
