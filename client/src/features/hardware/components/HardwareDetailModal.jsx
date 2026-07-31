@@ -6,11 +6,9 @@ import {
   History,
   Trash2,
   Calendar,
-  User,
-  Info,
+  ShieldCheck,
   CheckCircle2,
-  AlertTriangle,
-  RefreshCw,
+  Clock,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
@@ -114,6 +112,10 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
     }
   };
 
+  const isWarrantyExpired = hardware?.warrantyEndDate
+    ? new Date(hardware.warrantyEndDate) < new Date(new Date().setHours(0, 0, 0, 0))
+    : false;
+
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
@@ -134,13 +136,13 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                   </span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  {hardware?.brand} {hardware?.model}
+                  {hardware?.brand} {hardware?.model ? hardware.model : '-'}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -187,7 +189,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                     {canEdit && (
                       <button
                         onClick={() => setShowConfirmDelete(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors self-start sm:self-auto"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors self-start sm:self-auto cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                         Ürünü Sil
@@ -215,7 +217,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                         <div className="flex justify-between">
                           <span className="text-slate-500">Marka / Model:</span>
                           <span className="font-semibold text-slate-700">
-                            {hardware.brand} {hardware.model}
+                            {hardware.brand} {hardware.model ? hardware.model : 'Belirtilmemiş'}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -252,6 +254,61 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Garanti Bilgisi Bölümü */}
+                  <div className="p-4 bg-white rounded-xl border border-[#E2E8F0] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#1E2534]">
+                        <ShieldCheck className="w-4 h-4 text-[#4F8FE0]" />
+                        <span>Garanti Bilgisi</span>
+                      </div>
+
+                      {hardware.warrantyEndDate ? (
+                        isWarrantyExpired ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            <Clock className="w-3 h-3 text-amber-600" />
+                            Garanti Süresi Doldu
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            Garanti Devam Ediyor
+                          </span>
+                        )
+                      ) : null}
+                    </div>
+
+                    {!hardware.warrantyStartDate && !hardware.warrantyEndDate ? (
+                      <p className="text-xs text-slate-400 font-medium italic pt-1">
+                        Garanti bilgisi girilmemiş.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1 border-t border-slate-100">
+                        <div>
+                          <span className="text-slate-400 block text-[10px] font-bold uppercase">
+                            Garanti Başlangıç Tarihi
+                          </span>
+                          <span className="font-semibold text-slate-700 flex items-center gap-1 mt-0.5">
+                            <Calendar className="w-3.5 h-3.5 text-[#4F8FE0]" />
+                            {hardware.warrantyStartDate
+                              ? new Date(hardware.warrantyStartDate).toLocaleDateString('tr-TR')
+                              : '-'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px] font-bold uppercase">
+                            Garanti Bitiş Tarihi
+                          </span>
+                          <span className="font-semibold text-slate-700 flex items-center gap-1 mt-0.5">
+                            <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                            {hardware.warrantyEndDate
+                              ? new Date(hardware.warrantyEndDate).toLocaleDateString('tr-TR')
+                              : '-'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Specs Bilgisi (Desktop / Laptop ise) */}
@@ -345,7 +402,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
       <ConfirmModal
         isOpen={showConfirmDelete}
         title="Ürünü Sil"
-        message={`"${hardware?.brand} ${hardware?.model}" (${hardware?.demirbasNo}) adlı demirbaşı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`}
+        message={`"${hardware?.brand} ${hardware?.model || ''}" (${hardware?.demirbasNo}) adlı demirbaşı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`}
         confirmText={deleting ? 'Siliniyor...' : 'Evet, Sil'}
         confirmVariant="danger"
         onConfirm={handleDeleteConfirmed}

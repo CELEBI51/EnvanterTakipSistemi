@@ -273,7 +273,7 @@ export default function HardwareList() {
                   {/* Brand & Model */}
                   <div>
                     <h3 className="font-heading text-sm font-bold text-[#1E2534] group-hover:text-[#4F8FE0] transition-colors">
-                      {hw.brand} {hw.model}
+                      {hw.brand}{hw.model ? ` ${hw.model}` : ''}
                     </h3>
                     {hw.serialNo && (
                       <p className="text-[11px] font-mono text-slate-400 mt-0.5 truncate">
