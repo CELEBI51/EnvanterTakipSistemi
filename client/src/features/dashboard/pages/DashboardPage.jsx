@@ -1,18 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Package,
-  UserCheck,
-  CheckCircle2,
-  AlertTriangle,
   Plus,
   RefreshCw,
-  TrendingUp,
-  History,
-  Key,
-  Clock,
-  ArrowRight,
-  Laptop,
+  ChevronRight,
 } from 'lucide-react';
 import {
   PieChart,
@@ -31,11 +22,11 @@ import EmptyState from '../../../components/common/EmptyState';
 import AddHardwareModal from '../../hardware/components/AddHardwareModal';
 
 const STATUS_COLORS = {
-  Hazır: '#10B981', // Yeşil
-  Kullanımda: '#3B82F6', // Mavi
-  Arızalı: '#EF4444', // Kırmızı
-  Serviste: '#F59E0B', // Amber
-  'Kullanım Dışı': '#64748B', // Slate
+  Hazır: '#16A34A',
+  Kullanımda: '#2F6BFF',
+  Arızalı: '#DC2626',
+  Serviste: '#F59E0B',
+  'Kullanım Dışı': '#6B7280',
 };
 
 export default function DashboardPage() {
@@ -44,7 +35,7 @@ export default function DashboardPage() {
   const user = useAuthStore((state) => state.user);
 
   const [stats, setStats] = useState(null);
-  const [expiringSoftware, setExpiringSoftware] = useState([]);
+  const [expiringLicenses, setExpiringLicenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -59,7 +50,7 @@ export default function DashboardPage() {
         fetch('http://localhost:5000/api/reports/dashboard-stats', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('http://localhost:5000/api/software/expiring?days=15', {
+        fetch('http://localhost:5000/api/licenses/expiring?days=15', {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -73,7 +64,7 @@ export default function DashboardPage() {
 
       setStats(statsData.data);
       if (expiringRes.ok) {
-        setExpiringSoftware(expiringData.data || []);
+        setExpiringLicenses(expiringData.data || []);
       }
     } catch (err) {
       setError(err.message);
@@ -97,34 +88,36 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm">
+      {/* 1. Header */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+            DİTAŞ Otomotiv • Kurumsal Envanter Portalı
+          </span>
           <h1 className="font-heading text-2xl font-bold text-[#1E2534]">
-            Genel Bakış & İstatistikler
+            Sistem Genel Bakış & KPI Göstergeleri
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Demirbaş envanteri, zimmet durumları ve lisans süresi yaklaşan yazılımlar.
+          <p className="text-xs text-slate-500 mt-1">
+            Fabrika donanım varlıkları, zimmet takibi ve aktif lisans durumları.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={fetchDashboardData}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-slate-700 bg-white hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
-            title="Verileri Yenile"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-medium transition cursor-pointer"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Yenile
           </button>
 
           {canAddHardware && (
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] text-white text-xs font-bold transition cursor-pointer"
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              Yeni Ürün Ekle
+              <Plus className="w-4 h-4" />
+              Yeni Varlık Ekle
             </button>
           )}
         </div>
@@ -136,177 +129,141 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 5 Özet Kart - Grid */}
+      {/* 2. KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Toplam Demirbaş */}
-        <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center justify-between">
+        {/* Toplam Varlık */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-3">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+            Toplam Varlık
+          </span>
           <div>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Toplam Demirbaş
-            </span>
-            <div className="text-2xl font-black font-heading text-[#1E2534] mt-1">
+            <div className="text-3xl font-bold font-heading text-[#1E2534]">
               {loading ? '...' : stats?.totalCount ?? 0}
             </div>
-            <span className="text-[10px] font-medium text-slate-400 mt-1 block">
-              Sistemdeki donanımlar
-            </span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-[#1E2534]/5 text-[#1E2534] flex items-center justify-center shrink-0">
-            <Package className="w-5 h-5 stroke-[1.75]" />
+            <span className="text-[11px] text-slate-500 mt-1 block">Kayıtlı donanım envanteri</span>
           </div>
         </div>
 
         {/* Zimmetli */}
-        <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center justify-between">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-3">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+            Zimmetli Varlık
+          </span>
           <div>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Zimmetli (Kullanımda)
-            </span>
-            <div className="text-2xl font-black font-heading text-blue-600 mt-1">
+            <div className="text-3xl font-bold font-heading text-[#4F8FE0]">
               {loading ? '...' : stats?.assignedCount ?? 0}
             </div>
-            <span className="text-[10px] font-medium text-slate-400 mt-1 block">
-              Personele tahsisli
-            </span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <UserCheck className="w-5 h-5 stroke-[1.75]" />
+            <span className="text-[11px] text-slate-500 mt-1 block">Personelde zimmetli</span>
           </div>
         </div>
 
-        {/* Hazır (Boşta) */}
-        <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center justify-between">
+        {/* Hazır Stok */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-3">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+            Hazır Stok
+          </span>
           <div>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Hazır (Boşta)
-            </span>
-            <div className="text-2xl font-black font-heading text-emerald-600 mt-1">
+            <div className="text-3xl font-bold font-heading text-emerald-600">
               {loading ? '...' : stats?.readyCount ?? 0}
             </div>
-            <span className="text-[10px] font-medium text-slate-400 mt-1 block">
-              Zimmene uygun
-            </span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-5 h-5 stroke-[1.75]" />
+            <span className="text-[11px] text-slate-500 mt-1 block">Boşta hazır stok</span>
           </div>
         </div>
 
-        {/* Arızalı / Serviste */}
-        <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center justify-between">
+        {/* Arızalı / Bakım */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-3">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+            Bakım / Arızalı
+          </span>
           <div>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Arızalı / Serviste
-            </span>
-            <div className="text-2xl font-black font-heading text-rose-600 mt-1">
+            <div className="text-3xl font-bold font-heading text-rose-600">
               {loading ? '...' : stats?.faultyCount ?? 0}
             </div>
-            <span className="text-[10px] font-medium text-slate-400 mt-1 block">
-              Bakım gerektirenler
-            </span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-5 h-5 stroke-[1.75]" />
+            <span className="text-[11px] text-slate-500 mt-1 block">Arızalı veya serviste</span>
           </div>
         </div>
 
-        {/* Lisans Süresi Yaklaşanlar */}
+        {/* Bitişi Yaklaşan Lisans */}
         <div
-          onClick={() => navigate('/software')}
-          className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center justify-between cursor-pointer hover:border-[#4F8FE0] transition-colors group"
+          onClick={() => navigate('/licenses')}
+          className="bg-white p-5 rounded-xl border border-slate-200 space-y-3 cursor-pointer hover:border-[#4F8FE0] transition group"
         >
+          <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider block">
+            Bitişi Yaklaşan Lisans
+          </span>
           <div>
-            <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">
-              Lisans Süresi Yaklaşanlar
-            </span>
-            <div className="text-2xl font-black font-heading text-amber-600 mt-1">
-              {loading ? '...' : stats?.expiringSoftwareCount ?? 0}
+            <div className="text-3xl font-bold font-heading text-amber-600">
+              {loading ? '...' : (stats?.expiringLicenseCount ?? stats?.expiringSoftwareCount ?? 0)}
             </div>
-            <span className="text-[10px] font-medium text-amber-600/80 mt-1 block">
-              15 gün içinde veya geçmiş
+            <span className="text-[11px] text-amber-600 font-medium mt-1 block">
+              15 gün içinde dolacak
             </span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-100 transition-colors">
-            <Key className="w-5 h-5 stroke-[1.75]" />
           </div>
         </div>
       </div>
 
-      {/* Lisans Süresi Yaklaşanlar Liste Kutusu (Gerçek Veri) */}
-      <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="font-heading text-base font-bold text-[#1E2534]">
-                Lisans Süresi Yaklaşan / Dolmuş Yazılımlar
-              </h2>
-              <p className="text-xs text-slate-400">15 gün içinde süresi dolacak veya süresi geçmiş lisanslar</p>
-            </div>
+      {/* 3. Lisans Süresi Yaklaşanlar */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div>
+            <h2 className="font-heading text-base font-bold text-[#1E2534]">
+              Lisans Süresi Yaklaşan / Dolmuş Lisanslar
+            </h2>
+            <p className="text-xs text-slate-500">Önümüzdeki 15 gün içinde yenilenmesi gereken yazılım lisansları</p>
           </div>
 
           <button
-            onClick={() => navigate('/software')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4F8FE0] hover:text-[#3D75C4] transition-colors cursor-pointer"
+            onClick={() => navigate('/licenses')}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-[#4F8FE0] hover:text-[#3D75C4] transition cursor-pointer"
           >
-            Tüm Yazılımları Gör
-            <ArrowRight className="w-4 h-4" />
+            Tüm Lisanslar <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
         {loading ? (
           <div className="h-20 bg-slate-50 rounded-xl animate-pulse"></div>
-        ) : expiringSoftware.length === 0 ? (
+        ) : expiringLicenses.length === 0 ? (
           <EmptyState
-            icon={CheckCircle2}
             title="Süresi Yaklaşan Lisans Yok"
-            description="Önümüzdeki 15 gün içinde süresi dolacak herhangi bir yazılım lisansı bulunmamaktadır."
+            description="Önümüzdeki 15 gün içinde süresi dolacak aktif bir yazılım lisansı bulunmuyor."
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {expiringSoftware.slice(0, 6).map((sw) => {
-              const isExpired = sw.daysRemaining < 0;
-              const isToday = sw.daysRemaining === 0;
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {expiringLicenses.slice(0, 6).map((lic) => {
+              const isExpired = lic.daysRemaining < 0;
+              const isToday = lic.daysRemaining === 0;
+              const title = lic.brand && lic.productInfo ? `${lic.brand} - ${lic.productInfo}` : lic.name || lic.productInfo || lic.brand || 'Lisans';
 
               return (
                 <div
-                  key={sw.id}
-                  onClick={() => navigate('/software')}
-                  className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-[#4F8FE0] transition-all cursor-pointer space-y-2"
+                  key={lic.id}
+                  onClick={() => navigate('/licenses')}
+                  className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-[#4F8FE0] transition cursor-pointer space-y-2"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-bold text-xs text-[#1E2534] truncate">{sw.name}</h4>
+                    <h4 className="font-bold text-xs text-[#1E2534] truncate" title={title}>{title}</h4>
                     {isExpired ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
-                        {Math.abs(sw.daysRemaining)} gün önce doldu
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
+                        {Math.abs(lic.daysRemaining)} gün önce doldu
                       </span>
                     ) : isToday ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
                         Bugün bitiyor
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                        {sw.daysRemaining} gün kaldı
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                        {lic.daysRemaining} gün kaldı
                       </span>
                     )}
                   </div>
 
-                  <div className="font-mono text-[11px] text-slate-600 bg-white px-2 py-1 rounded border border-slate-200 truncate">
-                    {sw.licenseKey}
+                  <div className="font-mono text-[11px] text-[#1E2534] bg-white px-2.5 py-1 rounded border border-slate-200 truncate">
+                    {lic.licenseKey || 'Lisans Anahtarı Yok'}
                   </div>
 
                   <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                    <span>Bitiş: {formatDate(sw.endDate)}</span>
-                    {sw.assignedHardware ? (
-                      <span className="flex items-center gap-1 font-medium text-slate-700 truncate max-w-[140px]">
-                        <Laptop className="w-3 h-3 text-[#4F8FE0] shrink-0" />
-                        {sw.assignedHardware.brand}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400">-</span>
-                    )}
+                    <span>Bitiş: {formatDate(lic.endDate)}</span>
+                    <span className="font-semibold text-slate-700">{lic.unit?.name || lic.unitName || '-'}</span>
                   </div>
                 </div>
               );
@@ -315,21 +272,17 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Grafik Alanları - Responsive Grid */}
+      {/* 4. Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Durum Dağılımı (PieChart) */}
-        <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-heading text-base font-bold text-[#1E2534] flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-[#4F8FE0]" />
-              Durum Dağılımı
-            </h2>
-            <span className="text-xs text-slate-400 font-medium">Envanter Durumları</span>
+        {/* Durum Dağılımı */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+          <div className="border-b border-slate-100 pb-3">
+            <h2 className="font-heading text-base font-bold text-[#1E2534]">Durum Dağılımı</h2>
           </div>
 
           <div className="h-64 w-full flex items-center justify-center">
             {loading ? (
-              <div className="text-xs text-slate-400 animate-pulse">Grafik yükleniyor...</div>
+              <div className="text-xs text-slate-400">Grafik yükleniyor...</div>
             ) : stats?.statusDistribution && stats.statusDistribution.some((s) => s.count > 0) ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -348,7 +301,7 @@ export default function DashboardPage() {
                       .map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={STATUS_COLORS[entry.status] || '#94A3B8'}
+                          fill={STATUS_COLORS[entry.status] || '#6B7280'}
                         />
                       ))}
                   </Pie>
@@ -362,7 +315,7 @@ export default function DashboardPage() {
                   />
                   <Legend
                     formatter={(value) => (
-                      <span className="text-xs text-slate-600 font-medium">{value}</span>
+                      <span className="text-xs text-[#1E2534] font-medium">{value}</span>
                     )}
                   />
                 </PieChart>
@@ -376,24 +329,20 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Kategori Dağılımı (BarChart) */}
-        <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-heading text-base font-bold text-[#1E2534] flex items-center gap-2">
-              <Package className="w-5 h-5 text-[#1E2534]" />
-              Kategori Dağılımı
-            </h2>
-            <span className="text-xs text-slate-400 font-medium">Ürün Türüne Göre</span>
+        {/* Kategori Dağılımı */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+          <div className="border-b border-slate-100 pb-3">
+            <h2 className="font-heading text-base font-bold text-[#1E2534]">Kategori Dağılımı</h2>
           </div>
 
           <div className="h-64 w-full flex items-center justify-center">
             {loading ? (
-              <div className="text-xs text-slate-400 animate-pulse">Grafik yükleniyor...</div>
+              <div className="text-xs text-slate-400">Grafik yükleniyor...</div>
             ) : stats?.categoryDistribution && stats.categoryDistribution.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.categoryDistribution} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="category" tick={{ fontSize: 11, fill: '#64748B' }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748B' }} />
+                  <XAxis dataKey="category" tick={{ fontSize: 11, fill: '#6B7280' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6B7280' }} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#1E2534',
@@ -413,23 +362,6 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-      </div>
-
-      {/* Son İşlemler Bölümü (Modüler EmptyState) */}
-      <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-base font-bold text-[#1E2534] flex items-center gap-2">
-            <History className="w-5 h-5 text-[#4F8FE0]" />
-            Son İşlemler
-          </h2>
-          <span className="text-xs text-slate-400 font-medium">Son Zimmet & İade Hareketleri</span>
-        </div>
-
-        <EmptyState
-          icon={History}
-          title="Henüz İşlem Yok"
-          description="Sistemde henüz gerçekleştirilmiş bir zimmet teslim veya iade işlemi bulunmuyor."
-        />
       </div>
 
       {/* Modal */}

@@ -38,3 +38,8 @@ deploy/installers/
 .idea/
 Thumbs.db
 desktop.ini
+
+# Storage uploads (Yerel dosya depolama)
+server/storage/*
+!server/storage/**/.gitkeep
+

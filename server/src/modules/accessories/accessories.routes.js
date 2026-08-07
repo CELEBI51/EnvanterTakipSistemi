@@ -9,6 +9,7 @@ router.use(authMiddleware);
 
 // GET routes (Admin, IT Staff, Viewer)
 router.get('/', accessoryController.listAccessories);
+router.get('/stats', accessoryController.getAccessoryStats);
 router.get('/:id', accessoryController.getAccessoryById);
 router.get('/:id/history', accessoryController.getAccessoryHistory);
 

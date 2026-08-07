@@ -1,28 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Package,
   Plus,
   Search,
   ChevronLeft,
   ChevronRight,
   Eye,
-  Cpu,
   Barcode,
+  Download,
+  Wrench,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
 import AddHardwareModal from '../components/AddHardwareModal';
 import HardwareDetailModal from '../components/HardwareDetailModal';
 import BarcodePrintModal from '../../../components/common/BarcodePrintModal';
-
-const CATEGORIES = [
-  'Tümü',
-  'Desktop',
-  'Laptop',
-  'Monitör',
-  'Yazıcı',
-  'Diğer',
-];
+import AddMaintenanceModal from '../components/AddMaintenanceModal';
 
 const STATUSES = [
   { label: 'Tüm Durumlar', value: '' },
@@ -34,11 +26,11 @@ const STATUSES = [
 ];
 
 const STATUS_BADGES = {
-  Hazir: { label: 'Hazır', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  Kullanimda: { label: 'Kullanımda', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
-  Arizali: { label: 'Arızalı', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
-  Serviste: { label: 'Serviste', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
-  KullanimDisi: { label: 'Kullanım Dışı', bg: 'bg-slate-100 text-slate-700 border-slate-200' },
+  Hazir: { label: 'Hazır', bg: 'bg-emerald-50 text-[#16A34A] border-emerald-200' },
+  Kullanimda: { label: 'Kullanımda', bg: 'bg-blue-50 text-[#2F6BFF] border-blue-200' },
+  Arizali: { label: 'Arızalı', bg: 'bg-rose-50 text-[#DC2626] border-rose-200' },
+  Serviste: { label: 'Serviste', bg: 'bg-amber-50 text-[#F59E0B] border-amber-200' },
+  KullanimDisi: { label: 'Kullanım Dışı', bg: 'bg-slate-100 text-[#6B7280] border-slate-200' },
 };
 
 export default function HardwareList() {
@@ -46,10 +38,10 @@ export default function HardwareList() {
   const user = useAuthStore((state) => state.user);
 
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState(['Tümü']);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Filtering & Pagination States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tümü');
   const [selectedStatus, setSelectedStatus] = useState('');
@@ -57,16 +49,53 @@ export default function HardwareList() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedHardwareId, setSelectedHardwareId] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  // Barcode Print Modal
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
   const [barcodeModalData, setBarcodeModalData] = useState(null);
 
+  const [isAddMaintenanceOpen, setIsAddMaintenanceOpen] = useState(false);
+  const [maintenanceHardwareId, setMaintenanceHardwareId] = useState(null);
+
+  const [stats, setStats] = useState({ total: 0, inUse: 0, ready: 0, needsAttention: 0 });
+
   const canAdd = user?.role === 'admin' || user?.role === 'it_staff';
+
+  useEffect(() => {
+    fetchCategories();
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/hardware/stats', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.data) {
+        setStats(data.data);
+      }
+    } catch (err) {
+      console.error('Varlık istatistikleri alınamadı:', err);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/categories?parentType=Varlık', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.data) {
+        const catNames = data.data.map((c) => c.name);
+        setCategories(['Tümü', ...catNames]);
+      }
+    } catch (err) {
+      console.error('Kategoriler alınamadı:', err);
+    }
+  };
 
   const fetchHardwareList = async () => {
     setLoading(true);
@@ -127,34 +156,120 @@ export default function HardwareList() {
     setIsBarcodeModalOpen(true);
   };
 
+  const openAddMaintenanceModal = (e, hwId) => {
+    e.stopPropagation();
+    setMaintenanceHardwareId(hwId);
+    setIsAddMaintenanceOpen(true);
+  };
+
+  const exportToCSV = () => {
+    if (!items.length) return;
+    const headers = ['Demirbaş No', 'Kategori', 'Marka', 'Model', 'Seri No', 'Lokasyon', 'Tedarikçi', 'Durum'];
+    const rows = items.map((i) => [
+      i.demirbasNo,
+      i.category,
+      i.brand,
+      i.model || '',
+      i.serialNo || '',
+      i.location || '',
+      i.supplier || '',
+      i.status,
+    ]);
+    const csvContent =
+      'data:text/csv;charset=utf-8,\uFEFF' +
+      [headers.join(','), ...rows.map((e) => e.map((x) => `"${x}"`).join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `DITAS_Donanim_Envanteri_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Top Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 pb-12">
+      {/* Header */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading text-xl sm:text-2xl font-bold text-[#1E2534] tracking-tight">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+            DİTAŞ Otomotiv • Bilgisayar & Ekipman Yönetimi
+          </span>
+          <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
             Bilgisayar & Ekipman Envanteri
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Şirket bünyesindeki masaüstü, laptop, monitör ve yazıcı donanımlarını yönetin.
+          <p className="text-xs text-slate-500 mt-1">
+            Masaüstü, laptop, monitör ve diğer varlık donanımlarının detaylı takibi.
           </p>
         </div>
 
-        {canAdd && (
+        <div className="flex items-center gap-2.5 shrink-0">
           <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] active:bg-[#3566AD] text-white text-xs sm:text-sm font-bold shadow-xs transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+            onClick={exportToCSV}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-medium transition cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            Yeni Ürün Ekle
+            <Download className="w-3.5 h-3.5" />
+            Dışa Aktar (CSV)
           </button>
-        )}
+
+          {canAdd && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] text-white text-xs font-bold transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Yeni Ürün Ekle
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Hardware Statistics Summary Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Toplam */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+            Toplam
+          </span>
+          <div className="text-2xl font-bold font-heading text-[#1E2534]">
+            {stats.total}
+          </div>
+        </div>
+
+        {/* Kullanımda */}
+        <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-200 shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-bold text-[#2F6BFF] uppercase tracking-wider block mb-1">
+            Kullanımda
+          </span>
+          <div className="text-2xl font-bold font-heading text-blue-950">
+            {stats.inUse}
+          </div>
+        </div>
+
+        {/* Hazır */}
+        <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-200 shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-bold text-[#16A34A] uppercase tracking-wider block mb-1">
+            Hazır
+          </span>
+          <div className="text-2xl font-bold font-heading text-emerald-950">
+            {stats.ready}
+          </div>
+        </div>
+
+        {/* Arızalı/Serviste/Hurda */}
+        <div className="bg-amber-50/60 p-5 rounded-2xl border border-amber-200 shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block mb-1">
+            Arızalı/Serviste/Hurda
+          </span>
+          <div className="text-2xl font-bold font-heading text-amber-900">
+            {stats.needsAttention}
+          </div>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-3">
+      <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
         <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3">
-          {/* Search Input */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -162,18 +277,17 @@ export default function HardwareList() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Marka, model, seri no veya demirbaş no ara..."
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-[#E2E8F0] text-xs font-medium text-[#1E2534] placeholder-slate-400 focus:outline-hidden focus:border-[#4F8FE0] focus:ring-1 focus:ring-[#4F8FE0]"
+              className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs text-[#1E2534] placeholder-slate-400 focus:border-[#4F8FE0]"
             />
           </div>
 
-          {/* Status Filter */}
           <select
             value={selectedStatus}
             onChange={(e) => {
               setSelectedStatus(e.target.value);
               setPage(1);
             }}
-            className="px-3.5 py-2 rounded-xl border border-[#E2E8F0] text-xs font-medium text-[#1E2534] focus:outline-hidden focus:border-[#4F8FE0] focus:ring-1 focus:ring-[#4F8FE0] bg-white cursor-pointer"
+            className="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-medium text-[#1E2534] bg-white cursor-pointer"
           >
             {STATUSES.map((st) => (
               <option key={st.value} value={st.value}>
@@ -184,15 +298,15 @@ export default function HardwareList() {
 
           <button
             type="submit"
-            className="px-4 py-2 rounded-xl bg-[#1E2534] hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-[#1E2534] hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer"
           >
-            Ara
+            Filtrele
           </button>
         </form>
 
-        {/* Category Pills */}
+        {/* Dynamic Category Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const isActive = selectedCategory === cat;
             return (
               <button
@@ -201,10 +315,10 @@ export default function HardwareList() {
                   setSelectedCategory(cat);
                   setPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition cursor-pointer ${
                   isActive
-                    ? 'bg-[#4F8FE0] text-white shadow-2xs'
-                    : 'bg-[#F0F4F8] text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                    ? 'bg-[#4F8FE0] text-white font-bold'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 {cat}
@@ -214,120 +328,115 @@ export default function HardwareList() {
         </div>
       </div>
 
-      {/* Main Table Content */}
-      {loading ? (
-        <div className="py-20 text-center text-xs text-slate-400 font-medium">
-          Donanım envanteri yükleniyor...
-        </div>
-      ) : error ? (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium">
-          {error}
-        </div>
-      ) : items.length === 0 ? (
-        <EmptyState
-          icon={Package}
-          title="Ürün Bulunamadı"
-          description="Aradığınız kriterlere uygun donanım kaydı bulunmamaktadır."
-        />
-      ) : (
-        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+      {/* Table Section */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        {loading ? (
+          <div className="py-16 text-center text-xs text-slate-400">Yükleniyor...</div>
+        ) : error ? (
+          <div className="p-4 text-xs text-rose-600 font-medium">{error}</div>
+        ) : items.length === 0 ? (
+          <EmptyState
+            title="Kayıtlı Donanım Bulunamadı"
+            description="Arama kriterlerinize uygun herhangi bir bilgisayar veya donanım kaydı mevcut değil."
+          />
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#1E2534] text-white text-xs uppercase tracking-wider font-heading">
-                  <th className="py-3.5 px-4 font-bold">Demirbaş No</th>
-                  <th className="py-3.5 px-4 font-bold">Kategori</th>
-                  <th className="py-3.5 px-4 font-bold">Marka / Model</th>
-                  <th className="py-3.5 px-4 font-bold">Seri No</th>
-                  <th className="py-3.5 px-4 font-bold">Özellikler (Specs)</th>
-                  <th className="py-3.5 px-4 font-bold text-center">Durum</th>
-                  <th className="py-3.5 px-4 font-bold text-right">İşlemler</th>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="py-3.5 px-4">Demirbaş No</th>
+                  <th className="py-3.5 px-4">Ürün Adı / Marka & Model</th>
+                  <th className="py-3.5 px-4">Kategori</th>
+                  <th className="py-3.5 px-4">Seri No</th>
+                  <th className="py-3.5 px-4">Lokasyon</th>
+                  <th className="py-3.5 px-4">Durum</th>
+                  <th className="py-3.5 px-4 text-right">İşlemler</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
-                {items.map((hw) => {
-                  const badge = STATUS_BADGES[hw.status] || {
-                    label: hw.status,
+                {items.map((item) => {
+                  const statusInfo = STATUS_BADGES[item.status] || {
+                    label: item.status,
                     bg: 'bg-slate-100 text-slate-700 border-slate-200',
                   };
 
-                  const specsText = hw.specs
-                    ? [hw.specs.cpu, hw.specs.ram, hw.specs.gpu].filter(Boolean).join(' • ')
-                    : null;
-
                   return (
                     <tr
-                      key={hw.id}
+                      key={item.id}
                       onClick={() => {
-                        setSelectedHardwareId(hw.id);
+                        setSelectedHardwareId(item.id);
                         setIsDetailModalOpen(true);
                       }}
-                      className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                      className="hover:bg-slate-50/80 transition cursor-pointer"
                     >
-                      {/* Demirbaş No */}
-                      <td className="py-3.5 px-4">
-                        <span className="font-mono text-xs font-bold text-[#1E2534] bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/80">
-                          {hw.demirbasNo}
-                        </span>
+                      <td className="py-3 px-4 font-mono font-bold text-[#1E2534] whitespace-nowrap">
+                        {item.demirbasNo}
                       </td>
 
-                      {/* Kategori */}
-                      <td className="py-3.5 px-4 text-slate-600 font-semibold">{hw.category}</td>
-
-                      {/* Marka / Model */}
-                      <td className="py-3.5 px-4">
-                        <span className="font-bold text-[#1E2534]">
-                          {hw.brand}{hw.model ? ` ${hw.model}` : ''}
-                        </span>
-                      </td>
-
-                      {/* Seri No */}
-                      <td className="py-3.5 px-4 font-mono text-slate-500">
-                        {hw.serialNo || '-'}
-                      </td>
-
-                      {/* Specs */}
-                      <td className="py-3.5 px-4 text-slate-600">
-                        {specsText ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-600 bg-slate-100/70 px-2 py-0.5 rounded-md font-medium">
-                            <Cpu className="w-3 h-3 text-[#4F8FE0] shrink-0" />
-                            {specsText}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 font-mono text-[11px]">-</span>
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-[#1E2534]">
+                          {item.brand} {item.model || ''}
+                        </div>
+                        {item.specs && (
+                          <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                            {[item.specs.cpu, item.specs.ram, item.specs.gpu].filter(Boolean).join(' • ')}
+                          </div>
                         )}
                       </td>
 
-                      {/* Durum Rozeti */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${badge.bg}`}>
-                          {badge.label}
+                      <td className="py-3 px-4">
+                        <span className="inline-block px-2.5 py-1 rounded bg-slate-100 text-slate-700 font-medium">
+                          {item.category}
                         </span>
                       </td>
 
-                      {/* İşlemler */}
-                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => openBarcodeModal(e, hw)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:text-[#4F8FE0] hover:border-[#4F8FE0] text-[11px] font-bold shadow-2xs transition-colors cursor-pointer"
-                            title="Barkod Etiketi Yazdır"
-                          >
-                            <Barcode className="w-3.5 h-3.5 text-[#4F8FE0]" />
-                            <span>Barkod</span>
-                          </button>
+                      <td className="py-3 px-4 font-mono text-slate-600">
+                        {item.serialNo || '-'}
+                      </td>
 
+                      <td className="py-3 px-4 text-slate-600">
+                        {item.location || '-'}
+                      </td>
+
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-bold border ${statusInfo.bg}`}
+                        >
+                          {statusInfo.label}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-1">
+                          {canAdd && (
+                            <button
+                              type="button"
+                              onClick={(e) => openAddMaintenanceModal(e, item.id)}
+                              className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-slate-100 rounded transition cursor-pointer"
+                              title="Bakım İşlemi Oluştur"
+                            >
+                              <Wrench className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
-                            onClick={() => {
-                              setSelectedHardwareId(hw.id);
+                            onClick={(e) => openBarcodeModal(e, item)}
+                            className="p-1.5 text-slate-400 hover:text-[#4F8FE0] hover:bg-slate-100 rounded transition cursor-pointer"
+                            title="Barkod Yazdır"
+                          >
+                            <Barcode className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedHardwareId(item.id);
                               setIsDetailModalOpen(true);
                             }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#1E2534] hover:text-white text-slate-700 text-[11px] font-semibold transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-400 hover:text-[#1E2534] hover:bg-slate-100 rounded transition cursor-pointer"
+                            title="Detay Görüntüle"
                           >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Detay</span>
+                            <Eye className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -337,48 +446,49 @@ export default function HardwareList() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 rounded-2xl border border-[#E2E8F0] shadow-sm text-xs font-semibold">
-          <div className="text-slate-500">
-            Sayfa <span className="text-[#1E2534] font-bold">{page}</span> / {totalPages} (Toplam{' '}
-            {totalCount} kayıt)
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-slate-200 flex items-center justify-between text-xs">
+            <span className="text-slate-500">
+              Toplam {totalCount} kayıttan {((page - 1) * 10) + 1} - {Math.min(page * 10, totalCount)} arası gösteriliyor
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-600" />
+              </button>
+              <span className="font-semibold text-slate-700">
+                Sayfa {page} / {totalPages}
+              </span>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
           </div>
+        )}
+      </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              disabled={page === 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" /> Önceki
-            </button>
-
-            <button
-              disabled={page === totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            >
-              Sonraki <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Add Hardware Modal */}
+      {/* Modals */}
       <AddHardwareModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={() => {
           setIsAddModalOpen(false);
           fetchHardwareList();
+          fetchStats();
         }}
       />
 
-      {/* Detail Modal */}
       <HardwareDetailModal
         hardwareId={selectedHardwareId}
         isOpen={isDetailModalOpen}
@@ -386,11 +496,16 @@ export default function HardwareList() {
           setIsDetailModalOpen(false);
           setSelectedHardwareId(null);
         }}
-        onUpdate={fetchHardwareList}
-        onDelete={fetchHardwareList}
+        onUpdate={() => {
+          fetchHardwareList();
+          fetchStats();
+        }}
+        onDelete={() => {
+          fetchHardwareList();
+          fetchStats();
+        }}
       />
 
-      {/* Barcode Print Modal */}
       {barcodeModalData && (
         <BarcodePrintModal
           isOpen={isBarcodeModalOpen}
@@ -401,6 +516,20 @@ export default function HardwareList() {
           demirbasNo={barcodeModalData.demirbasNo}
           brand={barcodeModalData.brand}
           model={barcodeModalData.model}
+        />
+      )}
+
+      {maintenanceHardwareId && (
+        <AddMaintenanceModal
+          isOpen={isAddMaintenanceOpen}
+          onClose={() => {
+            setIsAddMaintenanceOpen(false);
+            setMaintenanceHardwareId(null);
+          }}
+          hardwareId={maintenanceHardwareId}
+          onSuccess={() => {
+            fetchHardwareList();
+          }}
         />
       )}
     </div>

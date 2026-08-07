@@ -1,35 +1,47 @@
 import { z } from 'zod';
 
-export const ALLOWED_CATEGORIES = [
-  'Desktop',
-  'Laptop',
-  'Yazıcı',
-  'Mouse',
-  'Klavye',
-  'Kulaklık',
-  'Monitör',
-  'Depolama Birimi',
-  'Kamera',
-  'Diğer',
-];
-
 export const ALLOWED_STATUSES = ['Hazir', 'Kullanimda', 'Arizali', 'Serviste', 'KullanimDisi'];
+
+const optionalString = z.string().nullable().optional().or(z.literal(''));
+const optionalPositiveAmount = z
+  .union([z.number().positive('Satın alım tutarı pozitif sayı olmalıdır.'), z.string()])
+  .nullable()
+  .optional()
+  .or(z.literal(''))
+  .transform((val) => {
+    if (val === '' || val === null || val === undefined) return null;
+    const num = Number(val);
+    return isNaN(num) ? null : num;
+  })
+  .refine((val) => val === null || val > 0, {
+    message: 'Satın alım tutarı pozitif sayı olmalıdır.',
+  });
 
 export const createHardwareSchema = z
   .object({
-    category: z.enum(ALLOWED_CATEGORIES, {
-      errorMap: () => ({ message: 'Geçersiz kategori seçimi.' }),
-    }),
+    category: z.string().optional(),
+    categoryId: z.string().uuid().optional(),
     brand: z.string({ required_error: 'Marka adı zorunludur.' }).min(1, 'Marka adı zorunludur.'),
-    model: z.string().nullable().optional().or(z.literal('')),
+    model: optionalString,
     serial_no: z.string().optional().default(''),
+    serialNo: z.string().optional().default(''),
     demirbas_no: z
       .string({ required_error: 'Demirbaş numarası zorunludur.' })
       .min(1, 'Demirbaş numarası zorunludur.'),
-    warranty_start_date: z.string().nullable().optional().or(z.literal('')),
-    warranty_end_date: z.string().nullable().optional().or(z.literal('')),
-    warrantyStartDate: z.string().nullable().optional().or(z.literal('')),
-    warrantyEndDate: z.string().nullable().optional().or(z.literal('')),
+    wifi_mac_address: optionalString,
+    wifiMacAddress: optionalString,
+    location: optionalString,
+    supplier: optionalString,
+    invoice_no: optionalString,
+    invoiceNo: optionalString,
+    purchase_date: optionalString,
+    purchaseDate: optionalString,
+    purchase_amount: optionalPositiveAmount,
+    purchaseAmount: optionalPositiveAmount,
+    warranty_start_date: optionalString,
+    warranty_end_date: optionalString,
+    warrantyStartDate: optionalString,
+    warrantyEndDate: optionalString,
     specs: z
       .object({
         cpu: z.string().optional(),
@@ -58,15 +70,27 @@ export const createHardwareSchema = z
 
 export const updateHardwareSchema = z
   .object({
-    category: z.enum(ALLOWED_CATEGORIES).optional(),
+    category: z.string().optional(),
+    categoryId: z.string().uuid().optional(),
     brand: z.string().min(1).optional(),
-    model: z.string().nullable().optional().or(z.literal('')),
+    model: optionalString,
     serial_no: z.string().optional(),
+    serialNo: z.string().optional(),
     status: z.enum(ALLOWED_STATUSES).optional(),
-    warranty_start_date: z.string().nullable().optional().or(z.literal('')),
-    warranty_end_date: z.string().nullable().optional().or(z.literal('')),
-    warrantyStartDate: z.string().nullable().optional().or(z.literal('')),
-    warrantyEndDate: z.string().nullable().optional().or(z.literal('')),
+    wifi_mac_address: optionalString,
+    wifiMacAddress: optionalString,
+    location: optionalString,
+    supplier: optionalString,
+    invoice_no: optionalString,
+    invoiceNo: optionalString,
+    purchase_date: optionalString,
+    purchaseDate: optionalString,
+    purchase_amount: optionalPositiveAmount,
+    purchaseAmount: optionalPositiveAmount,
+    warranty_start_date: optionalString,
+    warranty_end_date: optionalString,
+    warrantyStartDate: optionalString,
+    warrantyEndDate: optionalString,
     specs: z
       .object({
         cpu: z.string().optional(),

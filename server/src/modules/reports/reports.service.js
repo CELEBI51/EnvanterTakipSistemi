@@ -10,20 +10,24 @@ export const getDashboardStats = async () => {
     readyCount,
     faultyCount,
     disusedCount,
-    categoryGroups,
-    expiringSoftwareCount,
+    hardwareList,
+    expiringLicenseCount,
   ] = await Promise.all([
     prisma.hardware.count(),
     prisma.hardware.count({ where: { status: 'Kullanimda' } }),
     prisma.hardware.count({ where: { status: 'Hazir' } }),
     prisma.hardware.count({ where: { status: { in: ['Arizali', 'Serviste'] } } }),
     prisma.hardware.count({ where: { status: 'KullanimDisi' } }),
-    prisma.hardware.groupBy({
-      by: ['category'],
-      _count: { id: true },
+    prisma.hardware.findMany({
+      select: {
+        category: {
+          select: { name: true },
+        },
+      },
     }),
-    prisma.software.count({
+    prisma.license.count({
       where: {
+        status: { not: 'IPTAL_EDILDI' },
         endDate: {
           lte: threshold15Days,
         },
@@ -42,9 +46,15 @@ export const getDashboardStats = async () => {
     { status: 'Kullanım Dışı', count: disusedCount, key: 'KullanimDisi' },
   ];
 
-  const categoryDistribution = categoryGroups.map((g) => ({
-    category: g.category,
-    count: g._count.id,
+  const categoryMap = {};
+  for (const item of hardwareList) {
+    const catName = item.category?.name || 'Diğer';
+    categoryMap[catName] = (categoryMap[catName] || 0) + 1;
+  }
+
+  const categoryDistribution = Object.entries(categoryMap).map(([category, count]) => ({
+    category,
+    count,
   }));
 
   return {
@@ -52,7 +62,8 @@ export const getDashboardStats = async () => {
     assignedCount,
     readyCount,
     faultyCount,
-    expiringSoftwareCount,
+    expiringLicenseCount,
+    expiringSoftwareCount: expiringLicenseCount, // Backward compatibility
     statusDistribution,
     categoryDistribution,
   };

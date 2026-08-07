@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Zimmetleme Formu</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 10mm 12mm;
+    }
+    *, *:before, *:after {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      color: #1E2534;
+      margin: 0;
+      padding: 0;
+      font-size: 9.5px;
+      line-height: 1.3;
+    }
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+      border-bottom: 2px solid #1E2534;
+      padding-bottom: 4px;
+    }
+    .header-table td {
+      vertical-align: middle;
+    }
+    .logo-box {
+      font-size: 16px;
+      font-weight: bold;
+      color: #1E2534;
+      letter-spacing: 0.5px;
+    }
+    .title-box {
+      text-align: right;
+    }
+    .title-box h1 {
+      margin: 0;
+      font-size: 15px;
+      color: #1E2534;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .title-box p {
+      margin: 1px 0 0 0;
+      font-size: 9px;
+      color: #64748B;
+    }
+    .section-title {
+      font-size: 10.5px;
+      font-weight: bold;
+      color: #1E2534;
+      background-color: #F1F5F9;
+      padding: 4px 8px;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      margin-top: 8px;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 6px;
+    }
+    table.data-table th, table.data-table td {
+      border: 1px solid #CBD5E1;
+      padding: 4px 6px;
+      text-align: left;
+    }
+    table.data-table th {
+      background-color: #F8FAFC;
+      font-weight: bold;
+      font-size: 9px;
+      color: #475569;
+      text-transform: uppercase;
+    }
+    .hardware-block {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      margin-bottom: 6px;
+    }
+    .specs-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: -1px;
+      margin-bottom: 4px;
+    }
+    .specs-table td {
+      border: 1px solid #CBD5E1;
+      padding: 3px 6px;
+      font-size: 8.5px;
+    }
+    .specs-label {
+      background-color: #F8FAFC;
+      font-weight: bold;
+      color: #475569;
+      width: 16%;
+    }
+    .signatures-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .signatures-table td {
+      width: 50%;
+      vertical-align: top;
+      padding: 8px;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+    }
+    .sig-title {
+      font-weight: bold;
+      font-size: 10px;
+      border-bottom: 1px solid #E2E8F0;
+      padding-bottom: 3px;
+      margin-bottom: 5px;
+      color: #1E2534;
+    }
+    .sig-row {
+      margin-bottom: 4px;
+      font-size: 9px;
+    }
+    .sig-row span.label {
+      color: #64748B;
+      display: inline-block;
+      width: 105px;
+    }
+    .sig-line {
+      margin-top: 18px;
+      border-bottom: 1px dashed #94A3B8;
+      width: 75%;
+    }
+    .footer-notice {
+      margin-top: 8px;
+      padding: 6px 8px;
+      background-color: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 4px;
+      font-size: 8.5px;
+      line-height: 1.35;
+      text-align: justify;
+      color: #334155;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <table class="header-table">
+    <tr>
+      <td class="logo-box">
+        {{logoHtml}}
+        <span style="vertical-align: middle;">DİTAŞ OTOMOTİV A.Ş.</span>
+      </td>
+      <td class="title-box">
+        <h1>ZİMMETLEME FORMU</h1>
+        <p>Bilgi Teknolojileri Envanter Takip Sistemi</p>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Personel / Teslim Bilgileri -->
+  <div class="section-title">1. ZİMMET SAHİBİ & TESLİMAT BİLGİLERİ</div>
+  <table class="data-table">
+    <tr>
+      <th style="width: 20%;">Personel Adı Soyadı</th>
+      <td style="width: 30%;">{{employeeName}}</td>
+      <th style="width: 20%;">T.C. Kimlik No</th>
+      <td style="width: 30%;">{{employeeTcNo}}</td>
+    </tr>
+    <tr>
+      <th>Departman</th>
+      <td>{{employeeDepartment}}</td>
+      <th>Teslim Tarihi</th>
+      <td>{{teslimTarihi}}</td>
+    </tr>
+  </table>
+
+  <!-- Donanım / Varlık Kalemleri -->
+  {{#hasHardwareItems}}
+  <div class="section-title">2. VARLIK / DONANIM BİLGİLERİ</div>
+  {{#hardwareItems}}
+  <div class="hardware-block">
+    <table class="data-table" style="margin-bottom: 0;">
+      <thead>
+        <tr>
+          <th>Cinsi (Kategori)</th>
+          <th>Markası</th>
+          <th>Modeli</th>
+          <th>Seri No</th>
+          <th>Demirbaş No</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>{{categoryName}}</b></td>
+          <td>{{brand}}</td>
+          <td>{{model}}</td>
+          <td>{{serialNo}}</td>
+          <td><b>{{demirbasNo}}</b></td>
+        </tr>
+      </tbody>
+    </table>
+    <!-- Parça Tablosu -->
+    <table class="specs-table">
+      <tr>
+        <td class="specs-label">İşlemci (CPU)</td>
+        <td style="width: 17%;">{{specsCpu}}</td>
+        <td class="specs-label">Sabit Disk</td>
+        <td style="width: 17%;">{{specsDisk}}</td>
+        <td class="specs-label">Hafıza (RAM)</td>
+        <td style="width: 17%;">{{specsRam}}</td>
+      </tr>
+      <tr>
+        <td class="specs-label">CD Sürücü</td>
+        <td>{{specsDvd}}</td>
+        <td class="specs-label">Ekran (GPU)</td>
+        <td>{{specsGpu}}</td>
+        <td class="specs-label">Diğer / Ek</td>
+        <td>{{specsOther}}</td>
+      </tr>
+    </table>
+  </div>
+  {{/hardwareItems}}
+  {{/hasHardwareItems}}
+
+  <!-- Ek Kalemler Tablosu (Aksesuar / Sarf Malzeme) -->
+  {{#hasAdditionalItems}}
+  <div class="section-title">3. DİĞER EK ZİMMET KALEMLERİ</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Ürün Adı</th>
+        <th>Kategori</th>
+        <th>Kalem Türü</th>
+        <th style="text-align: center; width: 15%;">Miktar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#additionalItems}}
+      <tr>
+        <td><b>{{name}}</b></td>
+        <td>{{category}}</td>
+        <td>{{typeLabel}}</td>
+        <td style="text-align: center; font-weight: bold;">{{quantity}} adet</td>
+      </tr>
+      {{/additionalItems}}
+    </tbody>
+  </table>
+  {{/hasAdditionalItems}}
+
+  <!-- İmza Alanları -->
+  <div class="section-title" id="sig-section-title">4. ZİMMET TESLİM - TESLİM ALMA ONAYI</div>
+  <table class="signatures-table" id="sig-table">
+    <tr>
+      <!-- Sol: TESLİM EDEN -->
+      <td>
+        <div class="sig-title" id="sig-left-title">TESLİM EDEN (BİLGİ TEKNOLOJİLERİ)</div>
+        <div class="sig-row"><span class="label">Teslim Eden Personel:</span> {{teslimEden}}</div>
+        <div class="sig-row"><span class="label">Tarih:</span> {{teslimTarihi}}</div>
+        <div class="sig-row"><span class="label">İmza:</span></div>
+        <div class="sig-line"></div>
+      </td>
+
+      <!-- Sağ: TESLİM ALAN -->
+      <td>
+        <div class="sig-title" id="sig-right-title">TESLİM ALAN (KULLANICI)</div>
+        <div class="sig-row"><span class="label">Adı Soyadı:</span> {{employeeName}}</div>
+        <div class="sig-row"><span class="label">Departman:</span> {{employeeDepartment}}</div>
+        <div class="sig-row"><span class="label">T.C. Kimlik No:</span> {{employeeTcNo}}</div>
+        <div class="sig-row"><span class="label">İmza:</span></div>
+        <div class="sig-line"></div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Taahhütname Footer -->
+  <div class="footer-notice">
+    <b>BEYAN VE TAAHHÜT:</b> İş bu zimmet formunda tarafıma teslim edildiği/iade alındığı belirtilen cihaz ve ekipmanları eksiksiz ve kontrol edilmiş olarak teslim aldığımı/iade ettiğimi, cihazları şirket kuralları çerçevesinde özenle kullanacağımı, kullanıcı kaynaklı oluşabilecek her türlü hasar, kayıp ve ihmallerin tarafımca karşılanacağını beyan, kabul ve taahhüt ederim.
+  </div>
+
+</body>
+</html>

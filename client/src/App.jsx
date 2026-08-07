@@ -1,25 +1,36 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import LoginPage from './features/auth/pages/LoginPage';
 import ForceChangePasswordPage from './features/auth/pages/ForceChangePasswordPage';
 import UsersList from './features/admin/users/UsersList';
 import DashboardPage from './features/dashboard/pages/DashboardPage';
 import HardwareList from './features/hardware/pages/HardwareList';
-import SoftwareList from './features/software/pages/SoftwareList';
+import LicenseList from './features/licenses/pages/LicenseList';
 import AccessoryList from './features/accessories/pages/AccessoryList';
+import ConsumableList from './features/consumables/pages/ConsumableList';
+import ComponentList from './features/components/pages/ComponentList';
+import AssignmentList from './features/assignments/pages/AssignmentList';
+import CreateAssignmentPage from './features/assignments/pages/CreateAssignmentPage';
+import ReturnList from './features/returns/pages/ReturnList';
+import CreateReturnPage from './features/returns/pages/CreateReturnPage';
 import useAuthStore from './store/authStore';
 import {
-  Tag,
-  Users,
   LayoutDashboard,
-  Boxes,
   Monitor,
   Headphones,
   Key,
+  Users,
+  Settings,
   LogOut,
-  ChevronDown,
+  Bell,
   Menu,
   X,
+  ShieldCheck,
+  Building2,
+  Package,
+  Cpu,
+  ClipboardCheck,
+  RotateCcw,
 } from 'lucide-react';
 
 function ProtectedRoute({ children, allowedRoles, isForcePasswordRoute = false }) {
@@ -37,7 +48,7 @@ function ProtectedRoute({ children, allowedRoles, isForcePasswordRoute = false }
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user?.role?.toLowerCase())) {
+  if (allowedRoles && !allowedRoles.map(r => r.toLowerCase()).includes(user?.role?.toString().toLowerCase().trim())) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -45,245 +56,405 @@ function ProtectedRoute({ children, allowedRoles, isForcePasswordRoute = false }
 }
 
 function MainLayout({ children }) {
+  const token = useAuthStore((state) => state.accessToken);
   const { user, clearAuth } = useAuthStore();
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const [inventoryOpen, setInventoryOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [notificationsData, setNotificationsData] = useState(null);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const popoverRef = useRef(null);
 
   const isAdmin = user?.role === 'admin';
 
-  const isInventoryActive =
-    location.pathname.startsWith('/hardware') || location.pathname.startsWith('/accessories');
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setInventoryOpen(false);
+  const fetchNotificationsSummary = async () => {
+    if (!token) return;
+    setLoadingNotifs(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/notifications/summary', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.data) {
+        setNotificationsData(data.data);
       }
+    } catch (err) {
+      console.error('Bildirim özeti yüklenemedi:', err);
+    } finally {
+      setLoadingNotifs(false);
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  };
 
-  // Close menus on route change
   useEffect(() => {
-    setInventoryOpen(false);
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
+    fetchNotificationsSummary();
+  }, [token, location.pathname]);
+
+  // Click outside & ESC key handler to close popover
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        setPopoverOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setPopoverOpen(false);
+      }
+    };
+
+    if (popoverOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [popoverOpen]);
+
+  const navItems = [
+    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { label: 'Zimmetleme', path: '/assignments', icon: ClipboardCheck },
+    { label: 'Zimmet İade', path: '/returns', icon: RotateCcw },
+    { label: 'Varlıklar', path: '/hardware', icon: Monitor },
+    { label: 'Lisans', path: '/licenses', icon: Key },
+    { label: 'Aksesuar', path: '/accessories', icon: Headphones },
+    { label: 'Sarf Malzeme', path: '/consumables', icon: Package },
+    { label: 'Bileşen', path: '/components', icon: Cpu },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#F0F4F8] flex flex-col font-sans">
-      {/* Üst Kurumsal Header */}
-      <header className="bg-[#1E2534] text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/dashboard" className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#4F8FE0] text-white flex items-center justify-center font-bold shadow-xs">
-                <Tag className="w-4 h-4" />
-              </div>
-              <span className="font-heading text-base font-bold text-white tracking-tight hidden sm:inline">
-                Demirbaş Takip Sistemi
-              </span>
-            </Link>
-
-            {/* Masaüstü Navigasyon Tabları */}
-            <nav className="hidden md:flex items-center gap-1.5">
-              {/* Genel Bakış */}
-              <Link
-                to="/dashboard"
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors ${
-                  location.pathname === '/dashboard'
-                    ? 'bg-[#4F8FE0] text-white'
-                    : 'text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Genel Bakış</span>
-              </Link>
-
-              {/* Envanter (Açılır Grup) */}
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setInventoryOpen((prev) => !prev)}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer ${
-                    isInventoryActive
-                      ? 'bg-[#4F8FE0] text-white'
-                      : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <Boxes className="w-3.5 h-3.5" />
-                  <span>Envanter</span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform ${
-                      inventoryOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-
-                {inventoryOpen && (
-                  <div className="absolute left-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-slate-800 animate-fade-in">
-                    <Link
-                      to="/hardware"
-                      className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold hover:bg-[#F0F4F8] transition-colors ${
-                        location.pathname.startsWith('/hardware')
-                          ? 'text-[#4F8FE0] bg-[#EAF2FC] font-bold'
-                          : 'text-slate-700'
-                      }`}
-                    >
-                      <Monitor className="w-4 h-4 text-[#4F8FE0]" />
-                      <span>Bilgisayar & Ekipman</span>
-                    </Link>
-                    <Link
-                      to="/accessories"
-                      className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold hover:bg-[#F0F4F8] transition-colors ${
-                        location.pathname.startsWith('/accessories')
-                          ? 'text-[#4F8FE0] bg-[#EAF2FC] font-bold'
-                          : 'text-slate-700'
-                      }`}
-                    >
-                      <Headphones className="w-4 h-4 text-[#4F8FE0]" />
-                      <span>Aksesuarlar</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
-
-              {/* Yazılımlar */}
-              <Link
-                to="/software"
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors ${
-                  location.pathname.startsWith('/software')
-                    ? 'bg-[#4F8FE0] text-white'
-                    : 'text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <Key className="w-3.5 h-3.5" />
-                <span>Yazılımlar</span>
-              </Link>
-
-              {/* Kullanıcı Yönetimi */}
-              {isAdmin && (
-                <Link
-                  to="/admin/users"
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors ${
-                    location.pathname.startsWith('/admin/users')
-                      ? 'bg-[#4F8FE0] text-white'
-                      : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>Kullanıcı Yönetimi</span>
-                </Link>
-              )}
-            </nav>
+    <div className="min-h-screen bg-[#F5F4EF] flex font-sans text-[#1E2534]">
+      {/* 1. PERMANENT LEFT SIDEBAR */}
+      <aside className="hidden lg:flex flex-col w-64 bg-[#1E2534] text-white shrink-0 sticky top-0 h-screen shadow-xl z-20">
+        {/* DİTAŞ Corporate Logo */}
+        <div className="p-5 border-b border-slate-700/60 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-md shrink-0">
+            <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="w-full h-full object-contain" />
           </div>
-
-          {/* Sağ Kullanıcı Bilgisi ve Mobil Menü Butonu */}
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex flex-col text-right">
-              <span className="text-xs font-semibold text-slate-200">{user?.fullName}</span>
-              <span className="text-[10px] text-[#4F8FE0] font-bold uppercase">{user?.role}</span>
-            </div>
-
-            <button
-              onClick={clearAuth}
-              className="hidden md:flex p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-              title="Çıkış Yap"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-
-            {/* Mobil Menü Butonu */}
-            <button
-              onClick={() => setMobileMenuOpen((prev) => !prev)}
-              className="md:hidden p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+          <div>
+            <h1 className="font-heading text-base font-bold tracking-tight text-white leading-tight">
+              DİTAŞ
+            </h1>
+            <p className="text-[11px] text-slate-300 font-medium tracking-wide uppercase">
+              Demirbaş Takip Sistemi
+            </p>
           </div>
         </div>
 
-        {/* Mobil Menü Çekmecesi */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-[#1E2534] border-b border-slate-800 px-4 pt-2 pb-4 space-y-2 text-xs">
-            <Link
-              to="/dashboard"
-              className={`flex items-center gap-2 p-2.5 rounded-lg font-semibold ${
-                location.pathname === '/dashboard' ? 'bg-[#4F8FE0] text-white' : 'text-slate-300'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Genel Bakış</span>
-            </Link>
+        {/* Sidebar Navigation */}
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto text-sm font-medium">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname.startsWith(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${isActive
+                  ? 'bg-[#4F8FE0] text-white font-bold shadow-xs'
+                  : 'text-slate-300 hover:bg-slate-700/60 hover:text-white'
+                  }`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
 
-            <div className="space-y-1 pl-2 border-l-2 border-slate-700 my-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block px-2 py-1">
-                Envanter
-              </span>
-              <Link
-                to="/hardware"
-                className={`flex items-center gap-2 p-2 rounded-lg font-semibold ${
-                  location.pathname.startsWith('/hardware') ? 'bg-[#4F8FE0] text-white' : 'text-slate-300'
+          {/* Users (Admin Only) */}
+          {isAdmin && (
+            <Link
+              to="/admin/users"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${location.pathname.startsWith('/admin/users')
+                ? 'bg-[#4F8FE0] text-white font-bold shadow-xs'
+                : 'text-slate-300 hover:bg-slate-700/60 hover:text-white'
                 }`}
+            >
+              <Users className="w-4 h-4 shrink-0" />
+              <span>Kullanıcı Yönetimi</span>
+            </Link>
+          )}
+
+          {/* Account Settings */}
+          <Link
+            to="/force-change-password"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-700/60 hover:text-white transition-all"
+          >
+            <Settings className="w-4 h-4 shrink-0" />
+            <span>Sistem Ayarları</span>
+          </Link>
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-slate-700/60 text-[11px] text-slate-300 flex items-center gap-2">
+          <span>DİTAŞ Otomotiv © 2026</span>
+        </div>
+      </aside>
+
+      {/* 2. MAIN CONTENT WRAPPER */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* TOP NAVIGATION BAR */}
+        <header className="bg-white border-b border-slate-200 h-16 sticky top-0 z-10 flex items-center justify-between px-4 sm:px-6 shadow-xs">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setMobileSidebarOpen((prev) => !prev)}
+              className="lg:hidden p-2 rounded-xl border border-slate-200 text-[#1E2534] hover:bg-slate-100 transition cursor-pointer"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-4 pl-4">
+            <div className="relative" ref={popoverRef}>
+              <button
+                onClick={() => {
+                  setPopoverOpen((prev) => {
+                    const nextState = !prev;
+                    if (nextState) {
+                      fetchNotificationsSummary();
+                    }
+                    return nextState;
+                  });
+                }}
+                className="relative p-2 text-slate-500 hover:text-[#1E2534] hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                title="Bildirimler"
               >
-                <Monitor className="w-4 h-4" />
-                <span>Bilgisayar & Ekipman</span>
-              </Link>
-              <Link
-                to="/accessories"
-                className={`flex items-center gap-2 p-2 rounded-lg font-semibold ${
-                  location.pathname.startsWith('/accessories') ? 'bg-[#4F8FE0] text-white' : 'text-slate-300'
-                }`}
-              >
-                <Headphones className="w-4 h-4" />
-                <span>Aksesuarlar</span>
-              </Link>
+                <Bell className="w-5 h-5" />
+                {(notificationsData?.totalUnread || 0) > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-[10px] font-bold bg-rose-600 text-white rounded-full min-w-[18px] text-center leading-none ring-2 ring-white">
+                    {notificationsData.totalUnread}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Popover Dropdown Panel */}
+              {popoverOpen && (
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200 shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[80vh] sm:max-h-[480px]">
+                  {/* Header */}
+                  <div className="p-4 bg-[#1E2534] text-white flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-[#4F8FE0]" />
+                      <h3 className="font-heading text-sm font-bold">Bildirimler</h3>
+                    </div>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 bg-[#4F8FE0] text-white rounded-full">
+                      {notificationsData?.totalUnread || 0} Bildirim
+                    </span>
+                  </div>
+
+                  {/* Scrollable Content Body */}
+                  <div className="p-4 overflow-y-auto space-y-4 text-xs flex-1 divide-y divide-slate-100">
+                    {loadingNotifs && !notificationsData ? (
+                      <div className="py-8 text-center text-slate-400 font-medium">
+                        Bildirimler yükleniyor...
+                      </div>
+                    ) : (
+                      <>
+                        {/* 1. Süresi Yaklaşan Lisanslar */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                            <span>Süresi Yaklaşan Lisanslar</span>
+                            <span className="text-slate-400 font-mono">({notificationsData?.expiringLicenses?.totalCount || 0})</span>
+                          </div>
+
+                          {!notificationsData?.expiringLicenses?.items?.length ? (
+                            <p className="text-slate-400 italic text-[11px] py-1">Şu an bildirim yok</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {notificationsData.expiringLicenses.items.map((lic) => {
+                                const isExpired = lic.daysRemaining < 0;
+                                return (
+                                  <div
+                                    key={lic.id}
+                                    onClick={() => {
+                                      setPopoverOpen(false);
+                                      navigate(`/licenses?licenseId=${lic.id}`);
+                                    }}
+                                    className="p-2.5 rounded-xl bg-slate-50 hover:bg-[#EAF2FC]/50 border border-slate-100 transition cursor-pointer flex items-center justify-between gap-2 group"
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <p className="font-bold text-[#1E2534] truncate group-hover:text-[#4F8FE0]">
+                                        {lic.brand} {lic.productInfo}
+                                      </p>
+                                      <p className="text-[11px] text-slate-500 truncate">
+                                        Birim: {lic.unit?.name || '-'}
+                                      </p>
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${
+                                      isExpired
+                                        ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                                        : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    }`}>
+                                      {isExpired ? `${Math.abs(lic.daysRemaining)} gün önce doldu` : `${lic.daysRemaining} gün kaldı`}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 2. Kritik Stoktaki Aksesuarlar */}
+                        <div className="pt-3 space-y-2">
+                          <div className="flex items-center justify-between text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                            <span>Kritik Stoktaki Aksesuarlar</span>
+                            <span className="text-slate-400 font-mono">({notificationsData?.criticalAccessories?.totalCount || 0})</span>
+                          </div>
+
+                          {!notificationsData?.criticalAccessories?.items?.length ? (
+                            <p className="text-slate-400 italic text-[11px] py-1">Şu an bildirim yok</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {notificationsData.criticalAccessories.items.map((acc) => (
+                                <div
+                                  key={acc.id}
+                                  onClick={() => {
+                                    setPopoverOpen(false);
+                                    navigate(`/accessories?accessoryId=${acc.id}`);
+                                  }}
+                                  className="p-2.5 rounded-xl bg-slate-50 hover:bg-[#EAF2FC]/50 border border-slate-100 transition cursor-pointer flex items-center justify-between gap-2 group"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-bold text-[#1E2534] truncate group-hover:text-[#4F8FE0]">
+                                      {acc.name}
+                                    </p>
+                                    {acc.brand && (
+                                      <p className="text-[11px] text-slate-500 truncate">Marka: {acc.brand}</p>
+                                    )}
+                                  </div>
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200 shrink-0">
+                                    Kalan: {acc.available} adet
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 3. Kritik Stoktaki Sarf Malzemeler */}
+                        <div className="pt-3 space-y-2">
+                          <div className="flex items-center justify-between text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                            <span>Kritik Stoktaki Sarf Malzemeler</span>
+                            <span className="text-slate-400 font-mono">({notificationsData?.criticalConsumables?.totalCount || 0})</span>
+                          </div>
+
+                          {!notificationsData?.criticalConsumables?.items?.length ? (
+                            <p className="text-slate-400 italic text-[11px] py-1">Şu an bildirim yok</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {notificationsData.criticalConsumables.items.map((con) => (
+                                <div
+                                  key={con.id}
+                                  onClick={() => {
+                                    setPopoverOpen(false);
+                                    navigate(`/consumables?consumableId=${con.id}`);
+                                  }}
+                                  className="p-2.5 rounded-xl bg-slate-50 hover:bg-[#EAF2FC]/50 border border-slate-100 transition cursor-pointer flex items-center justify-between gap-2 group"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-bold text-[#1E2534] truncate group-hover:text-[#4F8FE0]">
+                                      {con.name}
+                                    </p>
+                                  </div>
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                                    Kalan: {con.available} adet
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <Link
-              to="/software"
-              className={`flex items-center gap-2 p-2.5 rounded-lg font-semibold ${
-                location.pathname.startsWith('/software') ? 'bg-[#4F8FE0] text-white' : 'text-slate-300'
-              }`}
-            >
-              <Key className="w-4 h-4" />
-              <span>Yazılımlar</span>
-            </Link>
-
-            {isAdmin && (
-              <Link
-                to="/admin/users"
-                className={`flex items-center gap-2 p-2.5 rounded-lg font-semibold ${
-                  location.pathname.startsWith('/admin/users') ? 'bg-[#4F8FE0] text-white' : 'text-slate-300'
-                }`}
-              >
-                <Users className="w-4 h-4" />
-                <span>Kullanıcı Yönetimi</span>
-              </Link>
-            )}
-
-            <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-slate-200">{user?.fullName}</div>
-                <div className="text-[10px] text-[#4F8FE0] font-bold uppercase">{user?.role}</div>
+            <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
+              <div className="w-8 h-8 rounded-full bg-[#1E2534] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                {user?.fullName ? user.fullName.substring(0, 2).toUpperCase() : 'US'}
               </div>
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="text-xs font-semibold text-[#1E2534] truncate max-w-[140px]">
+                  {user?.fullName}
+                </span>
+                <span className="text-[10px] font-bold text-[#4F8FE0] uppercase tracking-wider">
+                  {user?.role}
+                </span>
+              </div>
+
               <button
                 onClick={clearAuth}
-                className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300 font-bold"
+                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer"
+                title="Güvenli Çıkış"
               >
-                <LogOut className="w-4 h-4" />
-                <span>Çıkış</span>
+                <LogOut className="w-4.5 h-4.5" />
               </button>
             </div>
           </div>
-        )}
-      </header>
+        </header>
 
-      {/* Ana İçerik */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">{children}</main>
+        {/* Mobile Sidebar Overlay */}
+        {mobileSidebarOpen && (
+          <div className="lg:hidden fixed inset-0 z-40 flex">
+            <div
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
+              onClick={() => setMobileSidebarOpen(false)}
+            ></div>
+            <div className="relative w-64 bg-[#1E2534] text-white flex flex-col h-full shadow-2xl z-50">
+              <div className="p-5 border-b border-slate-700/60 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="w-7 h-7 object-contain bg-white rounded-lg p-0.5" />
+                  <span className="font-heading font-bold text-white text-base">DİTAŞ Takip</span>
+                </div>
+                <button
+                  onClick={() => setMobileSidebarOpen(false)}
+                  className="text-slate-300 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto text-sm font-medium">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname.startsWith(item.path);
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${isActive ? 'bg-[#4F8FE0] text-white font-bold' : 'text-slate-300'
+                        }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+
+                {isAdmin && (
+                  <Link
+                    to="/admin/users"
+                    onClick={() => setMobileSidebarOpen(false)}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${location.pathname.startsWith('/admin/users') ? 'bg-[#4F8FE0] text-white font-bold' : 'text-slate-300'
+                      }`}
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>Kullanıcı Yönetimi</span>
+                  </Link>
+                )}
+              </nav>
+            </div>
+          </div>
+        )}
+
+        {/* MAIN BODY CONTENT AREA */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">{children}</main>
+      </div>
     </div>
   );
 }
@@ -315,11 +486,66 @@ export default function App() {
         />
 
         <Route
+          path="/assignments"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+              <MainLayout>
+                <AssignmentList />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/assignments/create"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']}>
+              <MainLayout>
+                <CreateAssignmentPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/returns"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+              <MainLayout>
+                <ReturnList />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/returns/create"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']}>
+              <MainLayout>
+                <CreateReturnPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/hardware"
           element={
             <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
               <MainLayout>
                 <HardwareList />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/licenses"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+              <MainLayout>
+                <LicenseList />
               </MainLayout>
             </ProtectedRoute>
           }
@@ -337,15 +563,29 @@ export default function App() {
         />
 
         <Route
-          path="/software"
+          path="/consumables"
           element={
             <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
               <MainLayout>
-                <SoftwareList />
+                <ConsumableList />
               </MainLayout>
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/components"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+              <MainLayout>
+                <ComponentList />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Backward compatibility redirects */}
+        <Route path="/software" element={<Navigate to="/licenses" replace />} />
 
         <Route
           path="/admin/users"

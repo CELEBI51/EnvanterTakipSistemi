@@ -1,24 +1,63 @@
 import cron from 'node-cron';
 import prisma from '../config/db.js';
-import { calculateDaysRemaining } from '../modules/software/software.service.js';
+import { calculateDaysRemaining } from '../modules/licenses/license.service.js';
 
+/**
+ * Checks all active licenses for upcoming expiration dates (15, 7, 3, 0 days or expired)
+ * and creates notification entries in the database.
+ * 
+ * CRITICAL RULE:
+ * Notifications are EXCLUDED ONLY IF status === 'IPTAL_EDILDI'.
+ * All other statuses ('YENILENMEDI', 'YENILENMEYECEK', 'YENILENDI') produce notifications on 15, 7, 3, 0 thresholds.
+ */
 export const checkLicenseExpirations = async () => {
   try {
-    const allSoftware = await prisma.software.findMany();
+    const now = new Date();
+
+    // Update status to SURESI_DOLDU for licenses with status AKTIF or YENILENDI and endDate < now
+    await prisma.license.updateMany({
+      where: {
+        status: {
+          in: ['AKTIF', 'YENILENDI'],
+        },
+        endDate: {
+          lt: now,
+        },
+      },
+      data: {
+        status: 'SURESI_DOLDU',
+      },
+    });
+
+    // Fetch all licenses except status: IPTAL_EDILDI
+    const licenses = await prisma.license.findMany({
+      where: {
+        status: {
+          not: 'IPTAL_EDILDI',
+        },
+      },
+      include: {
+        unit: { select: { id: true, name: true } },
+      },
+    });
+
     const createdNotifications = [];
 
-    const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-    for (const sw of allSoftware) {
-      const daysRemaining = calculateDaysRemaining(sw.endDate);
+    for (const lic of licenses) {
+      // Exclude status: IPTAL_EDILDI strictly
+      if (lic.status === 'IPTAL_EDILDI') continue;
 
-      // AYNI gün için AYNI yazılığa tekrar bildirim oluşturma kontrolü
+      const daysRemaining = calculateDaysRemaining(lic.endDate);
+      const licTitle = `${lic.brand} - ${lic.productInfo}${lic.unit ? ` (${lic.unit.name})` : ''}`;
+
+      // Check if a notification for this license was already created today
       const alreadyNotifiedToday = await prisma.notification.findFirst({
         where: {
           type: 'license_expiring',
-          relatedId: sw.id,
+          relatedId: lic.id,
           createdAt: {
             gte: startOfToday,
             lte: endOfToday,
@@ -32,19 +71,19 @@ export const checkLicenseExpirations = async () => {
 
       let message = null;
 
-      // Pozitif eşikler: 15, 7, 3, 0 gün kalanlar
+      // Positive thresholds: 15, 7, 3, 0 days remaining
       if ([15, 7, 3, 0].includes(daysRemaining)) {
         if (daysRemaining === 0) {
-          message = `"${sw.name}" yazılımının lisansı bugün doluyor.`;
+          message = `"${licTitle}" lisansı bugün doluyor.`;
         } else {
-          message = `"${sw.name}" yazılımının lisansı ${daysRemaining} gün içinde doluyor.`;
+          message = `"${licTitle}" lisansı ${daysRemaining} gün içinde doluyor.`;
         }
       } else if (daysRemaining < 0) {
-        // Negatif değerler (süresi dolmuş) için daha önce "doldu" bildirimi oluşturulmuş mu?
+        // Negative values (already expired) - check if "doldu" notification already exists
         const alreadyNotifiedExpired = await prisma.notification.findFirst({
           where: {
             type: 'license_expiring',
-            relatedId: sw.id,
+            relatedId: lic.id,
             message: {
               contains: 'doldu',
             },
@@ -52,7 +91,7 @@ export const checkLicenseExpirations = async () => {
         });
 
         if (!alreadyNotifiedExpired) {
-          message = `"${sw.name}" yazılımının lisansı ${Math.abs(daysRemaining)} gün önce doldu.`;
+          message = `"${licTitle}" lisansı ${Math.abs(daysRemaining)} gün önce doldu.`;
         }
       }
 
@@ -60,7 +99,7 @@ export const checkLicenseExpirations = async () => {
         const notif = await prisma.notification.create({
           data: {
             type: 'license_expiring',
-            relatedId: sw.id,
+            relatedId: lic.id,
             message,
           },
         });
@@ -76,7 +115,7 @@ export const checkLicenseExpirations = async () => {
 };
 
 export const initLicenseExpiryJob = () => {
-  // Her gün saat 09:00'da çalışır
+  // Runs daily at 09:00 AM
   cron.schedule('0 9 * * *', async () => {
     console.log('[LicenseExpiryJob] Günlük lisans kontrolü başlatılıyor (09:00)...');
     await checkLicenseExpirations();

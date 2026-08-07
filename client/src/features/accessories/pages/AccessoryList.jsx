@@ -1,60 +1,105 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  Package,
   Plus,
   Search,
   PlusCircle,
   AlertTriangle,
   History,
   Trash2,
-  AlertCircle,
   ChevronLeft,
   ChevronRight,
-  TrendingDown,
+  Download,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import AddAccessoryModal from '../components/AddAccessoryModal';
-import RestockAccessoryModal from '../components/RestockAccessoryModal';
-import MarkDefectiveModal from '../components/MarkDefectiveModal';
-import AccessoryHistoryModal from '../components/AccessoryHistoryModal';
-
-const CATEGORIES = [
-  'Tümü',
-  'Mouse',
-  'Klavye',
-  'Kulaklık',
-  'Kamera',
-  'Depolama Birimi',
-  'Diğer',
-];
+import AccessoryDetailManageModal from '../components/AccessoryDetailManageModal';
 
 export default function AccessoryList() {
+  const [searchParams] = useSearchParams();
+  const accessoryIdParam = searchParams.get('accessoryId') || searchParams.get('id');
+
   const token = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
 
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState(['Tümü']);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Filtering & Pagination States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tümü');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedAccessory, setSelectedAccessory] = useState(null);
-  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
-  const [isMarkDefectiveModalOpen, setIsMarkDefectiveModalOpen] = useState(false);
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [manageModalInitialTab, setManageModalInitialTab] = useState('restock');
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [stats, setStats] = useState({ totalProducts: 0, outOfStock: 0, totalAssignedQuantity: 0 });
+
   const canEdit = user?.role === 'admin' || user?.role === 'it_staff';
+
+  useEffect(() => {
+    fetchCategories();
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    if (accessoryIdParam && token) {
+      const fetchTarget = async () => {
+        try {
+          const res = await fetch(`http://localhost:5000/api/accessories/${accessoryIdParam}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json();
+          if (res.ok && data.data) {
+            setSelectedAccessory(data.data);
+            setManageModalInitialTab('restock');
+            setIsManageModalOpen(true);
+          }
+        } catch (err) {
+          console.error('Aksesuar detayı alınamadı:', err);
+        }
+      };
+      fetchTarget();
+    }
+  }, [accessoryIdParam, token]);
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/accessories/stats', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.data) {
+        setStats(data.data);
+      }
+    } catch (err) {
+      console.error('Aksesuar istatistikleri alınamadı:', err);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/categories?parentType=Aksesuar', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.data) {
+        const catNames = data.data.map((c) => c.name);
+        setCategories(['Tümü', ...catNames]);
+      }
+    } catch (err) {
+      console.error('Aksesuar kategorileri alınamadı:', err);
+    }
+  };
 
   const fetchAccessories = async () => {
     setLoading(true);
@@ -119,56 +164,135 @@ export default function AccessoryList() {
     }
   };
 
+  const exportToCSV = () => {
+    if (!items.length) return;
+    const headers = [
+      'Ürün Adı',
+      'Kategori',
+      'Marka',
+      'Tedarikçi',
+      'Toplam Stok',
+      'Hazır Stok',
+      'Zimmetli',
+      'Kullanım Dışı',
+    ];
+    const rows = items.map((i) => [
+      i.name,
+      i.category,
+      i.brand || '',
+      i.supplier || '',
+      i.totalQuantity,
+      i.availableQuantity,
+      i.assignedQuantity,
+      i.outOfUseQuantity,
+    ]);
+    const csvContent =
+      'data:text/csv;charset=utf-8,\uFEFF' +
+      [headers.join(','), ...rows.map((e) => e.map((x) => `"${x}"`).join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `DITAS_Aksesuar_Stok_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Top Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 pb-12">
+      {/* Header */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-heading text-xl sm:text-2xl font-bold text-[#1E2534] tracking-tight">
-            Aksesuar Stok Yönetimi
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+            DİTAŞ Otomotiv • Aksesuar Yönetimi
+          </span>
+          <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
+            Aksesuar Stok Listesi
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Mouse, klavye, kulaklık ve diğer çevre birimlerinin adetli stok takibi.
+          <p className="text-xs text-slate-500 mt-1">
+            Mouse, klavye, kulaklık ve diğer çevre birimlerinin miktar bazlı stok takibi.
           </p>
         </div>
 
-        {canEdit && (
+        <div className="flex items-center gap-2.5 shrink-0">
           <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] active:bg-[#3566AD] text-white text-xs sm:text-sm font-bold shadow-xs transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+            onClick={exportToCSV}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-medium transition cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            Yeni Aksesuar Ekle
+            <Download className="w-3.5 h-3.5" />
+            Dışa Aktar (CSV)
           </button>
-        )}
+
+          {canEdit && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] text-white text-xs font-bold transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Yeni Aksesuar Ekle
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Accessory Statistics Summary Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Toplam Ürün Çeşidi */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+            Toplam Ürün Çeşidi
+          </span>
+          <div className="text-2xl font-bold font-heading text-[#1E2534]">
+            {stats.totalProducts}
+          </div>
+        </div>
+
+        {/* Stokta Tükenen */}
+        <div className="bg-amber-50/60 p-5 rounded-2xl border border-amber-200 shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block mb-1">
+            Stokta Tükenen
+          </span>
+          <div className="text-2xl font-bold font-heading text-amber-900">
+            {stats.outOfStock}
+          </div>
+        </div>
+
+        {/* Toplam Zimmetli Adet */}
+        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+            Toplam Zimmetli Adet
+          </span>
+          <div className="text-2xl font-bold font-heading text-slate-700">
+            {stats.totalAssignedQuantity}
+          </div>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-3">
+      <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
         <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3">
-          {/* Search Input */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Aksesuar adı veya marka ara..."
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-[#E2E8F0] text-xs font-medium text-[#1E2534] placeholder-slate-400 focus:outline-hidden focus:border-[#4F8FE0] focus:ring-1 focus:ring-[#4F8FE0]"
+              placeholder="Aksesuar ürün adı veya marka ara..."
+              className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs text-[#1E2534] focus:border-[#4F8FE0]"
             />
           </div>
 
           <button
             type="submit"
-            className="px-4 py-2 rounded-xl bg-[#1E2534] hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-[#1E2534] hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer"
           >
-            Ara
+            Filtrele
           </button>
         </form>
 
-        {/* Category Pills */}
+        {/* Dynamic Category Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const isActive = selectedCategory === cat;
             return (
               <button
@@ -177,10 +301,10 @@ export default function AccessoryList() {
                   setSelectedCategory(cat);
                   setPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition cursor-pointer ${
                   isActive
-                    ? 'bg-[#4F8FE0] text-white shadow-2xs'
-                    : 'bg-[#F0F4F8] text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                    ? 'bg-[#4F8FE0] text-white font-bold'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 {cat}
@@ -190,157 +314,143 @@ export default function AccessoryList() {
         </div>
       </div>
 
-      {/* Main Table Content */}
-      {loading ? (
-        <div className="py-20 text-center text-xs text-slate-400 font-medium">
-          Aksesuar stoku yükleniyor...
-        </div>
-      ) : error ? (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium">
-          {error}
-        </div>
-      ) : items.length === 0 ? (
-        <EmptyState
-          icon={Package}
-          title="Aksesuar Bulunamadı"
-          description="Aradığınız kriterlere uygun aksesuar kaydı bulunmamaktadır."
-        />
-      ) : (
-        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+      {/* Table Section */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        {loading ? (
+          <div className="py-16 text-center text-xs text-slate-400">Yükleniyor...</div>
+        ) : error ? (
+          <div className="p-4 text-xs text-rose-600 font-medium">{error}</div>
+        ) : items.length === 0 ? (
+          <EmptyState
+            title="Kayıtlı Aksesuar Bulunamadı"
+            description="Seçilen kriterlere uygun aksesuar stoğu bulunamadı."
+          />
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#1E2534] text-white text-xs uppercase tracking-wider font-heading">
-                  <th className="py-3.5 px-4 font-bold">Aksesuar / Ürün Adı</th>
-                  <th className="py-3.5 px-4 font-bold">Kategori</th>
-                  <th className="py-3.5 px-4 font-bold">Marka</th>
-                  <th className="py-3.5 px-4 font-bold text-center">Hazır Stok</th>
-                  <th className="py-3.5 px-4 font-bold text-center">Zimmetli</th>
-                  <th className="py-3.5 px-4 font-bold text-center">Kullanım Dışı</th>
-                  <th className="py-3.5 px-4 font-bold text-center">Toplam</th>
-                  <th className="py-3.5 px-4 font-bold text-right">İşlemler</th>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="py-3.5 px-4">Aksesuar Ürün Adı</th>
+                  <th className="py-3.5 px-4">Kategori</th>
+                  <th className="py-3.5 px-4">Marka</th>
+                  <th className="py-3.5 px-4 text-center">Toplam Stok</th>
+                  <th className="py-3.5 px-4 text-center">Hazır Stok</th>
+                  <th className="py-3.5 px-4 text-center">Zimmetli</th>
+                  <th className="py-3.5 px-4 text-center">Kullanım Dışı</th>
+                  <th className="py-3.5 px-4 text-right">İşlemler</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
-                {items.map((acc) => {
+                {items.map((item) => {
                   const isLowStock =
-                    acc.minThreshold !== null &&
-                    acc.minThreshold !== undefined &&
-                    acc.availableQuantity <= acc.minThreshold;
+                    item.minThreshold !== null &&
+                    item.minThreshold !== undefined &&
+                    item.availableQuantity <= item.minThreshold;
 
-                  const isDeletable = acc.assignedQuantity === 0 && acc.outOfUseQuantity === 0;
+                  const isDeletable =
+                    canEdit && item.assignedQuantity === 0 && item.outOfUseQuantity === 0;
 
                   return (
-                    <tr key={acc.id} className="hover:bg-slate-50/80 transition-colors">
-                      {/* Ürün Adı & Düşük Stok Uyarısı */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-[#1E2534]">{acc.name}</span>
-                          {isLowStock && (
-                            <span
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0"
-                              title={`Hazır stok (${acc.availableQuantity}) minimum eşik değerinin (${acc.minThreshold}) altında!`}
-                            >
-                              <TrendingDown className="w-3 h-3 text-amber-600" />
-                              Stok Azaldı
-                            </span>
-                          )}
-                        </div>
-                        {acc.notes && <p className="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">{acc.notes}</p>}
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-[#1E2534]">{item.name}</div>
+                        {isLowStock && (
+                          <div className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                            Kritik Stok Uyarısı (&le; {item.minThreshold})
+                          </div>
+                        )}
                       </td>
 
-                      {/* Kategori */}
-                      <td className="py-3.5 px-4 text-slate-600 font-medium">{acc.category}</td>
-
-                      {/* Marka */}
-                      <td className="py-3.5 px-4 font-semibold text-slate-700">{acc.brand || '-'}</td>
-
-                      {/* Hazır Stok (Yeşil Rozet) */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="inline-flex items-center justify-center min-w-8 px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          {acc.availableQuantity}
+                      <td className="py-3 px-4">
+                        <span className="inline-block px-2.5 py-1 rounded bg-slate-100 text-slate-700 font-medium">
+                          {item.category}
                         </span>
                       </td>
 
-                      {/* Zimmetli (Mavi Rozet) */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="inline-flex items-center justify-center min-w-8 px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                          {acc.assignedQuantity}
+                      <td className="py-3 px-4 text-slate-700">{item.brand || '-'}</td>
+
+                      <td className="py-3 px-4 text-center font-mono font-bold text-[#1E2534]">
+                        {item.totalQuantity}
+                      </td>
+
+                      <td className="py-3 px-4 text-center">
+                        <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                          {item.availableQuantity}
                         </span>
                       </td>
 
-                      {/* Kullanım Dışı (Turuncu Rozet) */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="inline-flex items-center justify-center min-w-8 px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                          {acc.outOfUseQuantity}
-                        </span>
+                      <td className="py-3 px-4 text-center font-mono text-slate-600">
+                        {item.assignedQuantity}
                       </td>
 
-                      {/* Toplam Stok */}
-                      <td className="py-3.5 px-4 text-center font-mono font-bold text-[#1E2534]">
-                        {acc.totalQuantity}
+                      <td className="py-3 px-4 text-center font-mono text-slate-500">
+                        {item.outOfUseQuantity}
                       </td>
 
-                      {/* İşlem Butonları */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-1">
                           {canEdit && (
                             <>
-                              {/* Stok Ekle */}
                               <button
+                                type="button"
                                 onClick={() => {
-                                  setSelectedAccessory(acc);
-                                  setIsRestockModalOpen(true);
+                                  setSelectedAccessory(item);
+                                  setManageModalInitialTab('restock');
+                                  setIsManageModalOpen(true);
                                 }}
-                                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
-                                title="Stok Ekle (+)"
+                                className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded transition cursor-pointer"
+                                title="Stok Ekle"
                               >
                                 <PlusCircle className="w-4 h-4" />
                               </button>
 
-                              {/* Arızalı Ayır */}
                               <button
+                                type="button"
                                 onClick={() => {
-                                  setSelectedAccessory(acc);
-                                  setIsMarkDefectiveModalOpen(true);
+                                  setSelectedAccessory(item);
+                                  setManageModalInitialTab('defective');
+                                  setIsManageModalOpen(true);
                                 }}
-                                className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
-                                title="Arızalı / Kullanım Dışı Ayır"
+                                className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-slate-100 rounded transition cursor-pointer"
+                                title="Arızalı Stok Ayır"
                               >
                                 <AlertTriangle className="w-4 h-4" />
                               </button>
                             </>
                           )}
 
-                          {/* Stok Geçmişi (Tüm Roller) */}
                           <button
+                            type="button"
                             onClick={() => {
-                              setSelectedAccessory(acc);
-                              setIsHistoryModalOpen(true);
+                              setSelectedAccessory(item);
+                              setManageModalInitialTab('history');
+                              setIsManageModalOpen(true);
                             }}
-                            className="p-1.5 rounded-lg text-[#4F8FE0] hover:bg-[#EAF2FC] transition-colors cursor-pointer"
-                            title="Stok Hareket Geçmişi"
+                            className="p-1.5 text-slate-400 hover:text-[#4F8FE0] hover:bg-slate-100 rounded transition cursor-pointer"
+                            title="Yönetim & Hareket Geçmişi"
                           >
                             <History className="w-4 h-4" />
                           </button>
 
-                          {/* Silme (Admin & IT Staff - Sadece Zimmetsiz ve Arızasız) */}
                           {canEdit && (
                             <button
+                              type="button"
                               disabled={!isDeletable}
                               onClick={() => {
-                                setSelectedAccessory(acc);
+                                if (!isDeletable) return;
+                                setSelectedAccessory(item);
                                 setIsDeleteConfirmOpen(true);
                               }}
-                              className={`p-1.5 rounded-lg transition-colors ${
+                              className={`p-1.5 rounded transition ${
                                 isDeletable
-                                  ? 'text-rose-600 hover:bg-rose-50 cursor-pointer'
-                                  : 'text-slate-300 cursor-not-allowed'
+                                  ? 'text-slate-400 hover:text-rose-600 hover:bg-slate-100 cursor-pointer'
+                                  : 'text-slate-200 cursor-not-allowed'
                               }`}
                               title={
                                 isDeletable
-                                  ? 'Aksesuar Türünü Sil'
-                                  : 'Zimmetli veya arızalı adeti bulunan aksesuar silinemez'
+                                  ? 'Aksesuarı Sil'
+                                  : 'Zimmetli veya kullanım dışı stoğu bulunan aksesuar silinemez'
                               }
                             >
                               <Trash2 className="w-4 h-4" />
@@ -354,101 +464,79 @@ export default function AccessoryList() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 rounded-2xl border border-[#E2E8F0] shadow-sm text-xs font-semibold">
-          <div className="text-slate-500">
-            Sayfa <span className="text-[#1E2534] font-bold">{page}</span> / {totalPages} (Toplam{' '}
-            {totalCount} aksesuar türü)
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-slate-200 flex items-center justify-between text-xs">
+            <span className="text-slate-500">
+              Toplam {totalCount} kayıttan {((page - 1) * 10) + 1} - {Math.min(page * 10, totalCount)} arası gösteriliyor
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-600" />
+              </button>
+              <span className="font-semibold text-slate-700">
+                Sayfa {page} / {totalPages}
+              </span>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
           </div>
+        )}
+      </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              disabled={page === 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" /> Önceki
-            </button>
-
-            <button
-              disabled={page === totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            >
-              Sonraki <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Add Accessory Modal */}
+      {/* Modals */}
       <AddAccessoryModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={() => {
           setIsAddModalOpen(false);
           fetchAccessories();
+          fetchStats();
         }}
       />
 
-      {/* Restock Modal */}
-      <RestockAccessoryModal
-        isOpen={isRestockModalOpen}
-        onClose={() => {
-          setIsRestockModalOpen(false);
-          setSelectedAccessory(null);
-        }}
-        accessory={selectedAccessory}
-        onSuccess={() => {
-          setIsRestockModalOpen(false);
-          setSelectedAccessory(null);
-          fetchAccessories();
-        }}
-      />
+      {selectedAccessory && (
+        <>
+          <AccessoryDetailManageModal
+            isOpen={isManageModalOpen}
+            onClose={() => {
+              setIsManageModalOpen(false);
+              setSelectedAccessory(null);
+            }}
+            accessory={selectedAccessory}
+            initialTab={manageModalInitialTab}
+            onSuccess={() => {
+              fetchAccessories();
+              fetchStats();
+            }}
+          />
 
-      {/* Mark Defective Modal */}
-      <MarkDefectiveModal
-        isOpen={isMarkDefectiveModalOpen}
-        onClose={() => {
-          setIsMarkDefectiveModalOpen(false);
-          setSelectedAccessory(null);
-        }}
-        accessory={selectedAccessory}
-        onSuccess={() => {
-          setIsMarkDefectiveModalOpen(false);
-          setSelectedAccessory(null);
-          fetchAccessories();
-        }}
-      />
-
-      {/* History Modal */}
-      <AccessoryHistoryModal
-        isOpen={isHistoryModalOpen}
-        onClose={() => {
-          setIsHistoryModalOpen(false);
-          setSelectedAccessory(null);
-        }}
-        accessoryId={selectedAccessory?.id}
-        accessoryName={selectedAccessory?.name}
-      />
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={isDeleteConfirmOpen}
-        title="Aksesuar Türünü Sil"
-        message={`"${selectedAccessory?.name}" adlı aksesuar kaydını tamamen silmek istediğinize emin misiniz? Bu işlem geri alanamaz.`}
-        confirmText={deleting ? 'Siliniyor...' : 'Evet, Sil'}
-        confirmVariant="danger"
-        onConfirm={handleDeleteConfirmed}
-        onCancel={() => {
-          setIsDeleteConfirmOpen(false);
-          setSelectedAccessory(null);
-        }}
-      />
+          <ConfirmModal
+            isOpen={isDeleteConfirmOpen}
+            title="Aksesuarı Sil"
+            message={`"${selectedAccessory.name}" aksesuar türünü silmek istediğinize emin misiniz?`}
+            confirmText={deleting ? 'Siliniyor...' : 'Evet, Sil'}
+            confirmVariant="danger"
+            onConfirm={handleDeleteConfirmed}
+            onCancel={() => {
+              setIsDeleteConfirmOpen(false);
+              setSelectedAccessory(null);
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -107,13 +107,13 @@ export default function RestockAccessoryModal({ isOpen, onClose, accessory, onSu
 
           <div>
             <label className="block text-xs font-bold text-[#1E2534] mb-1">
-              Not / Sipariş Açıklaması <span className="text-slate-400 font-normal">(opsiyonel)</span>
+              Not / Sipariş Açıklaması
             </label>
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="ör. Satın alımdan 10 adet eklendi"
+              placeholder=""
               className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-xs text-[#1E2534] focus:outline-hidden focus:border-[#4F8FE0] focus:ring-1 focus:ring-[#4F8FE0]"
             />
           </div>

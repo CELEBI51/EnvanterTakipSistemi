@@ -27,6 +27,52 @@ enum AssignmentStatus {
   IadeEdildi @map("İade Edildi")
 }
 
+enum LicensePaymentType {
+  KREDI_KARTI @map("Kredi Kartı")
+  NAKIT       @map("Nakit")
+  VADELI      @map("Vadeli")
+}
+
+enum LicenseStatus {
+  AKTIF          @map("Aktif")
+  YENILENDI      @map("Yenilendi")
+  YENILENMEDI    @map("Yenilenmedi")
+  YENILENMEYECEK @map("Yenilenmeyecek")
+  IPTAL_EDILDI   @map("İptal Edildi")
+  SURESI_DOLDU   @map("Süresi Doldu")
+}
+
+enum CategoryParentType {
+  AKSESUAR     @map("Aksesuar")
+  VARLIK       @map("Varlık")
+  SARF_MALZEME @map("Sarf Malzeme")
+  BILESEN      @map("Bileşen")
+  LISANS       @map("Lisans")
+}
+
+enum AttachmentEntityType {
+  hardware
+  accessory
+  license
+  consumable
+  component
+  assignment
+  return
+}
+
+enum AttachmentFileType {
+  invoice
+  signed_form
+}
+
+enum StockMovementEntityType {
+  hardware   @map("hardware")
+  accessory  @map("accessory")
+  consumable @map("consumable")
+  component  @map("component")
+  license    @map("license")
+}
+
 model User {
   id                 String   @id @default(uuid()) @db.Uuid
   fullName           String   @map("full_name")
@@ -36,85 +82,130 @@ model User {
   mustChangePassword Boolean  @default(true) @map("must_change_password")
   createdAt          DateTime @default(now()) @map("created_at")
 
-  createdHardware           Hardware[]
-  createdAssignments        Assignment[]
-  createdAccessories        Accessory[]
-  createdAccessoryMovements AccessoryStockMovement[]
+  createdHardware       Hardware[]
+  createdAssignments    Assignment[]
+  createdAccessories    Accessory[]
+  createdStockMovements StockMovement[]
+  uploadedAttachments   Attachment[]
+  createdLicenses       License[]
+  createdConsumables    Consumable[]
+  createdComponents     Component[]
+  createdMaintenances   MaintenanceRecord[]
 
   @@map("users")
 }
 
 model Employee {
-  id         String   @id @default(uuid()) @db.Uuid
-  fullName   String   @map("full_name")
-  tcNo       String   @unique @map("tc_no") @db.Char(11)
-  department String
-  phone      String?
-  email      String?
-  isActive   Boolean  @default(true) @map("is_active")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id        String   @id @default(uuid()) @db.Uuid
+  fullName  String   @map("full_name")
+  tcNo      String   @unique @map("tc_no") @db.Char(11)
+  unitId    String   @map("unit_id") @db.Uuid
+  unit      Unit     @relation(fields: [unitId], references: [id])
+  phone     String?
+  email     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  assignments Assignment[]
+  assignments    Assignment[]
+  stockMovements StockMovement[]
 
   @@index([tcNo])
-  @@index([department])
+  @@index([unitId])
   @@map("employees")
 }
 
+model Category {
+  id         String             @id @default(uuid()) @db.Uuid
+  parentType CategoryParentType @map("parent_type")
+  name       String
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  hardware    Hardware[]
+  accessories Accessory[]
+  consumables Consumable[]
+  components  Component[]
+
+  @@unique([parentType, name])
+  @@index([parentType])
+  @@map("categories")
+}
+
 model Hardware {
-  id                String         @id @default(uuid()) @db.Uuid
-  category          String
+  id                String            @id @default(uuid()) @db.Uuid
+  categoryId        String            @map("category_id") @db.Uuid
+  category          Category          @relation(fields: [categoryId], references: [id])
   brand             String
   model             String?
-  serialNo          String         @map("serial_no")
-  demirbasNo        String         @unique @map("demirbas_no")
-  specs             Json?          @db.JsonB
-  status            HardwareStatus @default(Hazir)
-  warrantyStartDate DateTime?      @map("warranty_start_date")
-  warrantyEndDate   DateTime?      @map("warranty_end_date")
-  createdById       String         @map("created_by") @db.Uuid
-  createdBy         User           @relation(fields: [createdById], references: [id])
-  createdAt         DateTime       @default(now()) @map("created_at")
-  updatedAt         DateTime       @updatedAt @map("updated_at")
+  serialNo          String            @map("serial_no")
+  demirbasNo        String            @unique @map("demirbas_no")
+  wifiMacAddress    String?           @map("wifi_mac_address")
+  location          String?           @map("location")
+  supplier          String?           @map("supplier")
+  invoiceNo         String?           @map("invoice_no")
+  purchaseDate      DateTime?         @map("purchase_date")
+  purchaseAmount    Decimal?          @map("purchase_amount") @db.Decimal(12, 2)
+  specs             Json?             @db.JsonB
+  status            HardwareStatus    @default(Hazir)
+  warrantyStartDate DateTime?         @map("warranty_start_date")
+  warrantyEndDate   DateTime?         @map("warranty_end_date")
+  createdById       String            @map("created_by") @db.Uuid
+  createdBy         User              @relation(fields: [createdById], references: [id])
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
 
-  assignedSoftware Software[]
-  assignmentItems  AssignmentItem[]
-  returnItems      ReturnItem[]
+  assignmentItems AssignmentItem[]
+  returnItems     ReturnItem[]
+  maintenances    MaintenanceRecord[]
 
   @@index([status])
-  @@index([category])
+  @@index([categoryId])
   @@map("hardware")
 }
 
-model Software {
-  id                 String    @id @default(uuid()) @db.Uuid
-  name               String
-  licenseKey         String    @map("license_key")
-  startDate          DateTime  @map("start_date")
-  endDate            DateTime  @map("end_date")
-  assignedHardwareId String?   @map("assigned_hardware_id") @db.Uuid
-  assignedHardware   Hardware? @relation(fields: [assignedHardwareId], references: [id])
-  notes              String?
-  createdAt          DateTime  @default(now()) @map("created_at")
+model License {
+  id            String             @id @default(uuid()) @db.Uuid
+  unitId        String             @map("unit_id") @db.Uuid
+  unit          Unit               @relation(fields: [unitId], references: [id])
+  brand         String
+  productInfo   String             @map("product_info")
+  licenseKey    String?            @map("license_key")
+  startDate     DateTime           @map("start_date")
+  endDate       DateTime           @map("end_date")
+  paymentType   LicensePaymentType @map("payment_type")
+  status        LicenseStatus      @default(AKTIF)
+  invoiceNumber String?            @map("invoice_number")
+  invoiceAmount Decimal?           @map("invoice_amount") @db.Decimal(12, 2)
+  notes         String?            @db.Text
+  createdById   String             @map("created_by") @db.Uuid
+  createdBy     User               @relation(fields: [createdById], references: [id])
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
 
+  @@index([unitId])
   @@index([endDate])
-  @@map("software")
+  @@index([status])
+  @@map("licenses")
 }
 
 model Assignment {
-  id           String           @id @default(uuid()) @db.Uuid
-  teslimEden   String           @map("teslim_eden")
-  employeeId   String           @map("employee_id") @db.Uuid
-  employee     Employee         @relation(fields: [employeeId], references: [id])
-  teslimTarihi DateTime         @map("teslim_tarihi")
-  status       AssignmentStatus @default(Aktif)
-  pdfUrl       String?          @map("pdf_url")
-  createdById  String           @map("created_by") @db.Uuid
-  createdBy    User             @relation(fields: [createdById], references: [id])
-  createdAt    DateTime         @default(now()) @map("created_at")
+  id                     String           @id @default(uuid()) @db.Uuid
+  teslimEden             String           @map("teslim_eden")
+  employeeId             String           @map("employee_id") @db.Uuid
+  employee               Employee         @relation(fields: [employeeId], references: [id])
+  teslimTarihi           DateTime         @map("teslim_tarihi")
+  status                 AssignmentStatus @default(Aktif)
+  pdfUrl                 String?          @map("pdf_url")
+  pdfPath                String?          @map("pdf_path") @db.Text
+  signedFormAttachmentId String?          @map("signed_form_attachment_id") @db.Uuid
+  signedFormAttachment   Attachment?      @relation("SignedFormAttachment", fields: [signedFormAttachmentId], references: [id])
+  createdById            String           @map("created_by") @db.Uuid
+  createdBy              User             @relation(fields: [createdById], references: [id])
+  createdAt              DateTime         @default(now()) @map("created_at")
 
-  items   AssignmentItem[]
-  returns Return[]
+  items           AssignmentItem[]
+  accessoryItems  AssignmentAccessoryItem[]
+  consumableItems AssignmentConsumableItem[]
+  returns         Return[]
 
   @@index([employeeId])
   @@index([status])
@@ -133,16 +224,47 @@ model AssignmentItem {
   @@map("assignment_items")
 }
 
-model Return {
+model AssignmentAccessoryItem {
+  id               String     @id @default(uuid()) @db.Uuid
+  assignmentId     String     @map("assignment_id") @db.Uuid
+  assignment       Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  accessoryId      String     @map("accessory_id") @db.Uuid
+  accessory        Accessory  @relation(fields: [accessoryId], references: [id])
+  quantityGiven    Int        @map("quantity_given")
+  quantityReturned Int        @default(0) @map("quantity_returned")
+
+  @@index([assignmentId])
+  @@index([accessoryId])
+  @@map("assignment_accessory_items")
+}
+
+model AssignmentConsumableItem {
   id           String     @id @default(uuid()) @db.Uuid
   assignmentId String     @map("assignment_id") @db.Uuid
-  assignment   Assignment @relation(fields: [assignmentId], references: [id])
-  teslimAlanIc String     @map("teslim_alan_ic")
-  tarih        DateTime
-  notes        String?
-  createdAt    DateTime   @default(now()) @map("created_at")
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  consumableId String     @map("consumable_id") @db.Uuid
+  consumable   Consumable @relation(fields: [consumableId], references: [id])
+  quantityGiven Int       @map("quantity_given")
 
-  items ReturnItem[]
+  @@index([assignmentId])
+  @@index([consumableId])
+  @@map("assignment_consumable_items")
+}
+
+model Return {
+  id                     String      @id @default(uuid()) @db.Uuid
+  assignmentId           String      @map("assignment_id") @db.Uuid
+  assignment             Assignment  @relation(fields: [assignmentId], references: [id])
+  teslimAlanIc           String      @map("teslim_alan_ic")
+  tarih                  DateTime
+  notes                  String?
+  pdfPath                String?     @map("pdf_path") @db.Text
+  signedFormAttachmentId String?     @map("signed_form_attachment_id") @db.Uuid
+  signedFormAttachment   Attachment? @relation("SignedFormReturnAttachment", fields: [signedFormAttachmentId], references: [id])
+  createdAt              DateTime    @default(now()) @map("created_at")
+
+  items          ReturnItem[]
+  accessoryItems ReturnAccessoryItem[]
 
   @@map("returns")
 }
@@ -158,6 +280,20 @@ model ReturnItem {
   @@map("return_items")
 }
 
+model ReturnAccessoryItem {
+  id               String     @id @default(uuid()) @db.Uuid
+  returnId         String     @map("return_id") @db.Uuid
+  return           Return     @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  accessoryId      String     @map("accessory_id") @db.Uuid
+  accessory        Accessory  @relation(fields: [accessoryId], references: [id])
+  quantityReturned Int        @map("quantity_returned")
+  resultStatus     String?    @map("result_status")
+
+  @@index([returnId])
+  @@index([accessoryId])
+  @@map("return_accessory_items")
+}
+
 model Notification {
   id        String   @id @default(uuid()) @db.Uuid
   type      String
@@ -170,38 +306,174 @@ model Notification {
 }
 
 model Accessory {
-  id                String   @id @default(uuid()) @db.Uuid
+  id                String                    @id @default(uuid()) @db.Uuid
   name              String
-  category          String
+  categoryId        String                    @map("category_id") @db.Uuid
+  category          Category                  @relation(fields: [categoryId], references: [id])
   brand             String?
-  totalQuantity     Int      @default(0) @map("total_quantity")
-  availableQuantity Int      @default(0) @map("available_quantity")
-  assignedQuantity  Int      @default(0) @map("assigned_quantity")
-  outOfUseQuantity  Int      @default(0) @map("out_of_use_quantity")
-  minThreshold      Int?     @map("min_threshold")
-  notes             String?
-  createdById       String   @map("created_by") @db.Uuid
-  createdBy         User     @relation(fields: [createdById], references: [id])
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  supplier          String?                   @map("supplier")
+  invoiceNo         String?                   @map("invoice_no")
+  purchaseDate      DateTime?                 @map("purchase_date")
+  purchaseAmount    Decimal?                  @map("purchase_amount") @db.Decimal(12, 2)
+  totalQuantity     Int                       @default(0) @map("total_quantity")
+  availableQuantity Int                       @default(0) @map("available_quantity")
+  assignedQuantity  Int                       @default(0) @map("assigned_quantity")
+  outOfUseQuantity  Int                       @default(0) @map("out_of_use_quantity")
+  minThreshold      Int?                      @map("min_threshold")
+  notes             String?                   @db.Text
+  createdById       String                    @map("created_by") @db.Uuid
+  createdBy         User                      @relation(fields: [createdById], references: [id])
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  updatedAt         DateTime                  @updatedAt @map("updated_at")
 
-  stockMovements AccessoryStockMovement[]
+  assignmentItems   AssignmentAccessoryItem[]
+  returnItems       ReturnAccessoryItem[]
 
-  @@index([category])
+  @@index([categoryId])
   @@map("accessories")
 }
 
-model AccessoryStockMovement {
-  id          String    @id @default(uuid()) @db.Uuid
-  accessoryId String    @map("accessory_id") @db.Uuid
-  accessory   Accessory @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
-  type        String
-  quantity    Int
-  note        String?
-  createdById String    @map("created_by") @db.Uuid
-  createdBy   User      @relation(fields: [createdById], references: [id])
-  createdAt   DateTime  @default(now()) @map("created_at")
+model Consumable {
+  id                String                     @id @default(uuid()) @db.Uuid
+  name              String
+  categoryId        String                     @map("category_id") @db.Uuid
+  category          Category                   @relation(fields: [categoryId], references: [id])
+  manufacturer      String?
+  supplier          String?
+  location          String?
+  totalQuantity     Int                        @default(0) @map("total_quantity")
+  availableQuantity Int                        @default(0) @map("available_quantity")
+  consumedQuantity  Int                        @default(0) @map("consumed_quantity")
+  invoiceNo         String?                    @map("invoice_no")
+  purchaseDate      DateTime?                  @map("purchase_date")
+  purchaseAmount    Decimal?                   @map("purchase_amount") @db.Decimal(12, 2)
+  notes             String?                    @db.Text
+  createdById       String                     @map("created_by") @db.Uuid
+  createdBy         User                       @relation(fields: [createdById], references: [id])
+  createdAt         DateTime                   @default(now()) @map("created_at")
+  updatedAt         DateTime                   @updatedAt @map("updated_at")
 
-  @@index([accessoryId])
-  @@map("accessory_stock_movements")
+  assignmentItems   AssignmentConsumableItem[]
+
+  @@index([categoryId])
+  @@map("consumables")
 }
+
+model Component {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  name                  String
+  categoryId            String                 @map("category_id") @db.Uuid
+  category              Category               @relation(fields: [categoryId], references: [id])
+  brand                 String?
+  model                 String?
+  location              String?
+  supplier              String?
+  totalQuantity         Int                    @default(0) @map("total_quantity")
+  availableQuantity     Int                    @default(0) @map("available_quantity")
+  usedQuantity          Int                    @default(0) @map("used_quantity")
+  invoiceNo             String?                @map("invoice_no")
+  purchaseDate          DateTime?              @map("purchase_date")
+  purchaseAmount        Decimal?               @map("purchase_amount") @db.Decimal(12, 2)
+  notes                 String?                @db.Text
+  createdById           String                 @map("created_by") @db.Uuid
+  createdBy             User                   @relation(fields: [createdById], references: [id])
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+
+  maintenanceComponents MaintenanceComponent[]
+
+  @@index([categoryId])
+  @@map("components")
+}
+
+model StockMovement {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  entityType         StockMovementEntityType @map("entity_type")
+  entityId           String                  @map("entity_id") @db.Uuid
+  type               String
+  quantity           Int
+  note               String?                 @db.Text
+  issuedToEmployeeId String?                 @map("issued_to_employee_id") @db.Uuid
+  issuedToEmployee   Employee?               @relation(fields: [issuedToEmployeeId], references: [id])
+  createdById        String                  @map("created_by") @db.Uuid
+  createdBy          User                    @relation(fields: [createdById], references: [id])
+  createdAt          DateTime                @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@map("stock_movements")
+}
+
+model Attachment {
+  id           String               @id @default(uuid()) @db.Uuid
+  entityType   AttachmentEntityType @map("entity_type")
+  entityId     String               @map("entity_id") @db.Uuid
+  fileType     AttachmentFileType   @map("file_type")
+  filePath     String               @map("file_path")
+  originalName String?              @map("original_name")
+  uploadedById String?              @map("uploaded_by") @db.Uuid
+  uploadedBy   User?                @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  signedFormAssignments Assignment[] @relation("SignedFormAttachment")
+  signedFormReturns     Return[]     @relation("SignedFormReturnAttachment")
+
+  @@index([entityType, entityId])
+  @@map("attachments")
+}
+
+model MaintenanceRecord {
+  id                     String    @id @default(uuid()) @db.Uuid
+  name                   String
+  hardwareId             String    @map("hardware_id") @db.Uuid
+  hardware               Hardware  @relation(fields: [hardwareId], references: [id])
+  maintenanceType        String    @map("maintenance_type")
+  customTypeNote         String?   @map("custom_type_note") @db.Text
+  startDate              DateTime  @map("start_date")
+  endDate                DateTime? @map("end_date")
+  cost                   Decimal?  @db.Decimal(10, 2)
+  notes                  String?   @db.Text
+  status                 String    @default("Devam Ediyor")
+  previousHardwareStatus String    @map("previous_hardware_status")
+  appliedResultStatus    String?   @map("applied_result_status")
+  createdById            String    @map("created_by") @db.Uuid
+  createdBy              User      @relation(fields: [createdById], references: [id])
+  createdAt              DateTime  @default(now()) @map("created_at")
+
+  components MaintenanceComponent[]
+
+  @@index([hardwareId])
+  @@index([status])
+  @@map("maintenance_records")
+}
+
+model MaintenanceComponent {
+  id            String            @id @default(uuid()) @db.Uuid
+  maintenanceId String            @map("maintenance_id") @db.Uuid
+  maintenance   MaintenanceRecord @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+  componentId   String            @map("component_id") @db.Uuid
+  component     Component         @relation(fields: [componentId], references: [id])
+  quantityUsed  Int               @map("quantity_used")
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  @@index([maintenanceId])
+  @@index([componentId])
+  @@map("maintenance_components")
+}
+
+model Unit {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @unique
+  address       String?
+  phone         String?
+  contactPerson String?  @map("contact_person")
+  email         String?
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  employees Employee[]
+  licenses  License[]
+
+  @@map("units")
+}
+

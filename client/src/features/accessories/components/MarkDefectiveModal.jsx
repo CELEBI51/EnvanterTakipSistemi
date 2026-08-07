@@ -69,7 +69,7 @@ export default function MarkDefectiveModal({ isOpen, onClose, accessory, onSucce
             </div>
             <div>
               <h3 className="font-heading text-base font-bold">Arızalı / Kullanım Dışı Ayır</h3>
-              <p className="text-[11px] text-slate-300 truncate max-w-[220px]">{accessory.name}</p>
+              <p className="text-[11px] text-[#A0AEC0] truncate max-w-[220px]">{accessory.name}</p>
             </div>
           </div>
           <button
@@ -113,13 +113,13 @@ export default function MarkDefectiveModal({ isOpen, onClose, accessory, onSucce
 
           <div>
             <label className="block text-xs font-bold text-[#1E2534] mb-1">
-              Arıza / Ayrılma Nedeni <span className="text-slate-400 font-normal">(opsiyonel)</span>
+              Arıza / Ayrılma Nedeni
             </label>
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="ör. Kablosu kopuk, sıvı teması var"
+              placeholder=""
               className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-xs text-[#1E2534] focus:outline-hidden focus:border-[#4F8FE0] focus:ring-1 focus:ring-[#4F8FE0]"
             />
           </div>

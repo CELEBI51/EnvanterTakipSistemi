@@ -1,0 +1,500 @@
+import React, { useEffect, useState } from 'react';
+import {
+  Plus,
+  Search,
+  PlusCircle,
+  History,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+} from 'lucide-react';
+import useAuthStore from '../../../store/authStore';
+import EmptyState from '../../../components/common/EmptyState';
+import ConfirmModal from '../../../components/common/ConfirmModal';
+import AddComponentModal from '../components/AddComponentModal';
+import RestockComponentModal from '../components/RestockComponentModal';
+import ComponentHistoryModal from '../components/ComponentHistoryModal';
+
+export default function ComponentList() {
+  const token = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
+
+  const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState(['Tümü']);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Tümü');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedComponent, setSelectedComponent] = useState(null);
+  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const [stats, setStats] = useState({ totalProducts: 0, outOfStock: 0, totalUsedQuantity: 0 });
+
+  const canEdit = user?.role === 'admin' || user?.role === 'it_staff';
+
+  useEffect(() => {
+    fetchCategories();
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/components/stats', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.data) {
+        setStats(data.data);
+      }
+    } catch (err) {
+      console.error('Bileşen istatistikleri alınamadı:', err);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/categories?parentType=Bileşen', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.data) {
+        const catNames = data.data.map((c) => c.name);
+        setCategories(['Tümü', ...catNames]);
+      }
+    } catch (err) {
+      console.error('Bileşen kategorileri alınamadı:', err);
+    }
+  };
+
+  const fetchComponents = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = new URLSearchParams();
+      params.append('page', page);
+
+      if (selectedCategory !== 'Tümü') {
+        params.append('category', selectedCategory);
+      }
+      if (searchQuery.trim()) {
+        params.append('q', searchQuery.trim());
+      }
+
+      const res = await fetch(`http://localhost:5000/api/components?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || 'Bileşenler listelenirken hata oluştu.');
+
+      setItems(data.data || []);
+      if (data.pagination) {
+        setTotalPages(data.pagination.totalPages || 1);
+        setTotalCount(data.pagination.totalCount || 0);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchComponents();
+  }, [page, selectedCategory]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setPage(1);
+    fetchComponents();
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (!canEdit || !selectedComponent) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`http://localhost:5000/api/components/${selectedComponent.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Bileşen silinemedi.');
+
+      setIsDeleteConfirmOpen(false);
+      setSelectedComponent(null);
+      fetchComponents();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const exportToCSV = () => {
+    if (!items.length) return;
+    const headers = [
+      'Bileşen Adı',
+      'Kategori',
+      'Marka',
+      'Model',
+      'Lokasyon',
+      'Hazır Stok',
+      'Kullanılan Miktar',
+      'Toplam Stok',
+    ];
+    const rows = items.map((i) => [
+      i.name,
+      i.category,
+      i.brand || '',
+      i.model || '',
+      i.location || '',
+      i.availableQuantity,
+      i.usedQuantity,
+      i.totalQuantity,
+    ]);
+    const csvContent =
+      'data:text/csv;charset=utf-8,\uFEFF' +
+      [headers.join(','), ...rows.map((e) => e.map((x) => `"${x}"`).join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `DITAS_Bilesen_Stok_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="space-y-6 pb-12">
+      {/* Header */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+            DİTAŞ Otomotiv • Bileşen Yönetimi
+          </span>
+          <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
+            Donanım Bileşen Stok Listesi
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            RAM, SSD/HDD, güç kaynağı ve anakart donanım bileşenlerinin stok takibi.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={exportToCSV}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-medium transition cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Dışa Aktar (CSV)
+          </button>
+
+          {canEdit && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] text-white text-xs font-bold transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Yeni Bileşen Ekle
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Component Statistics Summary Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Toplam Ürün Çeşidi */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+            Toplam Ürün Çeşidi
+          </span>
+          <div className="text-2xl font-bold font-heading text-[#1E2534]">
+            {stats.totalProducts}
+          </div>
+        </div>
+
+        {/* Stokta Tükenen */}
+        <div className="bg-amber-50/60 p-5 rounded-2xl border border-amber-200 shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block mb-1">
+            Stokta Tükenen
+          </span>
+          <div className="text-2xl font-bold font-heading text-amber-900">
+            {stats.outOfStock}
+          </div>
+        </div>
+
+        {/* Toplam Kullanılmış Adet */}
+        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+            Toplam Kullanılmış Adet
+          </span>
+          <div className="text-2xl font-bold font-heading text-slate-700">
+            {stats.totalUsedQuantity}
+          </div>
+        </div>
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Bileşen adı, marka veya model ara..."
+              className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs text-[#1E2534] focus:border-[#4F8FE0]"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="px-4 py-2 rounded-xl bg-[#1E2534] hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer"
+          >
+            Filtrele
+          </button>
+        </form>
+
+        {/* Dynamic Category Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+          {categories.map((cat) => {
+            const isActive = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition cursor-pointer ${
+                  isActive
+                    ? 'bg-[#4F8FE0] text-white font-bold'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Table Section */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        {loading ? (
+          <div className="py-16 text-center text-xs text-slate-400">Yükleniyor...</div>
+        ) : error ? (
+          <div className="p-4 text-xs text-rose-600 font-medium">{error}</div>
+        ) : items.length === 0 ? (
+          <EmptyState
+            title="Kayıtlı Bileşen Bulunamadı"
+            description="Seçilen kriterlere uygun donanım bileşeni bulunamadı."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="py-3.5 px-4">Bileşen Adı</th>
+                  <th className="py-3.5 px-4">Kategori</th>
+                  <th className="py-3.5 px-4">Marka</th>
+                  <th className="py-3.5 px-4">Model</th>
+                  <th className="py-3.5 px-4">Lokasyon</th>
+                  <th className="py-3.5 px-4 text-center">Hazır Stok</th>
+                  <th className="py-3.5 px-4 text-center">Kullanılan</th>
+                  <th className="py-3.5 px-4 text-center">Toplam</th>
+                  <th className="py-3.5 px-4 text-right">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {items.map((item) => {
+                  const isDeletable = canEdit && item.usedQuantity === 0;
+
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-[#1E2534]">{item.name}</div>
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <span className="inline-block px-2.5 py-1 rounded bg-slate-100 text-slate-700 font-medium">
+                          {item.category}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 text-slate-700">{item.brand || '-'}</td>
+                      <td className="py-3 px-4 text-slate-700">{item.model || '-'}</td>
+                      <td className="py-3 px-4 text-slate-700">{item.location || '-'}</td>
+
+                      <td className="py-3 px-4 text-center">
+                        <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          {item.availableQuantity}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 text-center">
+                        <span className="font-mono font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                          {item.usedQuantity}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 text-center font-mono font-bold text-[#1E2534]">
+                        {item.totalQuantity}
+                      </td>
+
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-1">
+                          {canEdit && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedComponent(item);
+                                setIsRestockModalOpen(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded transition cursor-pointer"
+                              title="Stok Ekle"
+                            >
+                              <PlusCircle className="w-4 h-4" />
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedComponent(item);
+                              setIsHistoryModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-[#4F8FE0] hover:bg-slate-100 rounded transition cursor-pointer"
+                            title="Hareket Geçmişi"
+                          >
+                            <History className="w-4 h-4" />
+                          </button>
+
+                          {canEdit && (
+                            <button
+                              type="button"
+                              disabled={!isDeletable}
+                              onClick={() => {
+                                if (!isDeletable) return;
+                                setSelectedComponent(item);
+                                setIsDeleteConfirmOpen(true);
+                              }}
+                              className={`p-1.5 rounded transition ${
+                                isDeletable
+                                  ? 'text-slate-400 hover:text-rose-600 hover:bg-slate-100 cursor-pointer'
+                                  : 'text-slate-200 cursor-not-allowed'
+                              }`}
+                              title={
+                                isDeletable
+                                  ? 'Bileşeni Sil'
+                                  : 'Kullanımda/montajlanmış stoğu bulunan bileşen silinemez'
+                              }
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-slate-200 flex items-center justify-between text-xs">
+            <span className="text-slate-500">
+              Toplam {totalCount} kayıttan {((page - 1) * 10) + 1} - {Math.min(page * 10, totalCount)} arası gösteriliyor
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-600" />
+              </button>
+              <span className="font-semibold text-slate-700">
+                Sayfa {page} / {totalPages}
+              </span>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      <AddComponentModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => {
+          setIsAddModalOpen(false);
+          fetchComponents();
+          fetchStats();
+        }}
+      />
+
+      {selectedComponent && (
+        <>
+          <RestockComponentModal
+            isOpen={isRestockModalOpen}
+            onClose={() => {
+              setIsRestockModalOpen(false);
+              setSelectedComponent(null);
+            }}
+            component={selectedComponent}
+            onSuccess={() => {
+              fetchComponents();
+              fetchStats();
+            }}
+          />
+
+          <ComponentHistoryModal
+            isOpen={isHistoryModalOpen}
+            onClose={() => {
+              setIsHistoryModalOpen(false);
+              setSelectedComponent(null);
+            }}
+            componentId={selectedComponent.id}
+            componentName={selectedComponent.name}
+          />
+
+          <ConfirmModal
+            isOpen={isDeleteConfirmOpen}
+            title="Bileşeni Sil"
+            message={`"${selectedComponent.name}" kaydını silmek istediğinize emin misiniz?`}
+            confirmText={deleting ? 'Siliniyor...' : 'Evet, Sil'}
+            confirmVariant="danger"
+            onConfirm={handleDeleteConfirmed}
+            onCancel={() => {
+              setIsDeleteConfirmOpen(false);
+              setSelectedComponent(null);
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+}

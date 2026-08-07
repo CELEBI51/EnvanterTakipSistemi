@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { X, History, PlusCircle, AlertTriangle, User, Calendar } from 'lucide-react';
+import { X, History, PlusCircle, AlertTriangle, User, Calendar, RotateCcw, PackageCheck } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
+import { getStockMovementInfo } from '../../../utils/stockMovementLabels';
 
 export default function AccessoryHistoryModal({ isOpen, onClose, accessoryId, accessoryName }) {
   const token = useAuthStore((state) => state.accessToken);
@@ -78,32 +79,27 @@ export default function AccessoryHistoryModal({ isOpen, onClose, accessoryId, ac
           ) : (
             <div className="space-y-3">
               {history.map((item) => {
-                const isRestock = item.type === 'restock';
+                const info = getStockMovementInfo(item.type, item.quantity);
+
                 return (
                   <div
                     key={item.id}
                     className="p-3.5 bg-white rounded-xl border border-slate-200 shadow-2xs text-xs flex items-center justify-between gap-3"
                   >
                     <div className="flex items-start gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center font-bold ${
-                          isRestock ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'
-                        }`}
-                      >
-                        {isRestock ? <PlusCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                      <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center font-bold bg-slate-50 border border-slate-200 text-slate-600">
+                        <PackageCheck className="w-4 h-4" />
                       </div>
 
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                              isRestock ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
-                            }`}
+                            className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${info.badgeClass}`}
                           >
-                            {isRestock ? 'Stok Takviyesi' : 'Arızalı Ayrıldı'}
+                            {info.label}
                           </span>
                           <span className="font-mono font-bold text-[#1E2534]">
-                            {isRestock ? `+${item.quantity}` : `-${item.quantity}`} adet
+                            {info.formattedQuantity}
                           </span>
                         </div>
 

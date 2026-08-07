@@ -113,3 +113,22 @@ export const getHardwareHistory = async (req, res) => {
     });
   }
 };
+
+export const getHardwareStats = async (req, res, next) => {
+  try {
+    const data = await hardwareService.getHardwareStats();
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('getHardwareStats controller error:', error);
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    next(error);
+  }
+};

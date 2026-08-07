@@ -141,3 +141,21 @@ export const deleteAccessory = async (req, res) => {
     });
   }
 };
+
+export const getAccessoryStats = async (req, res, next) => {
+  try {
+    const data = await accessoryService.getAccessoryStats();
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    next(error);
+  }
+};
