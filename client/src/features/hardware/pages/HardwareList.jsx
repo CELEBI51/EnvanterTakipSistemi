@@ -8,6 +8,7 @@ import {
   Barcode,
   Download,
   Wrench,
+  FileSpreadsheet,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
@@ -15,6 +16,7 @@ import AddHardwareModal from '../components/AddHardwareModal';
 import HardwareDetailModal from '../components/HardwareDetailModal';
 import BarcodePrintModal from '../../../components/common/BarcodePrintModal';
 import AddMaintenanceModal from '../components/AddMaintenanceModal';
+import ExcelImportModal from '../../../components/common/ExcelImportModal';
 
 const STATUSES = [
   { label: 'Tüm Durumlar', value: '' },
@@ -58,6 +60,7 @@ export default function HardwareList() {
 
   const [isAddMaintenanceOpen, setIsAddMaintenanceOpen] = useState(false);
   const [maintenanceHardwareId, setMaintenanceHardwareId] = useState(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const [stats, setStats] = useState({ total: 0, inUse: 0, ready: 0, needsAttention: 0 });
 
@@ -211,6 +214,16 @@ export default function HardwareList() {
             <Download className="w-3.5 h-3.5" />
             Dışa Aktar (CSV)
           </button>
+
+          {canAdd && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition cursor-pointer shadow-xs"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              Excel'den Aktar
+            </button>
+          )}
 
           {canAdd && (
             <button
@@ -527,11 +540,17 @@ export default function HardwareList() {
             setMaintenanceHardwareId(null);
           }}
           hardwareId={maintenanceHardwareId}
-          onSuccess={() => {
-            fetchHardwareList();
-          }}
+          onSuccess={fetchHardwareList}
         />
       )}
+
+      <ExcelImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        moduleKey="hardware"
+        moduleTitle="Varlık Donanımları"
+        onSuccess={fetchHardwareList}
+      />
     </div>
   );
 }

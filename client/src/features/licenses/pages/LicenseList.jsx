@@ -13,12 +13,14 @@ import {
   CreditCard,
   AlertTriangle,
   RefreshCw,
+  FileSpreadsheet,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
 
 import AddLicenseModal from '../components/AddLicenseModal';
 import LicenseDetailModal from '../components/LicenseDetailModal';
+import ExcelImportModal from '../../../components/common/ExcelImportModal';
 import { getLicenseStatusLabel } from '../../../constants/licenseStatusLabels';
 
 const STATUS_OPTIONS = [
@@ -67,6 +69,7 @@ export default function LicenseList() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedLicenseId, setSelectedLicenseId] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const canEdit = user?.role === 'admin' || user?.role === 'it_staff';
 
@@ -262,6 +265,16 @@ export default function LicenseList() {
             <Download className="w-4 h-4" />
             Dışa Aktar (CSV)
           </button>
+
+          {canEdit && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition cursor-pointer shadow-xs"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              Excel'den Aktar
+            </button>
+          )}
 
           {canEdit && (
             <button
@@ -574,6 +587,14 @@ export default function LicenseList() {
           fetchLicenses();
           fetchStats();
         }}
+      />
+
+      <ExcelImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        moduleKey="license"
+        moduleTitle="Yazılım Lisansları"
+        onSuccess={fetchLicenses}
       />
     </div>
   );

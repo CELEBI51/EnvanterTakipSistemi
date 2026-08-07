@@ -10,12 +10,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import AddAccessoryModal from '../components/AddAccessoryModal';
 import AccessoryDetailManageModal from '../components/AccessoryDetailManageModal';
+import ExcelImportModal from '../../../components/common/ExcelImportModal';
 
 export default function AccessoryList() {
   const [searchParams] = useSearchParams();
@@ -41,6 +43,7 @@ export default function AccessoryList() {
   const [manageModalInitialTab, setManageModalInitialTab] = useState('restock');
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const [stats, setStats] = useState({ totalProducts: 0, outOfStock: 0, totalAssignedQuantity: 0 });
 
@@ -222,6 +225,16 @@ export default function AccessoryList() {
             <Download className="w-3.5 h-3.5" />
             Dışa Aktar (CSV)
           </button>
+
+          {canEdit && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition cursor-pointer shadow-xs"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              Excel'den Aktar
+            </button>
+          )}
 
           {canEdit && (
             <button
@@ -537,6 +550,14 @@ export default function AccessoryList() {
           />
         </>
       )}
+
+      <ExcelImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        moduleKey="accessory"
+        moduleTitle="Aksesuarlar"
+        onSuccess={fetchAccessories}
+      />
     </div>
   );
 }

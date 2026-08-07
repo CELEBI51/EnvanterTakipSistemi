@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
@@ -16,6 +17,7 @@ import ConfirmModal from '../../../components/common/ConfirmModal';
 import AddConsumableModal from '../components/AddConsumableModal';
 import RestockConsumableModal from '../components/RestockConsumableModal';
 import ConsumableHistoryModal from '../components/ConsumableHistoryModal';
+import ExcelImportModal from '../../../components/common/ExcelImportModal';
 
 export default function ConsumableList() {
   const [searchParams] = useSearchParams();
@@ -41,6 +43,7 @@ export default function ConsumableList() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const canEdit = user?.role === 'admin' || user?.role === 'it_staff';
 
@@ -206,6 +209,16 @@ export default function ConsumableList() {
             <Download className="w-3.5 h-3.5" />
             Dışa Aktar (CSV)
           </button>
+
+          {canEdit && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition cursor-pointer shadow-xs"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              Excel'den Aktar
+            </button>
+          )}
 
           {canEdit && (
             <button
@@ -465,6 +478,14 @@ export default function ConsumableList() {
           />
         </>
       )}
+
+      <ExcelImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        moduleKey="consumable"
+        moduleTitle="Sarf Malzemeler"
+        onSuccess={fetchConsumables}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import prisma from '../../config/db.js';
 
 export const createEmployee = async (data) => {
-  const { fullName, tcNo, unitId, phone, email } = data;
+  const { fullName, tcNo, unitId, phone, email, hireDate } = data;
 
   const existing = await prisma.employee.findUnique({
     where: { tcNo },
@@ -30,6 +30,7 @@ export const createEmployee = async (data) => {
       unitId,
       phone: phone && phone.trim() !== '' ? phone.trim() : null,
       email: email && email.trim() !== '' ? email.trim() : null,
+      hireDate: hireDate ? new Date(hireDate) : null,
     },
     include: {
       unit: {
@@ -41,12 +42,16 @@ export const createEmployee = async (data) => {
   return employee;
 };
 
-export const listEmployees = async ({ page = 1, pageSize = 10, q }) => {
+export const listEmployees = async ({ page = 1, pageSize = 10, q, isActive }) => {
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const sizeNum = Math.max(1, parseInt(pageSize, 10) || 10);
   const skip = (pageNum - 1) * sizeNum;
 
   const where = {};
+
+  if (isActive !== undefined && isActive !== null && isActive !== '') {
+    where.isActive = String(isActive) === 'true';
+  }
 
   if (q && q.trim() !== '') {
     const searchTerm = q.trim();
@@ -68,12 +73,26 @@ export const listEmployees = async ({ page = 1, pageSize = 10, q }) => {
         unit: {
           select: { id: true, name: true },
         },
+        assignments: {
+          where: {
+            status: { in: ['Aktif', 'KismiIade'] },
+          },
+          select: { id: true },
+        },
       },
     }),
   ]);
 
+  const formattedItems = items.map((emp) => {
+    const { assignments, ...rest } = emp;
+    return {
+      ...rest,
+      activeAssignmentCount: assignments.length,
+    };
+  });
+
   return {
-    data: items,
+    data: formattedItems,
     pagination: {
       totalCount,
       totalPages: Math.ceil(totalCount / sizeNum) || 1,
@@ -90,6 +109,23 @@ export const getEmployeeById = async (id) => {
       unit: {
         select: { id: true, name: true },
       },
+      assignments: {
+        orderBy: { teslimTarihi: 'desc' },
+        select: {
+          id: true,
+          teslimTarihi: true,
+          status: true,
+          teslimEden: true,
+          pdfUrl: true,
+          _count: {
+            select: {
+              items: true,
+              accessoryItems: true,
+              consumableItems: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -99,5 +135,84 @@ export const getEmployeeById = async (id) => {
     throw error;
   }
 
-  return employee;
+  const activeAssignments = employee.assignments.filter((a) =>
+    ['Aktif', 'KismiIade'].includes(a.status)
+  );
+
+  return {
+    ...employee,
+    activeAssignmentCount: activeAssignments.length,
+    assignmentHistory: employee.assignments,
+  };
+};
+
+export const updateEmployeeStatus = async (id, { isActive, terminationDate }) => {
+  const employee = await prisma.employee.findUnique({
+    where: { id },
+    include: {
+      assignments: {
+        where: {
+          status: { in: ['Aktif', 'KismiIade'] },
+        },
+        select: { id: true },
+      },
+    },
+  });
+
+  if (!employee) {
+    const error = new Error('Personel bulunamadı.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const activeCount = employee.assignments.length;
+
+  if (!isActive) {
+    if (activeCount > 0) {
+      const error = new Error(
+        `Bu personelin zimmetinde henüz iade edilmemiş ${activeCount} adet zimmet kaydı var. İşten çıkarılmadan önce tüm zimmetlerin iade alınması gerekmektedir.`
+      );
+      error.statusCode = 400;
+      error.activeAssignmentCount = activeCount;
+      throw error;
+    }
+
+    const tDate = terminationDate ? new Date(terminationDate) : new Date();
+
+    return await prisma.employee.update({
+      where: { id },
+      data: {
+        isActive: false,
+        terminationDate: tDate,
+      },
+      include: {
+        unit: { select: { id: true, name: true } },
+      },
+    });
+  } else {
+    return await prisma.employee.update({
+      where: { id },
+      data: {
+        isActive: true,
+        terminationDate: null,
+      },
+      include: {
+        unit: { select: { id: true, name: true } },
+      },
+    });
+  }
+};
+
+export const getEmployeeStats = async () => {
+  const [total, active, inactive] = await Promise.all([
+    prisma.employee.count(),
+    prisma.employee.count({ where: { isActive: true } }),
+    prisma.employee.count({ where: { isActive: false } }),
+  ]);
+
+  return {
+    total,
+    active,
+    inactive,
+  };
 };

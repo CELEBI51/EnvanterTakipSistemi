@@ -11,4 +11,5 @@ export const createEmployeeSchema = z.object({
     .optional()
     .or(z.literal(''))
     .nullable(),
+  hireDate: z.string().optional().nullable(),
 });

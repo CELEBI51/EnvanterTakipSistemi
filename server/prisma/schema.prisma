@@ -103,8 +103,10 @@ model Employee {
   unit      Unit     @relation(fields: [unitId], references: [id])
   phone     String?
   email     String?
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
+  isActive        Boolean   @default(true) @map("is_active")
+  hireDate        DateTime? @map("hire_date")
+  terminationDate DateTime? @map("termination_date")
+  createdAt       DateTime  @default(now()) @map("created_at")
 
   assignments    Assignment[]
   stockMovements StockMovement[]

@@ -9,6 +9,7 @@ import LicenseList from './features/licenses/pages/LicenseList';
 import AccessoryList from './features/accessories/pages/AccessoryList';
 import ConsumableList from './features/consumables/pages/ConsumableList';
 import ComponentList from './features/components/pages/ComponentList';
+import EmployeeList from './features/employees/pages/EmployeeList';
 import AssignmentList from './features/assignments/pages/AssignmentList';
 import CreateAssignmentPage from './features/assignments/pages/CreateAssignmentPage';
 import ReturnList from './features/returns/pages/ReturnList';
@@ -123,6 +124,7 @@ function MainLayout({ children }) {
     { label: 'Aksesuar', path: '/accessories', icon: Headphones },
     { label: 'Sarf Malzeme', path: '/consumables', icon: Package },
     { label: 'Bileşen', path: '/components', icon: Cpu },
+    { label: 'Personel', path: '/employees', icon: Users },
   ];
 
   return (
@@ -579,6 +581,17 @@ export default function App() {
             <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
               <MainLayout>
                 <ComponentList />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/employees"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+              <MainLayout>
+                <EmployeeList />
               </MainLayout>
             </ProtectedRoute>
           }

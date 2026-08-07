@@ -17,6 +17,7 @@ import returnRoutes from './modules/returns/returns.routes.js';
 import employeeRoutes from './modules/employees/employees.routes.js';
 import unitRoutes from './modules/units/units.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
+import importRoutes from './modules/import/import.routes.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/api/returns', returnRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/import', importRoutes);
 
 // Global Error Handler Middleware
 app.use(errorHandler);

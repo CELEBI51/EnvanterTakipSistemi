@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FileText, Eye, Filter, RotateCcw, Plus, Search } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import ReturnDetailModal from '../components/ReturnDetailModal';
 import SelectAssignmentForReturnModal from '../components/SelectAssignmentForReturnModal';
 
 export default function ReturnList() {
+  const [searchParams] = useSearchParams();
   const token = useAuthStore((state) => state.accessToken);
   const userRole = useAuthStore((state) => state.user?.role?.toLowerCase());
+
+  const initialSearch = searchParams.get('search') || searchParams.get('q') || '';
 
   const [returns, setReturns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Filters & Pagination
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [unitIdFilter, setUnitIdFilter] = useState('');
   const [units, setUnits] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
