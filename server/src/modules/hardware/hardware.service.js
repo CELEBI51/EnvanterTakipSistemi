@@ -27,11 +27,13 @@ async function resolveCategoryId(categoryId, categoryName, parentType = 'VARLIK'
 
 function formatHardware(item) {
   if (!item) return null;
-  const { category, ...rest } = item;
+  const { category, _count, ...rest } = item;
+  const hasActiveMaintenance = _count ? _count.maintenances > 0 : false;
   return {
     ...rest,
     category: category ? category.name : null,
     categoryId: item.categoryId,
+    hasActiveMaintenance,
   };
 }
 
@@ -171,6 +173,13 @@ export const listHardware = async ({ page = 1, pageSize = 10, category, status, 
         createdBy: {
           select: { id: true, fullName: true, email: true, role: true },
         },
+        _count: {
+          select: {
+            maintenances: {
+              where: { status: 'Devam Ediyor' },
+            },
+          },
+        },
       },
     }),
   ]);
@@ -192,6 +201,13 @@ export const getHardwareById = async (id) => {
       category: true,
       createdBy: {
         select: { id: true, fullName: true, email: true, role: true },
+      },
+      _count: {
+        select: {
+          maintenances: {
+            where: { status: 'Devam Ediyor' },
+          },
+        },
       },
     },
   });
@@ -244,7 +260,18 @@ export const updateHardware = async (id, data) => {
     updateData.purchaseAmount = purchaseAmountVal !== null ? purchaseAmountVal : null;
   }
 
-  if (data.status !== undefined) updateData.status = data.status;
+  if (data.status !== undefined) {
+    // Statü elle değiştirilmek istendiğinde sadece 'Arizali' veya 'KullanimDisi' (veya mevcut statüsüne) çekilmesine izin verilir.
+    // 'Hazir', 'Kullanimda' ve 'Serviste' durumları sistem otomatik süreçleriyle (Zimmetleme, İade, Bakım) yönetilir.
+    const allowedManualStatuses = ['Arizali', 'KullanimDisi', existing.status];
+    if (!allowedManualStatuses.includes(data.status)) {
+      const error = new Error('"Hazır", "Kullanımda" veya "Serviste" durumları elle seçilemez. Bu durumlar Zimmetleme, İade ve Bakım modülleri tarafından otomatik yönetilir.');
+      error.statusCode = 400;
+      throw error;
+    }
+    updateData.status = data.status;
+  }
+
   if (data.specs !== undefined) updateData.specs = data.specs;
 
   const startDateVal = data.warranty_start_date !== undefined ? data.warranty_start_date : data.warrantyStartDate;
@@ -272,16 +299,11 @@ export const updateHardware = async (id, data) => {
 };
 
 export const deleteHardware = async (id) => {
-  const existing = await prisma.hardware.findUnique({ where: { id } });
-  if (!existing) {
-    const error = new Error('Silinecek ürün bulunamadı.');
-    error.statusCode = 404;
-    throw error;
-  }
-
-  await prisma.hardware.delete({ where: { id } });
-  return { message: 'Ürün başarıyla silindi.' };
+  const error = new Error('Varlık malzemeleri sistemden silinemez. Durumu "Kullanım Dışı" veya "Arızalı" olarak güncelleyebilirsiniz.');
+  error.statusCode = 400;
+  throw error;
 };
+
 
 /**
  * Get Hardware Statistics Summary (total, inUse, ready, needsAttention).
@@ -301,6 +323,83 @@ export const getHardwareStats = async () => {
     needsAttention,
   };
 };
+
+
+
+export const exportHardware = async ({ category, status, q }, res) => {
+
+  const where = {};
+
+  if (category) {
+    where.category = {
+      name: category,
+    };
+  }
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (q && q.trim() !== '') {
+    const searchTerm = q.trim();
+    where.OR = [
+      { brand: { contains: searchTerm, mode: 'insensitive' } },
+      { model: { contains: searchTerm, mode: 'insensitive' } },
+      { serialNo: { contains: searchTerm, mode: 'insensitive' } },
+      { demirbasNo: { contains: searchTerm, mode: 'insensitive' } },
+      { location: { contains: searchTerm, mode: 'insensitive' } },
+      { supplier: { contains: searchTerm, mode: 'insensitive' } },
+      { invoiceNo: { contains: searchTerm, mode: 'insensitive' } },
+    ];
+  }
+
+  const items = await prisma.hardware.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      category: true,
+    },
+  });
+
+  const columns = [
+    { header: 'Demirbaş No', key: 'demirbasNo', width: 18 },
+    { header: 'Seri No', key: 'serialNo', width: 20 },
+    { header: 'Kategori', key: 'categoryName', width: 18 },
+    { header: 'Marka', key: 'brand', width: 16 },
+    { header: 'Model', key: 'model', width: 16 },
+    { header: 'Durum', key: 'statusText', width: 15 },
+    { header: 'Lokasyon', key: 'location', width: 18 },
+    { header: 'Garanti Bitiş Tarihi', key: 'warrantyEndDate', width: 20 },
+    { header: 'Satın Alma Tarihi', key: 'purchaseDate', width: 18 },
+    { header: 'Tedarikçi', key: 'supplier', width: 20 },
+  ];
+
+  const STATUS_TEXT_MAP = {
+    Hazir: 'Hazır',
+    Kullanimda: 'Kullanımda',
+    Arizali: 'Arızalı',
+    Serviste: 'Serviste',
+    KullanimDisi: 'Kullanım Dışı',
+  };
+
+  const rows = items.map((item) => ({
+    demirbasNo: item.demirbasNo || '-',
+    serialNo: item.serialNo || '-',
+    categoryName: item.category ? item.category.name : '-',
+    brand: item.brand || '-',
+    model: item.model || '-',
+    statusText: STATUS_TEXT_MAP[item.status] || item.status,
+    location: item.location || '-',
+    warrantyEndDate: item.warrantyEndDate ? new Date(item.warrantyEndDate).toLocaleDateString('tr-TR') : '-',
+    purchaseDate: item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString('tr-TR') : '-',
+    supplier: item.supplier || '-',
+  }));
+
+  const { createExcelStream } = await import('../../services/excelExport.service.js');
+  const todayStr = new Date().toISOString().split('T')[0];
+  await createExcelStream('Varlıklar', columns, rows, res, `varlik_${todayStr}.xlsx`);
+};
+
 
 /**
  * Get assignment history for a specific hardware item.

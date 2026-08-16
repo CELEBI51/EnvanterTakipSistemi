@@ -37,13 +37,14 @@ export const updateUserRole = async (req, res) => {
   try {
     const { id } = req.params;
     const validatedData = updateUserRoleSchema.parse(req.body);
-    const updatedUser = await userService.updateUserRole(id, validatedData.role, req.user.id);
+    const updatedUser = await userService.updateUserRole(id, validatedData.role, validatedData.permissions, req.user.id);
     return res.status(200).json({
       status: 'success',
-      message: 'Kullanıcı rolü güncellendi.',
+      message: 'Kullanıcı rolü/yetkileri güncellendi.',
       data: updatedUser,
     });
   } catch (error) {
+
     if (error.name === 'ZodError') {
       return res.status(400).json({
         message: 'Form doğrulama hatası.',

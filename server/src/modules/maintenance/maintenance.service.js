@@ -30,6 +30,22 @@ export const createMaintenance = async (data, createdById) => {
     throw error;
   }
 
+  // Active maintenance check
+  const activeMaintenance = await prisma.maintenanceRecord.findFirst({
+    where: {
+      hardwareId: hardwareId,
+      status: 'Devam Ediyor',
+    },
+  });
+
+  if (activeMaintenance) {
+    const error = new Error(
+      'Bu varlık için zaten devam eden bir bakım kaydı mevcut. Önce mevcut bakımı tamamlayın.'
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
   // Previous hardware status in plain Turkish string (e.g. "Hazır", "Kullanımda", "Arızalı")
   const previousHardwareStatus = MAP_ENUM_TO_STRING[hardware.status] || hardware.status;
   const isCompletedImmediately = !!endDate;
@@ -274,12 +290,18 @@ export const completeMaintenance = async (id, endDate, resultStatus) => {
   }
 
   const { previousHardwareStatus } = record;
-  let finalStatusString = previousHardwareStatus;
+  let finalStatusString;
 
-  if (previousHardwareStatus === 'Arızalı') {
+  if (previousHardwareStatus === 'Kullanımda') {
+    // Durum sorma, otomatik 'Kullanımda'ya dön
+    finalStatusString = 'Kullanımda';
+  } else {
+    // previousHardwareStatus === 'Hazır' VEYA 'Arızalı' ise durum sor
     if (!resultStatus || !resultStatus.trim()) {
       const error = new Error(
-        'Bu varlık arızalı durumdayken bakıma alınmıştı, bakım sonucunda durumun ne olacağını (Hazır / Arızalı / Kullanım Dışı) seçmelisiniz.'
+        previousHardwareStatus === 'Arızalı'
+          ? 'Bu varlık arızalı durumdayken bakıma alınmıştı. Bakım sonucunda durumun ne olacağını seçmelisiniz.'
+          : 'Bakım tamamlanınca varlığın yeni durumunu seçmelisiniz.'
       );
       error.statusCode = 400;
       throw error;

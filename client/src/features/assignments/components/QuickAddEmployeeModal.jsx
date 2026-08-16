@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { formatPhoneInput, getPhoneDigits, formatTcNoInput } from '../../../utils/inputFormatters';
 
 export default function QuickAddEmployeeModal({ isOpen, onClose, onSuccess }) {
   const token = useAuthStore((state) => state.accessToken);
@@ -57,8 +58,8 @@ export default function QuickAddEmployeeModal({ isOpen, onClose, onSuccess }) {
       return;
     }
 
-    if (tcNo.length !== 11) {
-      setError('T.C. Kimlik Numarası tam olarak 11 haneli olmalıdır.');
+    if (!tcNo.trim()) {
+      setError('Sicil Numarası zorunludur.');
       return;
     }
 
@@ -80,7 +81,7 @@ export default function QuickAddEmployeeModal({ isOpen, onClose, onSuccess }) {
           fullName: fullName.trim(),
           tcNo: tcNo.trim(),
           unitId: selectedUnitId,
-          phone: phone.trim() || undefined,
+          phone: getPhoneDigits(phone) || undefined,
           email: email.trim() || undefined,
         }),
       });
@@ -147,18 +148,20 @@ export default function QuickAddEmployeeModal({ isOpen, onClose, onSuccess }) {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              T.C. Kimlik No <span className="text-rose-600">*</span>
+              Sicil Numarası <span className="text-rose-600">*</span>
             </label>
             <input
               type="text"
               value={tcNo}
-              onChange={handleTcChange}
-              placeholder="11 haneli T.C. Kimlik Numarası"
+              onChange={(e) => setTcNo(formatTcNoInput(e.target.value))}
+              placeholder="Örn: 12345678901"
               maxLength={11}
+              inputMode="numeric"
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
               required
             />
           </div>
+
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
@@ -188,8 +191,10 @@ export default function QuickAddEmployeeModal({ isOpen, onClose, onSuccess }) {
               <input
                 type="text"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
                 placeholder="05XX XXX XX XX"
+                maxLength={14}
+                inputMode="numeric"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
               />
             </div>

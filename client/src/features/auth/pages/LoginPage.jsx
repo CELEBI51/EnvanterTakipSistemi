@@ -44,12 +44,7 @@ export default function LoginPage() {
 
       if (token && user) {
         setAuth({ user, accessToken: token });
-        const userRole = user.role?.toLowerCase() || '';
-        if (userRole === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
+        navigate('/dashboard');
       } else {
         setErrorMessage('E-posta veya şifre hatalı');
       }

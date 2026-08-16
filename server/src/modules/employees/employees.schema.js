@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 export const createEmployeeSchema = z.object({
   fullName: z.string().min(1, 'Personel adı soyadı zorunludur.').trim(),
-  tcNo: z.string().regex(/^\d{11}$/, 'TC Kimlik Numarası 11 haneli rakamlardan oluşmalıdır.'),
+  tcNo: z.string().min(1, 'Sicil Numarası zorunludur.').trim(),
+
   unitId: z.string().uuid('Geçerli bir Birim (Unit) seçiniz.'),
   phone: z.string().optional().nullable(),
   email: z

@@ -3,8 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Search,
-  PlusCircle,
-  AlertTriangle,
   History,
   Trash2,
   ChevronLeft,
@@ -13,11 +11,14 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import AddAccessoryModal from '../components/AddAccessoryModal';
 import AccessoryDetailManageModal from '../components/AccessoryDetailManageModal';
 import ExcelImportModal from '../../../components/common/ExcelImportModal';
+import ExcelExportButton from '../../../components/common/ExcelExportButton';
+
 
 export default function AccessoryList() {
   const [searchParams] = useSearchParams();
@@ -47,7 +48,8 @@ export default function AccessoryList() {
 
   const [stats, setStats] = useState({ totalProducts: 0, outOfStock: 0, totalAssignedQuantity: 0 });
 
-  const canEdit = user?.role === 'admin' || user?.role === 'it_staff';
+  const canEdit = hasPermission(user, 'accessories:manage');
+  const canExcel = hasPermission(user, 'excel:view');
 
   useEffect(() => {
     fetchCategories();
@@ -218,15 +220,16 @@ export default function AccessoryList() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={exportToCSV}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-medium transition cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Dışa Aktar (CSV)
-          </button>
+          <ExcelExportButton
+            modulePath="accessories"
+            queryParams={{
+              category: selectedCategory,
+              q: searchQuery,
+            }}
+            fileNamePrefix="aksesuar"
+          />
 
-          {canEdit && (
+          {canExcel && (
             <button
               onClick={() => setIsImportModalOpen(true)}
               className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition cursor-pointer shadow-xs"
@@ -246,6 +249,7 @@ export default function AccessoryList() {
             </button>
           )}
         </div>
+
       </div>
 
       {/* Accessory Statistics Summary Bar */}
@@ -403,36 +407,6 @@ export default function AccessoryList() {
 
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-1">
-                          {canEdit && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedAccessory(item);
-                                  setManageModalInitialTab('restock');
-                                  setIsManageModalOpen(true);
-                                }}
-                                className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded transition cursor-pointer"
-                                title="Stok Ekle"
-                              >
-                                <PlusCircle className="w-4 h-4" />
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedAccessory(item);
-                                  setManageModalInitialTab('defective');
-                                  setIsManageModalOpen(true);
-                                }}
-                                className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-slate-100 rounded transition cursor-pointer"
-                                title="Arızalı Stok Ayır"
-                              >
-                                <AlertTriangle className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-
                           <button
                             type="button"
                             onClick={() => {

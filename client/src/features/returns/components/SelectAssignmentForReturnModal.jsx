@@ -3,20 +3,22 @@ import { X, Search, RotateCcw, User, Calendar, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../../store/authStore';
 
-export default function SelectAssignmentForReturnModal({ isOpen, onClose }) {
+export default function SelectAssignmentForReturnModal({ isOpen, onClose, initialSearch = '' }) {
   const navigate = useNavigate();
   const token = useAuthStore((state) => state.accessToken);
 
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
 
   useEffect(() => {
     if (isOpen) {
+      setSearchQuery(initialSearch);
       fetchEligibleAssignments();
     }
-  }, [isOpen, token]);
+  }, [isOpen, initialSearch, token]);
+
 
   const fetchEligibleAssignments = async () => {
     setLoading(true);
@@ -30,11 +32,18 @@ export default function SelectAssignmentForReturnModal({ isOpen, onClose }) {
 
       const data = await res.json();
       if (res.ok && data.data) {
-        // Filter ONLY active or partially returned assignments
-        const eligible = data.data.filter(
-          (a) => a.status !== 'İade Edildi' && a.status !== 'IadeEdildi'
-        );
+        // Filter ONLY active or partially returned assignments WITH returnable hardware or accessories
+        const eligible = data.data.filter((a) => {
+          const isNotFullyReturned = a.status !== 'İade Edildi' && a.status !== 'IadeEdildi';
+          if (!isNotFullyReturned) return false;
+
+          const hasReturnableHw = a.items && a.items.some((item) => !item.returned);
+          const hasReturnableAcc = a.accessoryItems && a.accessoryItems.some((acc) => acc.quantityGiven - acc.quantityReturned > 0);
+
+          return hasReturnableHw || hasReturnableAcc;
+        });
         setAssignments(eligible);
+
       } else {
         throw new Error(data.message || 'Zimmet kayıtları alınamadı.');
       }
@@ -144,7 +153,8 @@ export default function SelectAssignmentForReturnModal({ isOpen, onClose }) {
 
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 font-medium">
                         <span>Birim: {item.employee?.unit?.name || '-'}</span>
-                        <span>TC: {item.employee?.tcNo}</span>
+                        <span>Sicil No: {item.employee?.tcNo}</span>
+
                         <span>
                           Teslim:{' '}
                           {item.teslimTarihi && !isNaN(new Date(item.teslimTarihi).getTime())

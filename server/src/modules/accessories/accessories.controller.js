@@ -159,3 +159,13 @@ export const getAccessoryStats = async (req, res, next) => {
     next(error);
   }
 };
+
+export const exportAccessories = async (req, res, next) => {
+  try {
+    const { category, q } = req.query;
+    await accessoryService.exportAccessories({ category, q }, res);
+  } catch (error) {
+    next(error);
+  }
+};
+

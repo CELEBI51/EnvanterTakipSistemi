@@ -13,6 +13,9 @@ router.get('/', categoriesController.getCategories);
 // POST /api/categories (Admin ONLY)
 router.post('/', roleMiddleware(['admin']), categoriesController.createCategory);
 
+// PUT /api/categories/:id (Admin ONLY)
+router.put('/:id', roleMiddleware(['admin']), categoriesController.updateCategory);
+
 // DELETE /api/categories/:id (Admin ONLY)
 router.delete('/:id', roleMiddleware(['admin']), categoriesController.deleteCategory);
 

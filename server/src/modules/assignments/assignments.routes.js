@@ -8,8 +8,10 @@ const router = Router();
 
 router.use(authMiddleware);
 
+router.get('/export', assignmentsController.exportAssignments);
 router.get('/', assignmentsController.listAssignments);
 router.get('/stats', assignmentsController.getAssignmentStats);
+
 router.post('/', roleMiddleware(['admin', 'it_staff']), assignmentsController.createAssignment);
 router.get('/:id', assignmentsController.getAssignmentDetail);
 router.get('/:id/pdf', assignmentsController.downloadAssignmentPdf);

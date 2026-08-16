@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Calendar, Key, CheckCircle, Ban, FileText, Building2, CreditCard, Clock } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { hasPermission } from '../../../utils/permissions';
 import AttachmentList from '../../../components/common/AttachmentList';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import { getLicenseStatusLabel } from '../../../constants/licenseStatusLabels';
@@ -20,7 +21,7 @@ export default function LicenseDetailModal({ isOpen, onClose, licenseId, onSucce
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState('');
 
-  const canEdit = user?.role === 'admin' || user?.role === 'it_staff';
+  const canEdit = hasPermission(user, 'licenses:manage');
 
   useEffect(() => {
     if (isOpen && licenseId) {

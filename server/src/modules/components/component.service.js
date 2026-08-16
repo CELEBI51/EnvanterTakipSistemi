@@ -217,6 +217,54 @@ export const deleteComponent = async (id) => {
   return { message: 'Bileşen başarıyla silindi.' };
 };
 
+export const exportComponents = async ({ categoryId, q }, res) => {
+  const where = {};
+
+  if (categoryId) {
+    where.categoryId = categoryId;
+  }
+
+  if (q && q.trim() !== '') {
+    const searchTerm = q.trim();
+    where.OR = [
+      { name: { contains: searchTerm, mode: 'insensitive' } },
+      { brand: { contains: searchTerm, mode: 'insensitive' } },
+      { model: { contains: searchTerm, mode: 'insensitive' } },
+      { location: { contains: searchTerm, mode: 'insensitive' } },
+      { supplier: { contains: searchTerm, mode: 'insensitive' } },
+    ];
+  }
+
+  const items = await prisma.component.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      category: true,
+    },
+  });
+
+  const columns = [
+    { header: 'Ürün Adı', key: 'name', width: 22 },
+    { header: 'Kategori', key: 'categoryName', width: 18 },
+    { header: 'Toplam Miktar', key: 'totalQuantity', width: 15 },
+    { header: 'Kullanılabilir', key: 'availableQuantity', width: 15 },
+    { header: 'Kullanılan', key: 'usedQuantity', width: 15 },
+  ];
+
+  const rows = items.map((item) => ({
+    name: item.name || '-',
+    categoryName: item.category ? item.category.name : '-',
+    totalQuantity: item.totalQuantity || 0,
+    availableQuantity: item.availableQuantity || 0,
+    usedQuantity: item.usedQuantity || 0,
+  }));
+
+  const { createExcelStream } = await import('../../services/excelExport.service.js');
+  const todayStr = new Date().toISOString().split('T')[0];
+  await createExcelStream('Bileşenler', columns, rows, res, `bilesen_${todayStr}.xlsx`);
+};
+
+
 /**
  * Get Component Statistics Summary (totalProducts, outOfStock, totalUsedQuantity).
  */

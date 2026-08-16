@@ -8,7 +8,9 @@ const router = Router();
 
 router.use(authMiddleware);
 
+router.get('/export', returnsController.exportReturns);
 router.get('/', returnsController.listReturns);
+
 router.post('/', roleMiddleware(['admin', 'it_staff']), returnsController.createReturn);
 router.get('/:id', returnsController.getReturnDetail);
 router.get('/:id/pdf', returnsController.downloadReturnPdf);

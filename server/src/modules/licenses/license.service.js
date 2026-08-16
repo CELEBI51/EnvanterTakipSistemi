@@ -327,6 +327,93 @@ export const getLicenseStats = async () => {
   };
 };
 
+export const exportLicenses = async ({ unitId, status, paymentType, endDateFrom, endDateTo, q }, res) => {
+  const where = {};
+
+  if (unitId) {
+    where.unitId = unitId;
+  }
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (paymentType) {
+    where.paymentType = paymentType;
+  }
+
+  if (endDateFrom || endDateTo) {
+    where.endDate = {};
+    if (endDateFrom) where.endDate.gte = new Date(endDateFrom);
+    if (endDateTo) where.endDate.lte = new Date(endDateTo);
+  }
+
+  if (q && q.trim() !== '') {
+    const searchTerm = q.trim();
+    where.OR = [
+      { brand: { contains: searchTerm, mode: 'insensitive' } },
+      { productInfo: { contains: searchTerm, mode: 'insensitive' } },
+      { licenseKey: { contains: searchTerm, mode: 'insensitive' } },
+      { invoiceNumber: { contains: searchTerm, mode: 'insensitive' } },
+    ];
+  }
+
+  const items = await prisma.license.findMany({
+    where,
+    orderBy: { endDate: 'asc' },
+    include: {
+      unit: {
+        select: { id: true, name: true },
+      },
+    },
+  });
+
+  const columns = [
+    { header: 'Marka', key: 'brand', width: 18 },
+    { header: 'Ürün Bilgisi', key: 'productInfo', width: 22 },
+    { header: 'Birim', key: 'unitName', width: 18 },
+    { header: 'Lisans Anahtarı', key: 'licenseKey', width: 22 },
+    { header: 'Başlangıç Tarihi', key: 'startDate', width: 16 },
+    { header: 'Bitiş Tarihi', key: 'endDate', width: 16 },
+    { header: 'Durum', key: 'statusText', width: 15 },
+    { header: 'Ödeme Tipi', key: 'paymentTypeText', width: 15 },
+    { header: 'Fatura No', key: 'invoiceNumber', width: 16 },
+    { header: 'Fatura Tutarı', key: 'invoiceAmount', width: 16 },
+  ];
+
+  const STATUS_TEXT_MAP = {
+    AKTIF: 'Aktif',
+    YENILENDI: 'Yenilendi',
+    YENILENMEDI: 'Yenilenmedi',
+    YENILENMEYECEK: 'Yenilenmeyecek',
+    IPTAL_EDILDI: 'İptal Edildi',
+    SURESI_DOLDU: 'Süresi Doldu',
+  };
+
+  const PAYMENT_TYPE_MAP = {
+    KREDI_KARTI: 'Kredi Kartı',
+    NAKIT: 'Nakit',
+    VADELI: 'Vadeli',
+  };
+
+  const rows = items.map((item) => ({
+    brand: item.brand || '-',
+    productInfo: item.productInfo || '-',
+    unitName: item.unit ? item.unit.name : '-',
+    licenseKey: item.licenseKey || '-',
+    startDate: item.startDate ? new Date(item.startDate).toLocaleDateString('tr-TR') : '-',
+    endDate: item.endDate ? new Date(item.endDate).toLocaleDateString('tr-TR') : '-',
+    statusText: STATUS_TEXT_MAP[item.status] || item.status,
+    paymentTypeText: PAYMENT_TYPE_MAP[item.paymentType] || item.paymentType,
+    invoiceNumber: item.invoiceNumber || '-',
+    invoiceAmount: item.invoiceAmount !== null && item.invoiceAmount !== undefined ? `${item.invoiceAmount} ₺` : '-',
+  }));
+
+  const { createExcelStream } = await import('../../services/excelExport.service.js');
+  const todayStr = new Date().toISOString().split('T')[0];
+  await createExcelStream('Lisanslar', columns, rows, res, `lisans_${todayStr}.xlsx`);
+};
+
 /**
  * Get Expiring Licenses list (for Dashboard and alerts).
  */

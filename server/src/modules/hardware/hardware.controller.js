@@ -132,3 +132,13 @@ export const getHardwareStats = async (req, res, next) => {
     next(error);
   }
 };
+
+export const exportHardware = async (req, res, next) => {
+  try {
+    const { category, status, q } = req.query;
+    await hardwareService.exportHardware({ category, status, q }, res);
+  } catch (error) {
+    next(error);
+  }
+};
+

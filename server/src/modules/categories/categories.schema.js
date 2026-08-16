@@ -41,3 +41,11 @@ export const createCategorySchema = z.object({
     .min(1, 'Kategori adı boş olamaz.')
     .transform((val) => val.trim()),
 });
+
+export const updateCategorySchema = z.object({
+  name: z
+    .string({ required_error: 'Kategori adı zorunludur.' })
+    .min(1, 'Kategori adı boş olamaz.')
+    .transform((val) => val.trim()),
+});
+

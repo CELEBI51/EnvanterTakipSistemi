@@ -111,3 +111,14 @@ export const deleteConsumable = async (req, res, next) => {
     next(error);
   }
 };
+
+export const exportConsumables = async (req, res, next) => {
+  try {
+    const { categoryId, q } = req.query;
+    await consumableService.exportConsumables({ categoryId, q }, res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+

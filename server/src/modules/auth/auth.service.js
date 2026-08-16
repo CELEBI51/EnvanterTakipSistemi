@@ -39,6 +39,7 @@ export const loginUser = async ({ email, password }) => {
     fullName: user.fullName,
     email: user.email,
     role: user.role,
+    permissions: user.permissions || [],
     mustChangePassword: user.mustChangePassword,
   };
 
@@ -74,9 +75,11 @@ export const changePassword = async (userId, { newPassword, confirmPassword }) =
       fullName: true,
       email: true,
       role: true,
+      permissions: true,
       mustChangePassword: true,
     },
   });
+
 
   // Şifre yenilendikten sonra taze tam yetkili token üretilir
   const tokenPayload = {

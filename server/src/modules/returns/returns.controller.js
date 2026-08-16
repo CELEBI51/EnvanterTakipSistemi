@@ -17,8 +17,8 @@ export const createReturn = async (req, res, next) => {
 
 export const listReturns = async (req, res, next) => {
   try {
-    const { assignmentId, employeeId, unitId, q, page, pageSize } = req.query;
-    const result = await returnsService.listReturns({ assignmentId, employeeId, unitId, q, page, pageSize });
+    const { assignmentId, employeeId, unitId, status, q, page, pageSize } = req.query;
+    const result = await returnsService.listReturns({ assignmentId, employeeId, unitId, status, q, page, pageSize });
     return res.status(200).json({
       success: true,
       data: result.data,
@@ -28,6 +28,7 @@ export const listReturns = async (req, res, next) => {
     next(error);
   }
 };
+
 
 export const getReturnDetail = async (req, res, next) => {
   try {
@@ -80,3 +81,13 @@ export const downloadSignedReturnForm = async (req, res, next) => {
     next(error);
   }
 };
+
+export const exportReturns = async (req, res, next) => {
+  try {
+    const { assignmentId, employeeId, unitId, q } = req.query;
+    await returnsService.exportReturns({ assignmentId, employeeId, unitId, q }, res);
+  } catch (error) {
+    next(error);
+  }
+};
+

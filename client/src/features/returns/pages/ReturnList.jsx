@@ -2,15 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText, Eye, Filter, RotateCcw, Plus, Search } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { hasPermission } from '../../../utils/permissions';
+import ExcelExportButton from '../../../components/common/ExcelExportButton';
+
 import ReturnDetailModal from '../components/ReturnDetailModal';
 import SelectAssignmentForReturnModal from '../components/SelectAssignmentForReturnModal';
 
 export default function ReturnList() {
   const [searchParams] = useSearchParams();
   const token = useAuthStore((state) => state.accessToken);
-  const userRole = useAuthStore((state) => state.user?.role?.toLowerCase());
+  const currentUser = useAuthStore((state) => state.user);
+  const userRole = currentUser?.role?.toLowerCase();
+
 
   const initialSearch = searchParams.get('search') || searchParams.get('q') || '';
+  const autoOpenModal = searchParams.get('openModal') === 'true';
 
   const [returns, setReturns] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -20,6 +26,7 @@ export default function ReturnList() {
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [unitIdFilter, setUnitIdFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [units, setUnits] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -30,7 +37,8 @@ export default function ReturnList() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // Select Assignment for Return Modal
-  const [isSelectAssignmentOpen, setIsSelectAssignmentOpen] = useState(false);
+  const [isSelectAssignmentOpen, setIsSelectAssignmentOpen] = useState(autoOpenModal);
+
 
   // Debounce search input (350ms)
   useEffect(() => {
@@ -57,7 +65,7 @@ export default function ReturnList() {
 
   useEffect(() => {
     fetchReturns();
-  }, [unitIdFilter, debouncedSearch, currentPage, token]);
+  }, [unitIdFilter, statusFilter, debouncedSearch, currentPage, token]);
 
   const fetchReturns = async () => {
     setLoading(true);
@@ -66,6 +74,7 @@ export default function ReturnList() {
     try {
       let query = `?page=${currentPage}&pageSize=10`;
       if (unitIdFilter) query += `&unitId=${encodeURIComponent(unitIdFilter)}`;
+      if (statusFilter) query += `&status=${encodeURIComponent(statusFilter)}`;
       if (debouncedSearch.trim()) query += `&q=${encodeURIComponent(debouncedSearch.trim())}`;
 
       const res = await fetch(`http://localhost:5000/api/returns${query}`, {
@@ -100,44 +109,50 @@ export default function ReturnList() {
           </p>
         </div>
 
-        {userRole !== 'viewer' && (
-          <button
-            onClick={() => setIsSelectAssignmentOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-[#1E2534] text-white text-xs font-bold hover:bg-slate-800 transition cursor-pointer flex items-center gap-2 shadow-xs"
-          >
-            <Plus className="w-4 h-4" /> Yeni İade Oluştur
-          </button>
-        )}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <ExcelExportButton
+            modulePath="returns"
+            queryParams={{
+              unitId: unitIdFilter,
+              status: statusFilter,
+              q: searchQuery,
+            }}
+            fileNamePrefix="iade"
+          />
+
+          {hasPermission(currentUser, 'returns:create') && (
+            <button
+              onClick={() => setIsSelectAssignmentOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-[#1E2534] text-white text-xs font-bold hover:bg-slate-800 transition cursor-pointer flex items-center gap-2 shadow-xs"
+            >
+              <Plus className="w-4 h-4" /> Yeni İade Oluştur
+            </button>
+          )}
+
+        </div>
+
       </div>
 
       {/* Filters Card */}
-      <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center gap-2 text-[#4F8FE0]">
-          <Filter className="w-4 h-4" />
-          <span className="text-xs font-bold uppercase tracking-wider">Filtreleme & Canlı Arama</span>
+      <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        {/* Row 1: Full-width live search */}
+        <div className="relative w-full">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder="İade eden personel adı, Sicil No, teslim alan veya ürün bilgisi ile canlı ara..."
+
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
+          />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {/* Canlı Arama Çubuğu */}
-          <div className="md:col-span-2">
-            <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
-              Canlı Arama
-            </label>
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder="İade eden personel adı, T.C., teslim alan veya ürün bilgisi yazın..."
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
-              />
-            </div>
-          </div>
-
+        {/* Row 2: Equal width filters row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
           <div>
             <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
               Birim
@@ -158,8 +173,45 @@ export default function ReturnList() {
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
+              Zimmet Durumu
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
+            >
+              <option value="">Tüm Durumlar</option>
+              <option value="KismiIade">Kısmi İade</option>
+              <option value="IadeEdildi">İade Edildi</option>
+
+            </select>
+          </div>
         </div>
+
+        {/* Clear Filters Button Row (Only if any filter active) */}
+        {(searchQuery || unitIdFilter || statusFilter) && (
+          <div className="flex justify-end pt-1">
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setUnitIdFilter('');
+                setStatusFilter('');
+                setCurrentPage(1);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-xs font-bold transition cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Filtreleri Temizle
+            </button>
+          </div>
+        )}
       </div>
+
 
       {/* Main Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
@@ -294,7 +346,9 @@ export default function ReturnList() {
       <SelectAssignmentForReturnModal
         isOpen={isSelectAssignmentOpen}
         onClose={() => setIsSelectAssignmentOpen(false)}
+        initialSearch={initialSearch}
       />
+
     </div>
   );
 }

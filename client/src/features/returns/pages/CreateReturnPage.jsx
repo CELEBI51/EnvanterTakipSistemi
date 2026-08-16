@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import FileUploadField from '../../../components/common/FileUploadField';
+import PendingMaintenanceFormModal from '../components/PendingMaintenanceFormModal';
 
 export default function CreateReturnPage() {
   const navigate = useNavigate();
@@ -40,6 +41,76 @@ export default function CreateReturnPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [createdReturn, setCreatedReturn] = useState(null);
+
+  // Pending Maintenance Data State ({ [hardwareId]: formData })
+  const [pendingMaintenanceData, setPendingMaintenanceData] = useState({});
+  const [maintenanceCompletedForIds, setMaintenanceCompletedForIds] = useState(new Set());
+  const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
+  const [selectedHardwareForMaintenance, setSelectedHardwareForMaintenance] = useState(null);
+  const [previousStatusMap, setPreviousStatusMap] = useState({});
+
+  const handlePendingMaintenanceSave = (formData) => {
+    if (selectedHardwareForMaintenance) {
+      const hwId = selectedHardwareForMaintenance.id;
+      setPendingMaintenanceData((prev) => ({
+        ...prev,
+        [hwId]: formData,
+      }));
+      setMaintenanceCompletedForIds((prev) => {
+        const nextSet = new Set(prev);
+        nextSet.add(hwId);
+        return nextSet;
+      });
+    }
+    setIsMaintenanceModalOpen(false);
+  };
+
+  const handlePendingMaintenanceClose = () => {
+    if (
+      selectedHardwareForMaintenance &&
+      !maintenanceCompletedForIds.has(selectedHardwareForMaintenance.id)
+    ) {
+      const hwId = selectedHardwareForMaintenance.id;
+      const prevStatus = previousStatusMap[hwId] || 'Hazır';
+      setHardwareState((prev) => ({
+        ...prev,
+        [hwId]: {
+          ...prev[hwId],
+          resultStatus: prevStatus === 'Serviste' ? 'Hazır' : prevStatus,
+        },
+      }));
+    }
+    setIsMaintenanceModalOpen(false);
+  };
+
+  const handleStatusChange = (hwId, newStatus) => {
+    const currentStatus = hardwareState[hwId]?.resultStatus || 'Hazır';
+
+    if (newStatus === 'Serviste' && !maintenanceCompletedForIds.has(hwId)) {
+      setPreviousStatusMap((prev) => ({ ...prev, [hwId]: currentStatus }));
+      setHardwareState((prev) => ({
+        ...prev,
+        [hwId]: { ...prev[hwId], resultStatus: 'Serviste' },
+      }));
+
+      const hwItem = assignment?.items?.find((i) => i.hardwareId === hwId)?.hardware;
+      const hwName = hwItem ? `${hwItem.brand} ${hwItem.model || ''} (${hwItem.demirbasNo})` : 'Varlık';
+
+      setSelectedHardwareForMaintenance({ id: hwId, name: hwName });
+      setIsMaintenanceModalOpen(true);
+    } else {
+      setHardwareState((prev) => ({
+        ...prev,
+        [hwId]: { ...prev[hwId], resultStatus: newStatus },
+      }));
+    }
+  };
+
+  const handleCancelReturn = () => {
+    setPendingMaintenanceData({});
+    setMaintenanceCompletedForIds(new Set());
+    navigate('/assignments');
+  };
 
   // Signed Form Upload in Success State
   const [signedFile, setSignedFile] = useState(null);
@@ -191,6 +262,35 @@ export default function CreateReturnPage() {
         throw new Error(data.message || 'İade oluşturulurken hata oluştu.');
       }
 
+      // Create maintenance records in DB only now after return is created successfully
+      for (const hwId of Object.keys(pendingMaintenanceData)) {
+        const itemState = hardwareState[hwId];
+        if (itemState && itemState.selected && itemState.resultStatus === 'Serviste') {
+          const mData = pendingMaintenanceData[hwId];
+          if (mData) {
+            const maintRes = await fetch(`http://localhost:5000/api/maintenance`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                hardwareId: hwId,
+                ...mData,
+              }),
+            });
+
+            const maintData = await maintRes.json();
+            if (!maintRes.ok) {
+              throw new Error(
+                maintData.message ||
+                'İade kaydedildi ancak bakım kaydı oluşturulurken bir hata oluştu.'
+              );
+            }
+          }
+        }
+      }
+
       setCreatedReturn(data.data);
     } catch (err) {
       setSubmitError(err.message);
@@ -288,6 +388,13 @@ export default function CreateReturnPage() {
             )}
           </div>
         </div>
+
+        <PendingMaintenanceFormModal
+          isOpen={isMaintenanceModalOpen}
+          onClose={handlePendingMaintenanceClose}
+          onSave={handlePendingMaintenanceSave}
+          hardwareName={selectedHardwareForMaintenance?.name || ''}
+        />
       </div>
     );
   }
@@ -314,8 +421,31 @@ export default function CreateReturnPage() {
   const unreturnedHw = assignment?.items?.filter((i) => !i.returned) || [];
   const unreturnedAcc = assignment?.accessoryItems?.filter((a) => a.quantityGiven - a.quantityReturned > 0) || [];
 
+  if (unreturnedHw.length === 0 && unreturnedAcc.length === 0) {
+    return (
+      <div className="max-w-xl mx-auto p-8 bg-white border border-slate-200 rounded-2xl shadow-xs text-center space-y-4">
+        <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="text-base font-bold text-[#1E2534]">İade Edilebilir Kalem Bulunmuyor</h3>
+          <p className="text-xs text-slate-500">
+            Bu zimmette iade edilebilir kalem bulunmuyor. Sarf malzemeler tüketim yapıldığı için iade edilemez.
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/assignments')}
+          className="px-5 py-2.5 bg-[#1E2534] text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition cursor-pointer"
+        >
+          Zimmet Listesine Dön
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -349,8 +479,9 @@ export default function CreateReturnPage() {
 
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-1 text-xs">
             <p className="text-sm font-bold text-[#1E2534]">{assignment.employee?.fullName}</p>
-            <p className="text-slate-600 font-mono">T.C. No: {assignment.employee?.tcNo}</p>
+            <p className="text-slate-600 font-mono">Sicil No: {assignment.employee?.tcNo}</p>
             <p className="text-slate-600">Birim: {assignment.employee?.unit?.name || '-'}</p>
+
             <p className="text-slate-400 text-[11px] mt-1">
               Veriliş Tarihi: {new Date(assignment.teslimTarihi).toLocaleDateString('tr-TR')} (Teslim Eden: {assignment.teslimEden})
             </p>
@@ -444,12 +575,7 @@ export default function CreateReturnPage() {
                         <label className="text-[11px] font-bold text-slate-600 uppercase">Sonuç Durumu:</label>
                         <select
                           value={state.resultStatus}
-                          onChange={(e) =>
-                            setHardwareState((prev) => ({
-                              ...prev,
-                              [item.hardwareId]: { ...state, resultStatus: e.target.value },
-                            }))
-                          }
+                          onChange={(e) => handleStatusChange(item.hardwareId, e.target.value)}
                           className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800"
                         >
                           <option value="Hazır">Hazır (Sağlam)</option>
@@ -534,23 +660,47 @@ export default function CreateReturnPage() {
         )}
 
         {/* SUBMIT ACTIONS */}
-        <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-4">
-          <button
-            type="button"
-            onClick={() => navigate('/assignments')}
-            className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition cursor-pointer"
-          >
-            İptal
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-6 py-2.5 rounded-xl bg-[#1E2534] text-white text-xs font-bold hover:bg-slate-800 transition disabled:opacity-50 cursor-pointer shadow-xs"
-          >
-            {submitting ? 'İade Kaydediliyor...' : 'İadeyi Onayla ve PDF Oluştur'}
-          </button>
-        </div>
+        {(() => {
+          const pendingServiceHardware = Object.keys(hardwareState).find((hwId) => {
+            const state = hardwareState[hwId];
+            return state.selected && state.resultStatus === 'Serviste' && !maintenanceCompletedForIds.has(hwId);
+          });
+          const isSubmitDisabled = submitting || Boolean(pendingServiceHardware);
+
+          return (
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-4">
+              <button
+                type="button"
+                onClick={handleCancelReturn}
+                className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition cursor-pointer"
+              >
+                İptal
+              </button>
+              <div className="flex flex-col items-end gap-1.5">
+                <button
+                  type="submit"
+                  disabled={isSubmitDisabled}
+                  className="px-6 py-2.5 rounded-xl bg-[#1E2534] text-white text-xs font-bold hover:bg-slate-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                >
+                  {submitting ? 'İade Kaydediliyor...' : 'İadeyi Onayla ve PDF Oluştur'}
+                </button>
+                {pendingServiceHardware && (
+                  <p className="text-[11px] font-semibold text-rose-600">
+                    * Serviste olarak işaretlenen varlıklar için önce bakım kaydı oluşturulmalıdır
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </form>
+
+      <PendingMaintenanceFormModal
+        isOpen={isMaintenanceModalOpen}
+        onClose={handlePendingMaintenanceClose}
+        onSave={handlePendingMaintenanceSave}
+        hardwareName={selectedHardwareForMaintenance?.name || ''}
+      />
     </div>
   );
 }

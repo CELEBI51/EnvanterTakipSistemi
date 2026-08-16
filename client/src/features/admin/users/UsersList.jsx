@@ -12,11 +12,13 @@ import {
   Edit2,
   Check,
   Building2,
+  Sliders,
 } from 'lucide-react';
 import axiosClient from '../../../api/axiosClient';
 import useAuthStore from '../../../store/authStore';
 import AddUserModal from './AddUserModal';
 import ResetPasswordModal from './ResetPasswordModal';
+import EditPermissionsModal from './EditPermissionsModal';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 
 export default function UsersList() {
@@ -27,6 +29,8 @@ export default function UsersList() {
   // Modallar
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [resetModalUser, setResetModalUser] = useState(null);
+  const [editPermissionsUser, setEditPermissionsUser] = useState(null);
+
   const [deleteConfirmUser, setDeleteConfirmUser] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -86,7 +90,7 @@ export default function UsersList() {
     }
   };
 
-  const getRoleBadge = (role) => {
+  const getRoleBadge = (role, permissionsCount = 0) => {
     switch (role) {
       case 'admin':
         return (
@@ -95,19 +99,20 @@ export default function UsersList() {
           </span>
         );
       case 'it_staff':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] text-xs font-semibold bg-amber-50 text-[#F59E0B] border border-amber-300">
-            <UserCheck className="w-3 h-3 text-[#F59E0B]" /> IT Personeli (it_staff)
-          </span>
-        );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] text-xs font-semibold bg-slate-100 text-[#6B7280] border border-slate-300">
-            <UserX className="w-3 h-3 text-[#6B7280]" /> İzleyici (viewer)
-          </span>
+          <div className="inline-flex flex-col items-start gap-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] text-xs font-semibold bg-amber-50 text-[#F59E0B] border border-amber-300">
+              <UserCheck className="w-3 h-3 text-[#F59E0B]" /> IT Personeli
+            </span>
+            <span className="text-[10px] text-slate-500 font-mono">
+              ({permissionsCount} yetki tanımlı)
+            </span>
+          </div>
         );
     }
   };
+
 
   return (
     <div className="space-y-6 pb-12">
@@ -184,6 +189,7 @@ export default function UsersList() {
                 users.map((u) => {
                   const isSelf = u.id === currentUser?.id;
                   const isLastAdmin = u.role === 'admin' && adminCount <= 1;
+                  const permCount = Array.isArray(u.permissions) ? u.permissions.length : 0;
 
                   return (
                     <tr key={u.id} className="hover:bg-[#F3F4F6] even:bg-[#F9FAFB] transition-colors">
@@ -208,7 +214,6 @@ export default function UsersList() {
                             >
                               <option value="admin">Yönetici (admin)</option>
                               <option value="it_staff">IT Personeli (it_staff)</option>
-                              <option value="viewer">İzleyici (viewer)</option>
                             </select>
                             <button
                               onClick={() => handleUpdateRole(u.id)}
@@ -227,7 +232,7 @@ export default function UsersList() {
                             </button>
                           </div>
                         ) : (
-                          getRoleBadge(u.role)
+                          getRoleBadge(u.role, permCount)
                         )}
                       </td>
                       <td className="py-3.5 px-4">
@@ -250,6 +255,17 @@ export default function UsersList() {
                       </td>
                       <td className="py-3.5 px-4 sm:px-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {u.role === 'it_staff' && (
+                            <button
+                              onClick={() => setEditPermissionsUser(u)}
+                              title="Yetkileri / İzinleri Düzenle"
+                              className="p-2 text-[#4F8FE0] hover:bg-blue-50 rounded-[6px] transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                            >
+                              <Sliders className="w-4 h-4" />
+                              <span className="hidden md:inline">Yetkiler</span>
+                            </button>
+                          )}
+
                           {editingUserId !== u.id && (
                             <button
                               onClick={() => {
@@ -313,6 +329,13 @@ export default function UsersList() {
       <AddUserModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
+        onSuccess={fetchUsers}
+      />
+
+      <EditPermissionsModal
+        isOpen={!!editPermissionsUser}
+        onClose={() => setEditPermissionsUser(null)}
+        user={editPermissionsUser}
         onSuccess={fetchUsers}
       />
 

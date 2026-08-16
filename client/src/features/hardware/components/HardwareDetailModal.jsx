@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Trash2, Barcode, Wrench, Plus, ChevronRight } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import BarcodePrintModal from '../../../components/common/BarcodePrintModal';
@@ -148,16 +149,6 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                 </button>
               )}
 
-              {canEdit && hardware && (
-                <button
-                  onClick={() => setShowConfirmDelete(true)}
-                  className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-rose-100 transition cursor-pointer"
-                  title="Ürünü Sil"
-                >
-                  <Trash2 className="w-4.5 h-4.5" />
-                </button>
-              )}
-
               <button
                 onClick={onClose}
                 className="w-8 h-8 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center transition cursor-pointer"
@@ -165,6 +156,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                 <X className="w-5 h-5" />
               </button>
             </div>
+
           </div>
 
           {/* Content */}
@@ -210,24 +202,36 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-[#1E2534]">Durum & Tedarik</span>
                         {canEdit ? (
-                          <select
-                            disabled={updatingStatus}
-                            value={hardware.status}
-                            onChange={(e) => handleStatusChange(e.target.value)}
-                            className="px-2.5 py-1 rounded text-xs font-bold bg-white border border-slate-300 text-[#1E2534]"
-                          >
-                            {STATUS_OPTIONS.map((s) => (
-                              <option key={s.value} value={s.value}>
-                                {s.label}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="flex items-center gap-1.5">
+                            <select
+                              disabled={updatingStatus}
+                              value={hardware.status}
+                              onChange={(e) => handleStatusChange(e.target.value)}
+                              className="px-2.5 py-1 rounded text-xs font-bold bg-white border border-slate-300 text-[#1E2534] focus:border-[#4F8FE0]"
+                            >
+                              {/* Sistem tarafından otomatik yönetilen durumlar (Kullanımda, Hazır, Serviste) */}
+                              {hardware.status === 'Hazir' && (
+                                <option value="Hazir">Hazır (Boşta)</option>
+                              )}
+                              {hardware.status === 'Kullanimda' && (
+                                <option value="Kullanimda">Kullanımda (Zimmetli)</option>
+                              )}
+                              {hardware.status === 'Serviste' && (
+                                <option value="Serviste">Serviste (Bakımda)</option>
+                              )}
+
+                              {/* Elle değiştirilebilen durumlar */}
+                              <option value="Arizali">Arızalı</option>
+                              <option value="KullanimDisi">Kullanım Dışı</option>
+                            </select>
+                          </div>
                         ) : (
                           <span className="px-2.5 py-1 rounded text-xs font-bold bg-slate-200 text-slate-800">
                             {hardware.status}
                           </span>
                         )}
                       </div>
+
 
                       <div className="space-y-2 text-xs pt-1">
                         <div className="flex justify-between">
@@ -344,7 +348,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                         <h3 className="text-sm font-bold text-[#1E2534]">Bakım Geçmişi</h3>
                       </div>
 
-                      {canEdit && (
+                      {hasPermission(user, 'hardware:maintenance') && !hardware?.hasActiveMaintenance && (
                         <button
                           type="button"
                           onClick={() => setIsAddMaintenanceOpen(true)}

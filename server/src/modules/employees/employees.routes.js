@@ -7,8 +7,10 @@ const router = Router();
 
 router.use(authMiddleware);
 
+router.get('/export', employeesController.exportEmployees);
 router.get('/stats', employeesController.getEmployeeStats);
 router.get('/', employeesController.getEmployees);
+
 router.post('/', roleMiddleware(['admin', 'it_staff']), employeesController.createEmployee);
 router.get('/:id', employeesController.getEmployeeById);
 router.patch('/:id/status', roleMiddleware(['admin', 'it_staff']), employeesController.updateEmployeeStatus);

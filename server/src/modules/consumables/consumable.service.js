@@ -224,8 +224,22 @@ export const issueConsumable = async (id, { quantity, employeeId, note }, userId
     return item;
   });
 
+  // Anlık Kritik Stok Kontrolü
+  try {
+    const { checkAndNotifyItemInstantCriticalStock } = await import('../../jobs/criticalStock.job.js');
+    await checkAndNotifyItemInstantCriticalStock({
+      name: updatedConsumable.name,
+      type: 'Sarf Malzeme',
+      availableQuantity: updatedConsumable.availableQuantity,
+      oldAvailableQuantity: existing.availableQuantity,
+    });
+  } catch (err) {
+    console.error('Kritik stok mail kontrolü yapılırken hata:', err);
+  }
+
   return formatConsumable(updatedConsumable);
 };
+
 
 export const getConsumableHistory = async (id) => {
   const existing = await prisma.consumable.findUnique({ where: { id } });
@@ -268,3 +282,50 @@ export const deleteConsumable = async (id) => {
   await prisma.consumable.delete({ where: { id } });
   return { message: 'Sarf malzeme başarıyla silindi.' };
 };
+
+export const exportConsumables = async ({ categoryId, q }, res) => {
+  const where = {};
+
+  if (categoryId) {
+    where.categoryId = categoryId;
+  }
+
+  if (q && q.trim() !== '') {
+    const searchTerm = q.trim();
+    where.OR = [
+      { name: { contains: searchTerm, mode: 'insensitive' } },
+      { manufacturer: { contains: searchTerm, mode: 'insensitive' } },
+      { supplier: { contains: searchTerm, mode: 'insensitive' } },
+      { location: { contains: searchTerm, mode: 'insensitive' } },
+    ];
+  }
+
+  const items = await prisma.consumable.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      category: true,
+    },
+  });
+
+  const columns = [
+    { header: 'Ürün Adı', key: 'name', width: 22 },
+    { header: 'Kategori', key: 'categoryName', width: 18 },
+    { header: 'Toplam Miktar', key: 'totalQuantity', width: 15 },
+    { header: 'Kullanılabilir', key: 'availableQuantity', width: 15 },
+    { header: 'Tüketilen', key: 'consumedQuantity', width: 15 },
+  ];
+
+  const rows = items.map((item) => ({
+    name: item.name || '-',
+    categoryName: item.category ? item.category.name : '-',
+    totalQuantity: item.totalQuantity || 0,
+    availableQuantity: item.availableQuantity || 0,
+    consumedQuantity: item.consumedQuantity || 0,
+  }));
+
+  const { createExcelStream } = await import('../../services/excelExport.service.js');
+  const todayStr = new Date().toISOString().split('T')[0];
+  await createExcelStream('Sarf Malzemeler', columns, rows, res, `sarf_malzeme_${todayStr}.xlsx`);
+};
+

@@ -7,7 +7,9 @@ const router = Router();
 
 router.use(authMiddleware);
 
+router.get('/export', consumableController.exportConsumables);
 router.get('/', consumableController.getConsumables);
+
 router.post('/', roleMiddleware(['admin', 'it_staff']), consumableController.createConsumable);
 router.get('/:id', consumableController.getConsumableById);
 router.get('/:id/history', consumableController.getConsumableHistory);

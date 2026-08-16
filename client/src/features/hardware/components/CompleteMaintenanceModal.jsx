@@ -20,7 +20,8 @@ export default function CompleteMaintenanceModal({ isOpen, onClose, maintenance,
 
   if (!isOpen || !maintenance) return null;
 
-  const isPreviousArizali = maintenance.previousHardwareStatus === 'Arızalı';
+  const isKullanimda = maintenance.previousHardwareStatus === 'Kullanımda';
+  const needsStatusSelection = !isKullanimda;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,8 +32,12 @@ export default function CompleteMaintenanceModal({ isOpen, onClose, maintenance,
       return;
     }
 
-    if (isPreviousArizali && !resultStatus) {
-      setError('Bu varlık arızalı durumdayken bakıma alınmıştı. Lütfen bakım sonucu varlık durumunu seçin.');
+    if (needsStatusSelection && !resultStatus) {
+      setError(
+        maintenance.previousHardwareStatus === 'Arızalı'
+          ? 'Bu varlık arızalı durumdayken bakıma alınmıştı. Lütfen bakım sonucu varlık durumunu seçin.'
+          : 'Lütfen bakım sonrası varlık durumunu seçin.'
+      );
       return;
     }
 
@@ -47,7 +52,7 @@ export default function CompleteMaintenanceModal({ isOpen, onClose, maintenance,
         },
         body: JSON.stringify({
           endDate,
-          resultStatus: isPreviousArizali ? resultStatus : undefined,
+          resultStatus: needsStatusSelection ? resultStatus : undefined,
         }),
       });
 
@@ -57,7 +62,7 @@ export default function CompleteMaintenanceModal({ isOpen, onClose, maintenance,
         throw new Error(data.message || 'Bakım tamamlanırken hata oluştu.');
       }
 
-      const appliedStatus = data.data?.appliedResultStatus || (isPreviousArizali ? resultStatus : maintenance.previousHardwareStatus);
+      const appliedStatus = data.data?.appliedResultStatus || (needsStatusSelection ? resultStatus : 'Kullanımda');
       setSuccessMessage(`Bakım tamamlandı! Varlık durumu "${appliedStatus}" olarak güncellendi.`);
 
       setTimeout(() => {
@@ -104,7 +109,11 @@ export default function CompleteMaintenanceModal({ isOpen, onClose, maintenance,
           )}
 
           {/* Durum Bilgi Notu */}
-          {isPreviousArizali ? (
+          {isKullanimda ? (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
+              ℹ️ Varlık zimmetli olduğundan bakım sonrası otomatik olarak <strong>"Kullanımda"</strong> durumuna dönecektir.
+            </div>
+          ) : maintenance.previousHardwareStatus === 'Arızalı' ? (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
               <p className="font-bold">⚠️ Arızalı Varlık Uyarısı</p>
               <p>
@@ -112,8 +121,8 @@ export default function CompleteMaintenanceModal({ isOpen, onClose, maintenance,
               </p>
             </div>
           ) : (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
-              ℹ️ Varlık bakıma girmeden önce <strong>"{maintenance.previousHardwareStatus}"</strong> durumundaydı. Bakım tamamlandığında otomatik olarak tekrar <strong>"{maintenance.previousHardwareStatus}"</strong> durumuna dönecektir.
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700">
+              ℹ️ Varlık bakıma girmeden önce <strong>"Hazır"</strong> durumundaydı. Bakım sonrası yeni durumunu aşağıdan seçiniz.
             </div>
           )}
 
@@ -131,11 +140,11 @@ export default function CompleteMaintenanceModal({ isOpen, onClose, maintenance,
             />
           </div>
 
-          {/* Bakım Sonucu Durum (Sadece önceki durum Arızalı ise görünür!) */}
-          {isPreviousArizali && (
+          {/* Bakım Sonucu Durum (previousHardwareStatus !== 'Kullanımda' ise görünür) */}
+          {needsStatusSelection && (
             <div>
               <label className="block text-xs font-bold text-[#1E2534] mb-1">
-                Bakım Sonucu Varlık Durumu <span className="text-rose-500">*</span>
+                Bakım Sonrası Durum <span className="text-rose-500">*</span>
               </label>
               <select
                 value={resultStatus}
@@ -163,7 +172,7 @@ export default function CompleteMaintenanceModal({ isOpen, onClose, maintenance,
             </button>
             <button
               type="submit"
-              disabled={loading || (isPreviousArizali && !resultStatus)}
+              disabled={loading || (needsStatusSelection && !resultStatus)}
               className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs disabled:opacity-50 transition cursor-pointer"
             >
               {loading ? 'Tamamlanıyor...' : 'Bakımı Tamamla'}

@@ -7,8 +7,12 @@ const router = Router();
 
 router.use(authMiddleware);
 
+// GET /api/licenses/export (All authenticated roles)
+router.get('/export', licenseController.exportLicenses);
+
 // GET /api/licenses (All authenticated roles: admin, it_staff, viewer)
 router.get('/', licenseController.getLicenses);
+
 
 // GET /api/licenses/stats (All authenticated roles - statistics summary)
 router.get('/stats', licenseController.getLicenseStats);

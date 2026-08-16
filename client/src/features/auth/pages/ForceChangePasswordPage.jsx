@@ -51,13 +51,8 @@ export default function ForceChangePasswordPage() {
           user: resData.user,
           accessToken: resData.accessToken,
         });
+        navigate('/dashboard');
 
-        const userRole = resData.user.role?.toLowerCase();
-        if (userRole === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
       }
     } catch (err) {
       setErrorMessage(err.response?.data?.message || 'Şifre güncellenirken bir hata oluştu.');

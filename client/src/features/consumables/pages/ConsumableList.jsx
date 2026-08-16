@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Search,
-  PlusCircle,
   History,
   Trash2,
   ChevronLeft,
@@ -12,12 +11,14 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import AddConsumableModal from '../components/AddConsumableModal';
-import RestockConsumableModal from '../components/RestockConsumableModal';
-import ConsumableHistoryModal from '../components/ConsumableHistoryModal';
+import ConsumableDetailManageModal from '../components/ConsumableDetailManageModal';
 import ExcelImportModal from '../../../components/common/ExcelImportModal';
+import ExcelExportButton from '../../../components/common/ExcelExportButton';
+
 
 export default function ConsumableList() {
   const [searchParams] = useSearchParams();
@@ -39,13 +40,15 @@ export default function ConsumableList() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedConsumable, setSelectedConsumable] = useState(null);
-  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [manageModalInitialTab, setManageModalInitialTab] = useState('history');
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
-  const canEdit = user?.role === 'admin' || user?.role === 'it_staff';
+  const canCreate = hasPermission(user, 'consumables:create');
+  const canManage = hasPermission(user, 'consumables:manage');
+  const canExcel = hasPermission(user, 'excel:view');
 
   useEffect(() => {
     fetchCategories();
@@ -61,7 +64,8 @@ export default function ConsumableList() {
           const data = await res.json();
           if (res.ok && data.data) {
             setSelectedConsumable(data.data);
-            setIsRestockModalOpen(true);
+            setManageModalInitialTab('history');
+            setIsManageModalOpen(true);
           }
         } catch (err) {
           console.error('Sarf malzeme detayı alınamadı:', err);
@@ -131,7 +135,7 @@ export default function ConsumableList() {
   };
 
   const handleDeleteConfirmed = async () => {
-    if (!canEdit || !selectedConsumable) return;
+    if (!canManage || !selectedConsumable) return;
     setDeleting(true);
     try {
       const res = await fetch(`http://localhost:5000/api/consumables/${selectedConsumable.id}`, {
@@ -202,15 +206,17 @@ export default function ConsumableList() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={exportToCSV}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-medium transition cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Dışa Aktar (CSV)
-          </button>
+          <ExcelExportButton
+            modulePath="consumables"
+            queryParams={{
+              category: selectedCategory !== 'Tümü' ? selectedCategory : '',
+              q: searchQuery,
+            }}
+            fileNamePrefix="sarf_malzeme"
+          />
 
-          {canEdit && (
+
+          {canExcel && (
             <button
               onClick={() => setIsImportModalOpen(true)}
               className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition cursor-pointer shadow-xs"
@@ -220,7 +226,7 @@ export default function ConsumableList() {
             </button>
           )}
 
-          {canEdit && (
+          {canCreate && (
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] text-white text-xs font-bold transition cursor-pointer"
@@ -230,6 +236,7 @@ export default function ConsumableList() {
             </button>
           )}
         </div>
+
       </div>
 
       {/* Filter & Search Bar */}
@@ -307,7 +314,7 @@ export default function ConsumableList() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
                 {items.map((item) => {
-                  const isDeletable = canEdit && item.consumedQuantity === 0;
+                  const isDeletable = canManage && item.consumedQuantity === 0;
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/80 transition">
@@ -343,33 +350,20 @@ export default function ConsumableList() {
 
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-1">
-                          {canEdit && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedConsumable(item);
-                                setIsRestockModalOpen(true);
-                              }}
-                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded transition cursor-pointer"
-                              title="Stok Ekle"
-                            >
-                              <PlusCircle className="w-4 h-4" />
-                            </button>
-                          )}
-
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedConsumable(item);
-                              setIsHistoryModalOpen(true);
+                              setManageModalInitialTab('history');
+                              setIsManageModalOpen(true);
                             }}
                             className="p-1.5 text-slate-400 hover:text-[#4F8FE0] hover:bg-slate-100 rounded transition cursor-pointer"
-                            title="Hareket Geçmişi"
+                            title="Yönetim & Hareket Geçmişi"
                           >
                             <History className="w-4 h-4" />
                           </button>
 
-                          {canEdit && (
+                          {canManage && (
                             <button
                               type="button"
                               disabled={!isDeletable}
@@ -444,24 +438,15 @@ export default function ConsumableList() {
 
       {selectedConsumable && (
         <>
-          <RestockConsumableModal
-            isOpen={isRestockModalOpen}
+          <ConsumableDetailManageModal
+            isOpen={isManageModalOpen}
             onClose={() => {
-              setIsRestockModalOpen(false);
+              setIsManageModalOpen(false);
               setSelectedConsumable(null);
             }}
             consumable={selectedConsumable}
+            initialTab={manageModalInitialTab}
             onSuccess={fetchConsumables}
-          />
-
-          <ConsumableHistoryModal
-            isOpen={isHistoryModalOpen}
-            onClose={() => {
-              setIsHistoryModalOpen(false);
-              setSelectedConsumable(null);
-            }}
-            consumableId={selectedConsumable.id}
-            consumableName={selectedConsumable.name}
           />
 
           <ConfirmModal

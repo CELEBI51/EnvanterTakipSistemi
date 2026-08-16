@@ -20,6 +20,7 @@ export const getAllUsers = async () => {
       fullName: true,
       email: true,
       role: true,
+      permissions: true,
       mustChangePassword: true,
       createdAt: true,
     },
@@ -29,7 +30,7 @@ export const getAllUsers = async () => {
   });
 };
 
-export const createUser = async ({ fullName, email, role }) => {
+export const createUser = async ({ fullName, email, role, permissions = [] }) => {
   const existingUser = await prisma.user.findUnique({
     where: { email: email.toLowerCase() },
   });
@@ -48,6 +49,7 @@ export const createUser = async ({ fullName, email, role }) => {
       fullName,
       email: email.toLowerCase(),
       role,
+      permissions: Array.isArray(permissions) ? permissions : [],
       passwordHash,
       mustChangePassword: true,
     },
@@ -56,6 +58,7 @@ export const createUser = async ({ fullName, email, role }) => {
       fullName: true,
       email: true,
       role: true,
+      permissions: true,
       mustChangePassword: true,
       createdAt: true,
     },
@@ -96,7 +99,7 @@ export const resetPassword = async (targetUserId) => {
   };
 };
 
-export const updateUserRole = async (targetUserId, newRole, currentUserId) => {
+export const updateUserRole = async (targetUserId, newRole, permissions, currentUserId) => {
   const user = await prisma.user.findUnique({
     where: { id: targetUserId },
   });
@@ -108,7 +111,7 @@ export const updateUserRole = async (targetUserId, newRole, currentUserId) => {
   }
 
   // KRİTİK KURAL 2: Sistemde en az 1 admin kalmalı!
-  if (user.role === 'admin' && newRole !== 'admin') {
+  if (user.role === 'admin' && newRole && newRole !== 'admin') {
     const adminCount = await prisma.user.count({
       where: { role: 'admin' },
     });
@@ -120,14 +123,19 @@ export const updateUserRole = async (targetUserId, newRole, currentUserId) => {
     }
   }
 
+  const updateData = {};
+  if (newRole) updateData.role = newRole;
+  if (Array.isArray(permissions)) updateData.permissions = permissions;
+
   const updatedUser = await prisma.user.update({
     where: { id: targetUserId },
-    data: { role: newRole },
+    data: updateData,
     select: {
       id: true,
       fullName: true,
       email: true,
       role: true,
+      permissions: true,
       mustChangePassword: true,
       createdAt: true,
     },
@@ -135,6 +143,7 @@ export const updateUserRole = async (targetUserId, newRole, currentUserId) => {
 
   return updatedUser;
 };
+
 
 export const deleteUser = async (targetUserId, currentUserId) => {
   // KRİTİK KURAL 1: Admin kendi kendini silemez!

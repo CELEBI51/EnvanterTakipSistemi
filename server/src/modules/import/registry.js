@@ -194,12 +194,12 @@ export const importRegistry = {
       { key: 'fullName', header: 'Ad Soyad', required: true, type: 'string' },
       { 
         key: 'tcNo', 
-        header: 'TC No', 
+        header: 'Sicil No', 
         required: true, 
         type: 'string',
-        pattern: /^[0-9]{11}$/,
-        patternMessage: '"TC No" 11 haneli ve sadece rakamlardan oluşmalıdır.'
+        patternMessage: '"Sicil No" alanı zorunludur.'
       },
+
       { key: 'phone', header: 'Telefon', required: false, type: 'string' },
       { key: 'email', header: 'E-posta', required: false, type: 'string' },
       {

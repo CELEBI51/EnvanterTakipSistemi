@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import FileUploadField from '../../../components/common/FileUploadField';
+import { formatLicenseKeyInput } from '../../../utils/inputFormatters';
 
 export default function AddLicenseModal({ isOpen, onClose, onSuccess }) {
   const token = useAuthStore((state) => state.accessToken);
@@ -251,8 +252,9 @@ export default function AddLicenseModal({ isOpen, onClose, onSuccess }) {
             <input
               type="text"
               value={licenseKey}
-              onChange={(e) => setLicenseKey(e.target.value)}
-              placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
+              onChange={(e) => setLicenseKey(formatLicenseKeyInput(e.target.value))}
+              placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
+              maxLength={29}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono text-[#1E2534] focus:border-[#4F8FE0] transition"
             />
           </div>
@@ -312,8 +314,10 @@ export default function AddLicenseModal({ isOpen, onClose, onSuccess }) {
               <input
                 type="text"
                 value={invoiceNumber}
-                onChange={(e) => setInvoiceNumber(e.target.value)}
+                onChange={(e) => setInvoiceNumber(e.target.value.slice(0, 50))}
+                onBlur={(e) => setInvoiceNumber(e.target.value.trim())}
                 placeholder="Örn: INV-2026-001"
+                maxLength={50}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono text-[#1E2534] focus:border-[#4F8FE0] transition"
               />
             </div>

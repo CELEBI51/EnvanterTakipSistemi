@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, FileText, Download, Eye, Calendar, Building2, Filter } from 'lucide-react';
+import { Plus, Search, FileText, Download, Eye, Calendar, Building2, Filter, RotateCcw } from 'lucide-react';
+
 import useAuthStore from '../../../store/authStore';
+import { hasPermission } from '../../../utils/permissions';
+import ExcelExportButton from '../../../components/common/ExcelExportButton';
+
 import AssignmentDetailModal from '../components/AssignmentDetailModal';
 
 export default function AssignmentList() {
   const navigate = useNavigate();
   const token = useAuthStore((state) => state.accessToken);
-  const userRole = useAuthStore((state) => state.user?.role?.toLowerCase());
+  const currentUser = useAuthStore((state) => state.user);
+  const userRole = currentUser?.role?.toLowerCase();
+
 
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -151,14 +157,30 @@ export default function AssignmentList() {
           </p>
         </div>
 
-        {userRole !== 'viewer' && (
-          <button
-            onClick={() => navigate('/assignments/create')}
-            className="px-4 py-2.5 rounded-xl bg-[#1E2534] text-white text-xs font-bold hover:bg-slate-800 transition cursor-pointer flex items-center gap-2 shadow-xs"
-          >
-            <Plus className="w-4 h-4" /> Yeni Zimmetleme Oluştur
-          </button>
-        )}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <ExcelExportButton
+            modulePath="assignments"
+            queryParams={{
+              unitId: unitIdFilter,
+              status: statusFilter,
+              dateFrom,
+              dateTo,
+              q: searchQuery,
+            }}
+            fileNamePrefix="zimmet"
+          />
+
+          {hasPermission(currentUser, 'assignments:create') && (
+            <button
+              onClick={() => navigate('/assignments/create')}
+              className="px-4 py-2.5 rounded-xl bg-[#1E2534] text-white text-xs font-bold hover:bg-slate-800 transition cursor-pointer flex items-center gap-2 shadow-xs"
+            >
+              <Plus className="w-4 h-4" /> Yeni Zimmetleme Oluştur
+            </button>
+          )}
+
+        </div>
+
       </div>
 
       {/* Assignment Statistics Summary Bar */}
@@ -205,33 +227,25 @@ export default function AssignmentList() {
       </div>
 
       {/* Filters Card */}
-      <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center gap-2 text-[#4F8FE0]">
-          <Filter className="w-4 h-4" />
-          <span className="text-xs font-bold uppercase tracking-wider">Filtreleme & Canlı Arama</span>
+      <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        {/* Row 1: Full-width live search */}
+        <div className="relative w-full">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder="Personel adı, Sicil No, teslim eden veya varlık bilgisi ile canlı ara..."
+
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
+          />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {/* Canlı Arama Çubuğu */}
-          <div className="lg:col-span-2">
-            <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
-              Canlı Arama
-            </label>
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder="Personel adı, T.C., teslim eden veya varlık bilgisi yazın..."
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
-              />
-            </div>
-          </div>
-
+        {/* Row 2: Equal width filters row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
           <div>
             <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
               Birim
@@ -302,7 +316,27 @@ export default function AssignmentList() {
             />
           </div>
         </div>
+
+        {/* Clear Filters Button Row (Only if any filter active) */}
+        {(searchQuery || unitIdFilter || statusFilter || dateFrom || dateTo) && (
+          <div className="flex justify-end pt-1">
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setUnitIdFilter('');
+                setStatusFilter('');
+                setDateFrom('');
+                setDateTo('');
+                setCurrentPage(1);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-xs font-bold transition cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Filtreleri Temizle
+            </button>
+          </div>
+        )}
       </div>
+
 
       {/* Main Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">

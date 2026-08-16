@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Download, CheckCircle2, RotateCcw, History } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { hasPermission } from '../../../utils/permissions';
 import FileUploadField from '../../../components/common/FileUploadField';
 
 export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, onReturnClick }) {
   const token = useAuthStore((state) => state.accessToken);
-  const userRole = useAuthStore((state) => state.user?.role?.toLowerCase());
+  const currentUser = useAuthStore((state) => state.user);
+  const userRole = currentUser?.role?.toLowerCase();
+
 
   const [assignment, setAssignment] = useState(null);
   const [returnsHistory, setReturnsHistory] = useState([]);
@@ -125,6 +128,11 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
 
   const isFullyReturned = assignment?.status === 'İade Edildi' || assignment?.status === 'IadeEdildi';
 
+  const hasReturnableHw = assignment?.items && assignment.items.some((item) => !item.returned);
+  const hasReturnableAcc = assignment?.accessoryItems && assignment.accessoryItems.some((acc) => acc.quantityGiven - acc.quantityReturned > 0);
+  const canReturn = !isFullyReturned && (hasReturnableHw || hasReturnableAcc);
+
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
@@ -177,8 +185,9 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
                   </span>
                   <div className="space-y-1 text-xs">
                     <p className="font-bold text-[#1E2534] text-sm">{assignment.employee?.fullName}</p>
-                    <p className="text-slate-600 font-mono">T.C. No: {assignment.employee?.tcNo}</p>
+                    <p className="text-slate-600 font-mono">Sicil No: {assignment.employee?.tcNo}</p>
                     <p className="text-slate-600">Birim: {assignment.employee?.unit?.name || '-'}</p>
+
                     {assignment.employee?.phone && (
                       <p className="text-slate-600">Tel: {assignment.employee.phone}</p>
                     )}
@@ -373,7 +382,7 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
                       <Download className="w-3.5 h-3.5" /> İmzalı Belgeyi İndir
                     </button>
                   </div>
-                ) : userRole !== 'viewer' ? (
+                ) : hasPermission(currentUser, 'assignments:create') ? (
                   <form onSubmit={handleUploadSignedForm} className="space-y-3">
                     {uploadError && (
                       <div className="p-2 bg-rose-50 text-rose-700 text-xs font-semibold rounded-lg">
@@ -408,21 +417,23 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
         {/* Footer Actions */}
         {assignment && (
           <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-200 shrink-0">
-            <button
-              onClick={handleDownloadPdf}
-              className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-[#1E2534] text-xs font-bold hover:bg-slate-100 transition cursor-pointer flex items-center gap-2"
-            >
-              <FileText className="w-4 h-4 text-[#4F8FE0]" /> Zimmet PDF'ini İndir
-            </button>
+            {hasPermission(currentUser, 'assignments:pdf') ? (
+              <button
+                onClick={handleDownloadPdf}
+                className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-[#1E2534] text-xs font-bold hover:bg-slate-100 transition cursor-pointer flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4 text-[#4F8FE0]" /> Zimmet PDF'ini İndir
+              </button>
+            ) : <div />}
 
             <div className="flex items-center gap-3">
-              {!isFullyReturned && userRole !== 'viewer' && (
+              {canReturn && hasPermission(currentUser, 'assignments:return') && (
                 <button
                   onClick={() => {
                     onClose();
                     if (onReturnClick) onReturnClick(assignment);
                   }}
-                  className="px-4 py-2.5 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition cursor-pointer flex items-center gap-2 shadow-xs"
+                  className="px-4 py-2.5 rounded-xl bg-amber-600 text-[#FFFFFF] text-xs font-bold hover:bg-amber-700 transition cursor-pointer flex items-center gap-2 shadow-xs"
                 >
                   <RotateCcw className="w-4 h-4" /> Zimmet İade Al
                 </button>
@@ -437,6 +448,7 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

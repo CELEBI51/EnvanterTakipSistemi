@@ -98,3 +98,14 @@ export const getComponentStats = async (req, res, next) => {
     next(error);
   }
 };
+
+export const exportComponents = async (req, res, next) => {
+  try {
+    const { categoryId, q } = req.query;
+    await componentService.exportComponents({ categoryId, q }, res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+

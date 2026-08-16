@@ -7,8 +7,10 @@ const router = Router();
 
 router.use(authMiddleware);
 
+router.get('/export', componentController.exportComponents);
 router.get('/', componentController.getComponents);
 router.get('/stats', componentController.getComponentStats);
+
 router.post('/', roleMiddleware(['admin', 'it_staff']), componentController.createComponent);
 router.get('/:id', componentController.getComponentById);
 router.get('/:id/history', componentController.getComponentHistory);

@@ -25,6 +25,13 @@ export const createAssignment = async (data, currentUser) => {
     throw error;
   }
 
+  if (!employee.isActive) {
+    const error = new Error(`"${employee.fullName}" isimli personel işten çıkarıldığı (pasif) için zimmetleme yapılamaz.`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+
   const assignment = await prisma.$transaction(async (tx) => {
     // 1. Ana Assignment kaydını oluştur
     const newAssignment = await tx.assignment.create({
@@ -181,8 +188,162 @@ export const createAssignment = async (data, currentUser) => {
     console.error('PDF üretilirken hata oluştu (Zimmet kaydı oluşturuldu):', pdfErr);
   }
 
+  // BİLDİRİM 4: Yeni Zimmet Bildirimi (Anlık - Zimmet Oluşturulunca)
+  try {
+    const fullAssignment = await prisma.assignment.findUnique({
+      where: { id: assignment.id },
+      include: {
+        employee: {
+          select: {
+            fullName: true,
+            unit: { select: { name: true } },
+          },
+        },
+        items: {
+          include: {
+            hardware: {
+              select: { demirbasNo: true, brand: true, model: true },
+            },
+          },
+        },
+        accessoryItems: {
+          include: {
+            accessory: { select: { name: true } },
+          },
+        },
+        consumableItems: {
+          include: {
+            consumable: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    if (fullAssignment) {
+      const { sendMailToAdmins, buildEmailTemplate } = await import('../../services/mail.service.js');
+
+      const empName = fullAssignment.employee ? fullAssignment.employee.fullName : 'Bilinmiyor';
+      const unitName = fullAssignment.employee && fullAssignment.employee.unit ? fullAssignment.employee.unit.name : 'Belirtilmedi';
+      const teslimTarihiFormatted = new Date(fullAssignment.teslimTarihi).toLocaleDateString('tr-TR');
+
+      let itemsRows = '';
+
+      // Demirbaş kalemleri
+      fullAssignment.items.forEach((it) => {
+        const hw = it.hardware;
+        if (hw) {
+          itemsRows += `
+            <tr>
+              <td><span class="badge" style="background-color: #1E2534;">Demirbaş</span></td>
+              <td>${hw.demirbasNo}</td>
+              <td>${hw.brand}${hw.model ? ' ' + hw.model : ''}</td>
+              <td>1 Adet</td>
+            </tr>
+          `;
+        }
+      });
+
+      // Aksesuar kalemleri
+      fullAssignment.accessoryItems.forEach((accItem) => {
+        if (accItem.accessory) {
+          itemsRows += `
+            <tr>
+              <td><span class="badge" style="background-color: #4F8FE0;">Aksesuar</span></td>
+              <td>-</td>
+              <td>${accItem.accessory.name}</td>
+              <td>${accItem.quantityGiven} Adet</td>
+            </tr>
+          `;
+        }
+      });
+
+      // Sarf Malzeme kalemleri
+      fullAssignment.consumableItems.forEach((conItem) => {
+        if (conItem.consumable) {
+          itemsRows += `
+            <tr>
+              <td><span class="badge" style="background-color: #f0ad4e;">Sarf Malzeme</span></td>
+              <td>-</td>
+              <td>${conItem.consumable.name}</td>
+              <td>${conItem.quantityGiven} Adet</td>
+            </tr>
+          `;
+        }
+      });
+
+      const bodyHtml = `
+        <p>Sisteme yeni bir zimmet kaydı eklendi. Zimmet detayları aşağıdadır:</p>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+          <tr><td style="padding: 4px 0; font-weight: bold; width: 130px;">Zimmetlenen Personel:</td><td>${empName} (${unitName})</td></tr>
+          <tr><td style="padding: 4px 0; font-weight: bold;">Teslim Eden:</td><td>${fullAssignment.teslimEden}</td></tr>
+          <tr><td style="padding: 4px 0; font-weight: bold;">Teslim Tarihi:</td><td>${teslimTarihiFormatted}</td></tr>
+        </table>
+        
+        <h4>Zimmetlenen Kalemler</h4>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tür</th>
+              <th>Demirbaş No</th>
+              <th>Ürün / Model</th>
+              <th>Miktar</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsRows}
+          </tbody>
+        </table>
+      `;
+
+      const subject = `📦 Yeni Zimmet — ${empName}`;
+      const html = buildEmailTemplate({
+        title: `📦 Yeni Zimmet Bildirimi`,
+        bodyHtml,
+      });
+
+      const text = `📦 Yeni Zimmet — ${empName}\n\n` +
+        `Personel: ${empName} (${unitName})\n` +
+        `Teslim Eden: ${fullAssignment.teslimEden}\n` +
+        `Tarih: ${teslimTarihiFormatted}\n`;
+
+      await sendMailToAdmins({ subject, text, html });
+
+      // Zimmetleme sonrası kritik stok seviyesine düşen Aksesuar/Sarf Malzeme kontrolü
+      const { checkAndNotifyItemInstantCriticalStock } = await import('../../jobs/criticalStock.job.js');
+      
+      for (const accItem of fullAssignment.accessoryItems) {
+        if (accItem.accessory) {
+          const freshAcc = await prisma.accessory.findUnique({ where: { id: accItem.accessoryId } });
+          if (freshAcc) {
+            await checkAndNotifyItemInstantCriticalStock({
+              name: freshAcc.name,
+              type: 'Aksesuar',
+              availableQuantity: freshAcc.availableQuantity,
+            });
+          }
+        }
+      }
+
+      for (const conItem of fullAssignment.consumableItems) {
+        if (conItem.consumable) {
+          const freshCon = await prisma.consumable.findUnique({ where: { id: conItem.consumableId } });
+          if (freshCon) {
+            await checkAndNotifyItemInstantCriticalStock({
+              name: freshCon.name,
+              type: 'Sarf Malzeme',
+              availableQuantity: freshCon.availableQuantity,
+            });
+          }
+        }
+      }
+    }
+  } catch (mailErr) {
+    console.error('[AssignmentService] Zimmet mail bildirimi gönderilirken hata (Zimmet kaydı etkilenmedi):', mailErr);
+  }
+
   return assignment;
 };
+
 
 export const listAssignments = async ({
   employeeId,
@@ -487,3 +648,208 @@ export const getAssignmentStats = async () => {
     fullyReturned,
   };
 };
+
+export const exportAssignments = async ({ employeeId, status, unitId, dateFrom, dateTo, q }, res) => {
+  const where = {};
+
+  if (employeeId) where.employeeId = employeeId;
+
+  if (status) {
+    if (status === 'Kısmi İade' || status === 'KismiIade') {
+      where.status = 'KismiIade';
+    } else if (status === 'İade Edildi' || status === 'IadeEdildi') {
+      where.status = 'IadeEdildi';
+    } else {
+      where.status = status;
+    }
+  }
+
+  if (unitId) {
+    where.employee = {
+      unitId: unitId,
+    };
+  }
+
+  if (dateFrom || dateTo) {
+    where.teslimTarihi = {};
+    if (dateFrom) where.teslimTarihi.gte = new Date(dateFrom);
+    if (dateTo) where.teslimTarihi.lte = new Date(dateTo);
+  }
+
+  if (q && q.trim() !== '') {
+    const searchTerm = q.trim();
+    where.AND = where.AND || [];
+    where.AND.push({
+      OR: [
+        { employee: { fullName: { contains: searchTerm, mode: 'insensitive' } } },
+        { employee: { tcNo: { contains: searchTerm, mode: 'insensitive' } } },
+        { teslimEden: { contains: searchTerm, mode: 'insensitive' } },
+        {
+          items: {
+            some: {
+              hardware: {
+                OR: [
+                  { brand: { contains: searchTerm, mode: 'insensitive' } },
+                  { model: { contains: searchTerm, mode: 'insensitive' } },
+                  { serialNo: { contains: searchTerm, mode: 'insensitive' } },
+                  { demirbasNo: { contains: searchTerm, mode: 'insensitive' } },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    });
+  }
+
+  const assignments = await prisma.assignment.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      employee: {
+        select: {
+          fullName: true,
+          unit: { select: { name: true } },
+        },
+      },
+      items: {
+        include: {
+          hardware: true,
+        },
+      },
+      accessoryItems: {
+        include: {
+          accessory: true,
+        },
+      },
+      consumableItems: {
+        include: {
+          consumable: true,
+        },
+      },
+    },
+  });
+
+  const columns = [
+    { header: 'Zimmet No', key: 'assignmentNo', width: 16 },
+    { header: 'Personel Ad Soyad', key: 'employeeName', width: 22 },
+    { header: 'Personel Birimi', key: 'unitName', width: 18 },
+    { header: 'Teslim Eden', key: 'teslimEden', width: 18 },
+    { header: 'Zimmet Tarihi', key: 'teslimTarihi', width: 16 },
+    { header: 'Zimmet Durumu', key: 'statusText', width: 15 },
+    { header: 'Kalem Türü', key: 'itemType', width: 16 },
+    { header: 'Ürün Adı / Marka-Model', key: 'productName', width: 25 },
+    { header: 'Demirbaş No', key: 'demirbasNo', width: 18 },
+    { header: 'Seri No', key: 'serialNo', width: 20 },
+    { header: 'Miktar', key: 'quantity', width: 12 },
+    { header: 'İade Durumu', key: 'itemReturnStatus', width: 15 },
+  ];
+
+  const STATUS_MAP = {
+    Aktif: 'Aktif',
+    KismiIade: 'Kısmi İade',
+    IadeEdildi: 'İade Edildi',
+  };
+
+  const rows = [];
+
+  for (const asgn of assignments) {
+    const baseRow = {
+      assignmentNo: asgn.id ? asgn.id.substring(0, 8) : '-',
+      employeeName: asgn.employee ? asgn.employee.fullName : '-',
+      unitName: asgn.employee && asgn.employee.unit ? asgn.employee.unit.name : '-',
+      teslimEden: asgn.teslimEden || '-',
+      teslimTarihi: asgn.teslimTarihi ? new Date(asgn.teslimTarihi).toLocaleDateString('tr-TR') : '-',
+      statusText: STATUS_MAP[asgn.status] || asgn.status,
+    };
+
+    let hasAnyItems = false;
+
+    // 1. Hardware Items
+    if (asgn.items && asgn.items.length > 0) {
+      hasAnyItems = true;
+      for (const hwItem of asgn.items) {
+        const brandModel = hwItem.hardware
+          ? [hwItem.hardware.brand, hwItem.hardware.model].filter(Boolean).join(' ')
+          : '-';
+
+        let returnStat = 'Hayır';
+        if (hwItem.returned) {
+          returnStat = 'Evet';
+        }
+
+        rows.push({
+          ...baseRow,
+          itemType: 'Varlık',
+          productName: brandModel || '-',
+          demirbasNo: (hwItem.hardware && hwItem.hardware.demirbasNo) || '-',
+          serialNo: (hwItem.hardware && hwItem.hardware.serialNo) || '-',
+          quantity: 1,
+          itemReturnStatus: returnStat,
+        });
+      }
+    }
+
+    // 2. Accessory Items
+    if (asgn.accessoryItems && asgn.accessoryItems.length > 0) {
+      hasAnyItems = true;
+      for (const accItem of asgn.accessoryItems) {
+        const accName = accItem.accessory ? accItem.accessory.name : '-';
+
+        let returnStat = 'Hayır';
+        if (accItem.quantityReturned >= accItem.quantityGiven) {
+          returnStat = 'Evet';
+        } else if (accItem.quantityReturned > 0) {
+          returnStat = 'Kısmi';
+        }
+
+        rows.push({
+          ...baseRow,
+          itemType: 'Aksesuar',
+          productName: accName,
+          demirbasNo: '',
+          serialNo: '',
+          quantity: accItem.quantityGiven || 1,
+          itemReturnStatus: returnStat,
+        });
+
+      }
+    }
+
+    // 3. Consumable Items
+    if (asgn.consumableItems && asgn.consumableItems.length > 0) {
+      hasAnyItems = true;
+      for (const conItem of asgn.consumableItems) {
+        const conName = conItem.consumable ? conItem.consumable.name : '-';
+        rows.push({
+          ...baseRow,
+          itemType: 'Sarf Malzeme',
+          productName: conName,
+          demirbasNo: '',
+          serialNo: '',
+          quantity: conItem.quantity || 1,
+          itemReturnStatus: 'N/A', // Consumables are not returned
+        });
+      }
+    }
+
+    // Fallback if assignment has no items
+    if (!hasAnyItems) {
+      rows.push({
+        ...baseRow,
+        itemType: '-',
+        productName: '-',
+        demirbasNo: '',
+        serialNo: '',
+        quantity: 0,
+        itemReturnStatus: '-',
+      });
+    }
+  }
+
+  const { createExcelStream } = await import('../../services/excelExport.service.js');
+  const todayStr = new Date().toISOString().split('T')[0];
+  await createExcelStream('Zimmetler', columns, rows, res, `zimmet_${todayStr}.xlsx`);
+};
+
+

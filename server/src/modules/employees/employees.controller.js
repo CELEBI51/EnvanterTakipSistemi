@@ -87,3 +87,14 @@ export const getEmployeeStats = async (req, res, next) => {
     next(error);
   }
 };
+
+export const exportEmployees = async (req, res, next) => {
+  try {
+    const { q, isActive } = req.query;
+    await employeesService.exportEmployees({ q, isActive }, res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+

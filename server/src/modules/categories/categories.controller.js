@@ -1,4 +1,4 @@
-import { createCategorySchema } from './categories.schema.js';
+import { createCategorySchema, updateCategorySchema } from './categories.schema.js';
 import * as categoriesService from './categories.service.js';
 
 export const getCategories = async (req, res, next) => {
@@ -45,6 +45,33 @@ export const createCategory = async (req, res, next) => {
   }
 };
 
+export const updateCategory = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const parsed = updateCategorySchema.parse(req.body);
+    const data = await categoriesService.updateCategory(id, parsed.name);
+    return res.status(200).json({
+      success: true,
+      data,
+      message: 'Kategori başarıyla güncellendi.',
+    });
+  } catch (error) {
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        success: false,
+        message: error.errors[0]?.message || 'Geçersiz veri.',
+      });
+    }
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    next(error);
+  }
+};
+
 export const deleteCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -63,3 +90,4 @@ export const deleteCategory = async (req, res, next) => {
     next(error);
   }
 };
+

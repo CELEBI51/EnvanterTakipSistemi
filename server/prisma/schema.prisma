@@ -10,8 +10,8 @@ datasource db {
 enum Role {
   admin
   it_staff
-  viewer
 }
+
 
 enum HardwareStatus {
   Hazir        @map("Hazır")
@@ -79,8 +79,10 @@ model User {
   email              String   @unique
   passwordHash       String   @map("password_hash")
   role               Role
+  permissions        String[] @default([])
   mustChangePassword Boolean  @default(true) @map("must_change_password")
   createdAt          DateTime @default(now()) @map("created_at")
+
 
   createdHardware       Hardware[]
   createdAssignments    Assignment[]

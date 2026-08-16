@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Download, CheckCircle2, RotateCcw } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { hasPermission } from '../../../utils/permissions';
 import FileUploadField from '../../../components/common/FileUploadField';
 
 export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
   const token = useAuthStore((state) => state.accessToken);
-  const userRole = useAuthStore((state) => state.user?.role?.toLowerCase());
+  const currentUser = useAuthStore((state) => state.user);
+  const userRole = currentUser?.role?.toLowerCase();
+
 
   const [returnRecord, setReturnRecord] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -161,9 +164,10 @@ export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
                       {returnRecord.assignment?.employee?.fullName}
                     </p>
                     <p className="text-slate-600 font-mono">
-                      T.C. No: {returnRecord.assignment?.employee?.tcNo}
+                      Sicil No: {returnRecord.assignment?.employee?.tcNo}
                     </p>
                     <p className="text-slate-600">
+
                       Birim: {returnRecord.assignment?.employee?.unit?.name || '-'}
                     </p>
                   </div>
@@ -287,7 +291,7 @@ export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
                       <Download className="w-3.5 h-3.5" /> İmzalı Belgeyi İndir
                     </button>
                   </div>
-                ) : userRole !== 'viewer' ? (
+                ) : hasPermission(currentUser, 'returns:create') ? (
                   <form onSubmit={handleUploadSignedForm} className="space-y-3">
                     {uploadError && (
                       <div className="p-2 bg-rose-50 text-rose-700 text-xs font-semibold rounded-lg">
@@ -322,12 +326,14 @@ export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
         {/* Footer Actions */}
         {returnRecord && (
           <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-200 shrink-0">
-            <button
-              onClick={handleDownloadPdf}
-              className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-[#1E2534] text-xs font-bold hover:bg-slate-100 transition cursor-pointer flex items-center gap-2"
-            >
-              <FileText className="w-4 h-4 text-[#4F8FE0]" /> İade PDF'ini İndir
-            </button>
+            {hasPermission(currentUser, 'returns:pdf') ? (
+              <button
+                onClick={handleDownloadPdf}
+                className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-[#1E2534] text-xs font-bold hover:bg-slate-100 transition cursor-pointer flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4 text-[#4F8FE0]" /> İade PDF'ini İndir
+              </button>
+            ) : <div />}
 
             <button
               onClick={onClose}
@@ -337,6 +343,7 @@ export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
             </button>
           </div>
         )}
+
       </div>
     </div>
   );

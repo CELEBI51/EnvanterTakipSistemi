@@ -102,3 +102,14 @@ export const getAssignmentStats = async (req, res, next) => {
     next(error);
   }
 };
+
+export const exportAssignments = async (req, res, next) => {
+  try {
+    const { employeeId, status, unitId, dateFrom, dateTo, q } = req.query;
+    await assignmentsService.exportAssignments({ employeeId, status, unitId, dateFrom, dateTo, q }, res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+

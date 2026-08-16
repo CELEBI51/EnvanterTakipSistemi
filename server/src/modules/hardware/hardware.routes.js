@@ -8,8 +8,10 @@ const router = Router();
 router.use(authMiddleware);
 
 // Public for authenticated users (including viewer)
+router.get('/export', hardwareController.exportHardware);
 router.get('/', hardwareController.listHardware);
 router.get('/stats', hardwareController.getHardwareStats);
+
 router.get('/:id', hardwareController.getHardwareById);
 router.get('/:id/history', hardwareController.getHardwareHistory);
 

@@ -20,16 +20,21 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { hasPermission } from '../../../utils/permissions';
+import { formatPhoneInput, getPhoneDigits, formatTcNoInput } from '../../../utils/inputFormatters';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import ExcelImportModal from '../../../components/common/ExcelImportModal';
+import ExcelExportButton from '../../../components/common/ExcelExportButton';
+
 
 export default function EmployeeList() {
   const token = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
 
-  const canEdit = user?.role === 'admin' || user?.role === 'it_staff';
+  const canEdit = hasPermission(user, 'employees:manage');
+  const canExcel = hasPermission(user, 'excel:view');
 
   const [employees, setEmployees] = useState([]);
   const [units, setUnits] = useState([]);
@@ -173,14 +178,15 @@ export default function EmployeeList() {
       setAddError('Personel adı soyadı zorunludur.');
       return;
     }
-    if (addTcNo.length !== 11) {
-      setAddError('T.C. Kimlik Numarası 11 haneli olmalıdır.');
+    if (!addTcNo.trim()) {
+      setAddError('Sicil Numarası zorunludur.');
       return;
     }
     if (!addUnitId) {
       setAddError('Lütfen bir Birim seçiniz.');
       return;
     }
+
 
     setAddLoading(true);
 
@@ -195,7 +201,7 @@ export default function EmployeeList() {
           fullName: addFullName.trim(),
           tcNo: addTcNo.trim(),
           unitId: addUnitId,
-          phone: addPhone.trim() || undefined,
+          phone: getPhoneDigits(addPhone) || undefined,
           email: addEmail.trim() || undefined,
           hireDate: addHireDate || undefined,
         }),
@@ -326,7 +332,17 @@ export default function EmployeeList() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          {canEdit && (
+          <ExcelExportButton
+            modulePath="employees"
+            queryParams={{
+              q: searchQuery,
+              isActive: statusFilter,
+            }}
+            fileNamePrefix="personel"
+          />
+
+
+          {canExcel && (
             <button
               onClick={() => setIsImportModalOpen(true)}
               className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition cursor-pointer shadow-xs"
@@ -346,6 +362,7 @@ export default function EmployeeList() {
             </button>
           )}
         </div>
+
       </div>
 
       {/* 1. Statistics Summary Bar */}
@@ -464,7 +481,7 @@ export default function EmployeeList() {
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
                 <tr>
                   <th className="p-4">Ad Soyad</th>
-                  <th className="p-4">TC Kimlik No</th>
+                  <th className="p-4">Sicil No</th>
                   <th className="p-4">Birim</th>
                   <th className="p-4">İletişim</th>
                   <th className="p-4">İşe Başlama</th>
@@ -601,14 +618,15 @@ export default function EmployeeList() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    T.C. Kimlik No <span className="text-rose-600">*</span>
+                    Sicil Numarası <span className="text-rose-600">*</span>
                   </label>
                   <input
                     type="text"
                     value={addTcNo}
-                    onChange={(e) => setAddTcNo(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                    placeholder="11 haneli TC"
+                    onChange={(e) => setAddTcNo(formatTcNoInput(e.target.value))}
+                    placeholder="Örn: 12345678901"
                     maxLength={11}
+                    inputMode="numeric"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
                     required
                   />
@@ -642,8 +660,10 @@ export default function EmployeeList() {
                   <input
                     type="text"
                     value={addPhone}
-                    onChange={(e) => setAddPhone(e.target.value)}
+                    onChange={(e) => setAddPhone(formatPhoneInput(e.target.value))}
                     placeholder="05XX XXX XX XX"
+                    maxLength={14}
+                    inputMode="numeric"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
                   />
                 </div>
@@ -743,13 +763,14 @@ export default function EmployeeList() {
                         <button
                           onClick={() => {
                             setSelectedEmployeeId(null);
-                            navigate(`/returns?search=${encodeURIComponent(employeeDetail.fullName)}`);
+                            navigate(`/returns?search=${encodeURIComponent(employeeDetail.fullName)}&openModal=true`);
                           }}
                           className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs transition cursor-pointer shadow-xs"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           <span>Zimmetlerini Görüntüle & İade Al</span>
                         </button>
+
                       </div>
                     </div>
                   )}

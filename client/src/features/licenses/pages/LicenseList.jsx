@@ -16,11 +16,14 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 
 import AddLicenseModal from '../components/AddLicenseModal';
 import LicenseDetailModal from '../components/LicenseDetailModal';
 import ExcelImportModal from '../../../components/common/ExcelImportModal';
+import ExcelExportButton from '../../../components/common/ExcelExportButton';
+
 import { getLicenseStatusLabel } from '../../../constants/licenseStatusLabels';
 
 const STATUS_OPTIONS = [
@@ -71,7 +74,9 @@ export default function LicenseList() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
-  const canEdit = user?.role === 'admin' || user?.role === 'it_staff';
+  const canCreate = hasPermission(user, 'licenses:create');
+  const canManage = hasPermission(user, 'licenses:manage');
+  const canExcel = hasPermission(user, 'excel:view');
 
   useEffect(() => {
     fetchUnits();
@@ -258,15 +263,18 @@ export default function LicenseList() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={exportToCSV}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold transition cursor-pointer"
-          >
-            <Download className="w-4 h-4" />
-            Dışa Aktar (CSV)
-          </button>
+          <ExcelExportButton
+            modulePath="licenses"
+            queryParams={{
+              unitId: selectedUnitId,
+              status: selectedStatus,
+              paymentType: selectedPaymentType,
+              q: searchQuery,
+            }}
+            fileNamePrefix="lisans"
+          />
 
-          {canEdit && (
+          {canExcel && (
             <button
               onClick={() => setIsImportModalOpen(true)}
               className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition cursor-pointer shadow-xs"
@@ -276,7 +284,7 @@ export default function LicenseList() {
             </button>
           )}
 
-          {canEdit && (
+          {canCreate && (
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] text-white text-xs font-bold shadow-xs transition cursor-pointer"
@@ -286,6 +294,7 @@ export default function LicenseList() {
             </button>
           )}
         </div>
+
       </div>
 
       {/* Statistics Summary Bar */}

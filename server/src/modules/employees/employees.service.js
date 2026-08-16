@@ -8,10 +8,11 @@ export const createEmployee = async (data) => {
   });
 
   if (existing) {
-    const error = new Error('Bu T.C. Kimlik Numarası ile kayıtlı personel zaten mevcut.');
+    const error = new Error('Bu Sicil Numarası ile kayıtlı personel zaten mevcut.');
     error.statusCode = 409;
     throw error;
   }
+
 
   const unit = await prisma.unit.findUnique({
     where: { id: unitId },
@@ -216,3 +217,65 @@ export const getEmployeeStats = async () => {
     inactive,
   };
 };
+
+export const exportEmployees = async ({ q, isActive }, res) => {
+  const where = {};
+
+  if (isActive !== undefined && isActive !== null && isActive !== '') {
+    where.isActive = String(isActive) === 'true';
+  }
+
+  if (q && q.trim() !== '') {
+    const searchTerm = q.trim();
+    where.OR = [
+      { fullName: { contains: searchTerm, mode: 'insensitive' } },
+      { tcNo: { contains: searchTerm, mode: 'insensitive' } },
+      { unit: { name: { contains: searchTerm, mode: 'insensitive' } } },
+    ];
+  }
+
+  const items = await prisma.employee.findMany({
+    where,
+    orderBy: { fullName: 'asc' },
+    include: {
+      unit: {
+        select: { id: true, name: true },
+      },
+      assignments: {
+        where: {
+          status: { in: ['Aktif', 'KismiIade'] },
+        },
+        select: { id: true },
+      },
+    },
+  });
+
+  const columns = [
+    { header: 'Ad Soyad', key: 'fullName', width: 22 },
+    { header: 'TC No', key: 'tcNo', width: 16 },
+    { header: 'Birim', key: 'unitName', width: 18 },
+    { header: 'Telefon', key: 'phone', width: 16 },
+    { header: 'Email', key: 'email', width: 22 },
+    { header: 'İşe Başlama Tarihi', key: 'hireDate', width: 18 },
+    { header: 'İşten Çıkış Tarihi', key: 'terminationDate', width: 18 },
+    { header: 'Durum', key: 'statusText', width: 14 },
+    { header: 'Aktif Zimmet Sayısı', key: 'activeAssignmentCount', width: 18 },
+  ];
+
+  const rows = items.map((emp) => ({
+    fullName: emp.fullName || '-',
+    tcNo: emp.tcNo || '-',
+    unitName: emp.unit ? emp.unit.name : '-',
+    phone: emp.phone || '-',
+    email: emp.email || '-',
+    hireDate: emp.hireDate ? new Date(emp.hireDate).toLocaleDateString('tr-TR') : '-',
+    terminationDate: emp.terminationDate ? new Date(emp.terminationDate).toLocaleDateString('tr-TR') : '-',
+    statusText: emp.isActive ? 'Aktif' : 'Pasif',
+    activeAssignmentCount: emp.assignments ? emp.assignments.length : 0,
+  }));
+
+  const { createExcelStream } = await import('../../services/excelExport.service.js');
+  const todayStr = new Date().toISOString().split('T')[0];
+  await createExcelStream('Personeller', columns, rows, res, `personel_${todayStr}.xlsx`);
+};
+

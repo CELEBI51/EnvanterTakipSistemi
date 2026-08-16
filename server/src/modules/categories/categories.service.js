@@ -65,6 +65,42 @@ export const createCategory = async (parentType, name) => {
   return formatCategory(category);
 };
 
+export const updateCategory = async (id, name) => {
+  const existing = await prisma.category.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    const err = new Error('Kategori bulunamadı.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Check if another category with same parentType and name exists
+  const duplicate = await prisma.category.findFirst({
+    where: {
+      parentType: existing.parentType,
+      name: name.trim(),
+      id: { not: id },
+    },
+  });
+
+  if (duplicate) {
+    const err = new Error('Bu isimde bir kategori zaten mevcut.');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const updated = await prisma.category.update({
+    where: { id },
+    data: {
+      name: name.trim(),
+    },
+  });
+
+  return formatCategory(updated);
+};
+
 export const deleteCategory = async (id) => {
   const category = await prisma.category.findUnique({
     where: { id },
@@ -76,17 +112,19 @@ export const deleteCategory = async (id) => {
     throw err;
   }
 
-  // Check linked records in Hardware and Accessory
-  const [hardwareCount, accessoryCount] = await Promise.all([
+  // Check linked records in Hardware, Accessory, Consumable, and Component
+  const [hardwareCount, accessoryCount, consumableCount, componentCount] = await Promise.all([
     prisma.hardware.count({ where: { categoryId: id } }),
     prisma.accessory.count({ where: { categoryId: id } }),
+    prisma.consumable.count({ where: { categoryId: id } }),
+    prisma.component.count({ where: { categoryId: id } }),
   ]);
 
-  const totalLinked = hardwareCount + accessoryCount;
+  const totalLinked = hardwareCount + accessoryCount + consumableCount + componentCount;
 
   if (totalLinked > 0) {
     const err = new Error(
-      `Bu kategoriye bağlı ${totalLinked} kayıt var, önce bu kayıtları başka bir kategoriye taşıyın veya silin.`
+      `Bu kategoriye bağlı ${totalLinked} adet kayıt var, silinemez. Önce bu kayıtları başka bir kategoriye taşıyın veya silin.`
     );
     err.statusCode = 400;
     throw err;

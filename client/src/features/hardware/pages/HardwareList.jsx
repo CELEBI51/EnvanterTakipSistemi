@@ -11,12 +11,15 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 import AddHardwareModal from '../components/AddHardwareModal';
 import HardwareDetailModal from '../components/HardwareDetailModal';
 import BarcodePrintModal from '../../../components/common/BarcodePrintModal';
 import AddMaintenanceModal from '../components/AddMaintenanceModal';
 import ExcelImportModal from '../../../components/common/ExcelImportModal';
+import ExcelExportButton from '../../../components/common/ExcelExportButton';
+
 
 const STATUSES = [
   { label: 'Tüm Durumlar', value: '' },
@@ -64,7 +67,9 @@ export default function HardwareList() {
 
   const [stats, setStats] = useState({ total: 0, inUse: 0, ready: 0, needsAttention: 0 });
 
-  const canAdd = user?.role === 'admin' || user?.role === 'it_staff';
+  const canCreate = hasPermission(user, 'hardware:create');
+  const canMaintain = hasPermission(user, 'hardware:maintenance');
+  const canExcel = hasPermission(user, 'excel:view');
 
   useEffect(() => {
     fetchCategories();
@@ -207,15 +212,17 @@ export default function HardwareList() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={exportToCSV}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-medium transition cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Dışa Aktar (CSV)
-          </button>
+          <ExcelExportButton
+            modulePath="hardware"
+            queryParams={{
+              category: selectedCategory,
+              status: selectedStatus,
+              q: searchQuery,
+            }}
+            fileNamePrefix="varlik"
+          />
 
-          {canAdd && (
+          {canExcel && (
             <button
               onClick={() => setIsImportModalOpen(true)}
               className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition cursor-pointer shadow-xs"
@@ -225,7 +232,7 @@ export default function HardwareList() {
             </button>
           )}
 
-          {canAdd && (
+          {canCreate && (
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] text-white text-xs font-bold transition cursor-pointer"
@@ -235,6 +242,7 @@ export default function HardwareList() {
             </button>
           )}
         </div>
+
       </div>
 
       {/* Hardware Statistics Summary Bar */}
@@ -421,7 +429,7 @@ export default function HardwareList() {
 
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-1">
-                          {canAdd && (
+                          {canMaintain && !item.hasActiveMaintenance && (
                             <button
                               type="button"
                               onClick={(e) => openAddMaintenanceModal(e, item.id)}

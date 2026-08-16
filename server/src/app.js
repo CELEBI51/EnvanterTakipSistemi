@@ -35,6 +35,23 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Test Mail Endpoint
+app.post('/api/test-mail', async (req, res, next) => {
+  try {
+    const { to = 'muhammet@testmail.local', subject = 'Test E-postası', text = 'Bu bir test e-postasıdır.', html } = req.body || {};
+    const mailService = await import('./services/mail.service.js');
+    const info = await mailService.sendEmail({ to, subject, text, html });
+    res.status(200).json({
+      success: true,
+      message: 'E-posta başarıyla gönderildi.',
+      info,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
 // Auth, User, Hardware, License, Reports, Accessories, Categories, Attachments, Consumables, Components, Maintenance, Assignment, Return, Employee, Unit ve Notification API Rotaları
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

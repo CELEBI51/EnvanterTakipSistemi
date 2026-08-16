@@ -67,13 +67,14 @@ export default function CreateAssignmentPage() {
     const timer = setTimeout(async () => {
       setLoadingEmployees(true);
       try {
-        const res = await fetch(`http://localhost:5000/api/employees?q=${encodeURIComponent(employeeSearch.trim())}`, {
+        const res = await fetch(`http://localhost:5000/api/employees?isActive=true&q=${encodeURIComponent(employeeSearch.trim())}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         if (res.ok && data.data) {
           setEmployeeResults(data.data);
         }
+
       } catch (err) {
         console.error('Personel arama hatası:', err);
       } finally {
@@ -417,7 +418,7 @@ export default function CreateAssignmentPage() {
                   type="text"
                   value={employeeSearch}
                   onChange={(e) => setEmployeeSearch(e.target.value)}
-                  placeholder="İsim veya T.C. Kimlik No ile personel ara..."
+                  placeholder="İsim veya Sicil No ile personel ara..."
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
                 />
               </div>
@@ -442,7 +443,7 @@ export default function CreateAssignmentPage() {
                     >
                       <div>
                         <p className="text-xs font-bold text-[#1E2534]">{emp.fullName}</p>
-                        <p className="text-[11px] text-slate-500 font-mono">TC: {emp.tcNo} • {emp.unit?.name || '-'}</p>
+                        <p className="text-[11px] text-slate-500 font-mono">Sicil No: {emp.tcNo} • {emp.unit?.name || '-'}</p>
                       </div>
                       <Plus className="w-4 h-4 text-[#4F8FE0]" />
                     </button>
@@ -473,7 +474,7 @@ export default function CreateAssignmentPage() {
                 </button>
               </div>
               <div className="text-xs text-slate-600 space-y-0.5 font-medium">
-                <p className="font-mono">T.C. No: {selectedEmployee.tcNo}</p>
+                <p className="font-mono">Sicil No: {selectedEmployee.tcNo}</p>
                 <p>Birim: {selectedEmployee.unit?.name || '-'}</p>
                 {selectedEmployee.phone && <p>Tel: {selectedEmployee.phone}</p>}
                 {selectedEmployee.email && <p>E-posta: {selectedEmployee.email}</p>}

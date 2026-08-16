@@ -14,7 +14,9 @@ import AssignmentList from './features/assignments/pages/AssignmentList';
 import CreateAssignmentPage from './features/assignments/pages/CreateAssignmentPage';
 import ReturnList from './features/returns/pages/ReturnList';
 import CreateReturnPage from './features/returns/pages/CreateReturnPage';
+import SettingsLayout from './features/settings/pages/SettingsLayout';
 import useAuthStore from './store/authStore';
+import { hasPermission } from './utils/permissions';
 import {
   LayoutDashboard,
   Monitor,
@@ -34,7 +36,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
-function ProtectedRoute({ children, allowedRoles, isForcePasswordRoute = false }) {
+function ProtectedRoute({ children, allowedRoles, requiredPermission, isForcePasswordRoute = false }) {
   const { isAuthenticated, user } = useAuthStore();
 
   if (!isAuthenticated) {
@@ -53,8 +55,13 @@ function ProtectedRoute({ children, allowedRoles, isForcePasswordRoute = false }
     return <Navigate to="/dashboard" replace />;
   }
 
+  if (requiredPermission && !hasPermission(user, requiredPermission)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return children;
 }
+
 
 function MainLayout({ children }) {
   const token = useAuthStore((state) => state.accessToken);
@@ -117,30 +124,31 @@ function MainLayout({ children }) {
 
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { label: 'Zimmetleme', path: '/assignments', icon: ClipboardCheck },
-    { label: 'Zimmet İade', path: '/returns', icon: RotateCcw },
-    { label: 'Varlıklar', path: '/hardware', icon: Monitor },
-    { label: 'Lisans', path: '/licenses', icon: Key },
-    { label: 'Aksesuar', path: '/accessories', icon: Headphones },
-    { label: 'Sarf Malzeme', path: '/consumables', icon: Package },
-    { label: 'Bileşen', path: '/components', icon: Cpu },
-    { label: 'Personel', path: '/employees', icon: Users },
-  ];
+    { label: 'Zimmetleme', path: '/assignments', icon: ClipboardCheck, permission: 'assignments:view' },
+    { label: 'Zimmet İade', path: '/returns', icon: RotateCcw, permission: 'returns:view' },
+    { label: 'Varlıklar', path: '/hardware', icon: Monitor, permission: 'hardware:view' },
+    { label: 'Lisans', path: '/licenses', icon: Key, permission: 'licenses:view' },
+    { label: 'Aksesuar', path: '/accessories', icon: Headphones, permission: 'accessories:view' },
+    { label: 'Sarf Malzeme', path: '/consumables', icon: Package, permission: 'consumables:view' },
+    { label: 'Bileşen', path: '/components', icon: Cpu, permission: 'components:view' },
+    { label: 'Personel', path: '/employees', icon: Users, permission: 'employees:view' },
+  ].filter((item) => !item.permission || hasPermission(user, item.permission));
+
 
   return (
-    <div className="min-h-screen bg-[#F5F4EF] flex font-sans text-[#1E2534]">
+    <div className="min-h-screen flex font-sans transition-colors duration-300" style={{ backgroundColor: 'var(--theme-page-bg)', color: 'var(--theme-text-primary)' }}>
       {/* 1. PERMANENT LEFT SIDEBAR */}
-      <aside className="hidden lg:flex flex-col w-64 bg-[#1E2534] text-white shrink-0 sticky top-0 h-screen shadow-xl z-20">
+      <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-0 h-screen shadow-xl z-20 transition-colors duration-300" style={{ backgroundColor: 'var(--theme-sidebar-bg)', color: 'var(--theme-sidebar-text)' }}>
         {/* DİTAŞ Corporate Logo */}
-        <div className="p-5 border-b border-slate-700/60 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-md shrink-0">
+        <div className="p-5 flex items-center gap-3" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center p-1.5 shadow-md shrink-0" style={{ backgroundColor: 'var(--theme-sidebar-logo-bg)' }}>
             <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="font-heading text-base font-bold tracking-tight text-white leading-tight">
+            <h1 className="font-heading text-base font-bold tracking-tight leading-tight" style={{ color: 'var(--theme-sidebar-text)' }}>
               DİTAŞ
             </h1>
-            <p className="text-[11px] text-slate-300 font-medium tracking-wide uppercase">
+            <p className="text-[11px] font-medium tracking-wide uppercase" style={{ color: 'var(--theme-sidebar-muted)' }}>
               Demirbaş Takip Sistemi
             </p>
           </div>
@@ -156,9 +164,13 @@ function MainLayout({ children }) {
                 key={item.path}
                 to={item.path}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${isActive
-                  ? 'bg-[#4F8FE0] text-white font-bold shadow-xs'
-                  : 'text-slate-300 hover:bg-slate-700/60 hover:text-white'
+                  ? 'font-bold shadow-xs'
+                  : ''
                   }`}
+              style={isActive
+                ? { backgroundColor: 'var(--theme-accent)', color: '#fff', boxShadow: `0 2px 8px var(--theme-accent-shadow)` }
+                : { color: 'var(--theme-sidebar-muted)' }
+              }
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span>{item.label}</span>
@@ -170,28 +182,35 @@ function MainLayout({ children }) {
           {isAdmin && (
             <Link
               to="/admin/users"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${location.pathname.startsWith('/admin/users')
-                ? 'bg-[#4F8FE0] text-white font-bold shadow-xs'
-                : 'text-slate-300 hover:bg-slate-700/60 hover:text-white'
-                }`}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${location.pathname.startsWith('/admin/users') ? 'font-bold shadow-xs' : ''}`}
+              style={location.pathname.startsWith('/admin/users')
+                ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
+                : { color: 'var(--theme-sidebar-muted)' }
+              }
             >
               <Users className="w-4 h-4 shrink-0" />
               <span>Kullanıcı Yönetimi</span>
             </Link>
           )}
 
-          {/* Account Settings */}
-          <Link
-            to="/force-change-password"
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-700/60 hover:text-white transition-all"
-          >
-            <Settings className="w-4 h-4 shrink-0" />
-            <span>Sistem Ayarları</span>
-          </Link>
+          {/* System Settings (Admin Only) */}
+          {isAdmin && (
+            <Link
+              to="/settings"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${location.pathname.startsWith('/settings') ? 'font-bold shadow-xs' : ''}`}
+              style={location.pathname.startsWith('/settings')
+                ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
+                : { color: 'var(--theme-sidebar-muted)' }
+              }
+            >
+              <Settings className="w-4 h-4 shrink-0" />
+              <span>Sistem Ayarları</span>
+            </Link>
+          )}
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-slate-700/60 text-[11px] text-slate-300 flex items-center gap-2">
+        <div className="p-4 text-[11px] flex items-center gap-2" style={{ borderTop: '1px solid var(--theme-sidebar-border)', color: 'var(--theme-sidebar-muted)' }}>
           <span>DİTAŞ Otomotiv © 2026</span>
         </div>
       </aside>
@@ -199,7 +218,7 @@ function MainLayout({ children }) {
       {/* 2. MAIN CONTENT WRAPPER */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* TOP NAVIGATION BAR */}
-        <header className="bg-white border-b border-slate-200 h-16 sticky top-0 z-10 flex items-center justify-between px-4 sm:px-6 shadow-xs">
+        <header className="h-16 sticky top-0 z-10 flex items-center justify-between px-4 sm:px-6 shadow-xs transition-colors duration-300" style={{ backgroundColor: 'var(--theme-header-bg)', borderBottom: '1px solid var(--theme-header-border)' }}>
           <div className="flex items-center gap-4">
             <button
               onClick={() => setMobileSidebarOpen((prev) => !prev)}
@@ -376,14 +395,14 @@ function MainLayout({ children }) {
             </div>
 
             <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
-              <div className="w-8 h-8 rounded-full bg-[#1E2534] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-xs" style={{ backgroundColor: 'var(--theme-user-badge-bg)', color: 'var(--theme-user-badge-text)' }}>
                 {user?.fullName ? user.fullName.substring(0, 2).toUpperCase() : 'US'}
               </div>
               <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs font-semibold text-[#1E2534] truncate max-w-[140px]">
+                <span className="text-xs font-semibold truncate max-w-[140px]" style={{ color: 'var(--theme-text-primary)' }}>
                   {user?.fullName}
                 </span>
-                <span className="text-[10px] font-bold text-[#4F8FE0] uppercase tracking-wider">
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-accent)' }}>
                   {user?.role}
                 </span>
               </div>
@@ -406,8 +425,8 @@ function MainLayout({ children }) {
               className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
               onClick={() => setMobileSidebarOpen(false)}
             ></div>
-            <div className="relative w-64 bg-[#1E2534] text-white flex flex-col h-full shadow-2xl z-50">
-              <div className="p-5 border-b border-slate-700/60 flex items-center justify-between">
+            <div className="relative w-64 flex flex-col h-full shadow-2xl z-50" style={{ backgroundColor: 'var(--theme-sidebar-bg)', color: 'var(--theme-sidebar-text)' }}>
+              <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
                 <div className="flex items-center gap-2.5">
                   <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="w-7 h-7 object-contain bg-white rounded-lg p-0.5" />
                   <span className="font-heading font-bold text-white text-base">DİTAŞ Takip</span>
@@ -429,8 +448,11 @@ function MainLayout({ children }) {
                       key={item.path}
                       to={item.path}
                       onClick={() => setMobileSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${isActive ? 'bg-[#4F8FE0] text-white font-bold' : 'text-slate-300'
-                        }`}
+                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${isActive ? 'font-bold' : ''}`}
+                      style={isActive
+                        ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
+                        : { color: 'var(--theme-sidebar-muted)' }
+                      }
                     >
                       <Icon className="w-4 h-4" />
                       <span>{item.label}</span>
@@ -439,15 +461,33 @@ function MainLayout({ children }) {
                 })}
 
                 {isAdmin && (
-                  <Link
-                    to="/admin/users"
-                    onClick={() => setMobileSidebarOpen(false)}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${location.pathname.startsWith('/admin/users') ? 'bg-[#4F8FE0] text-white font-bold' : 'text-slate-300'
-                      }`}
-                  >
-                    <Users className="w-4 h-4" />
-                    <span>Kullanıcı Yönetimi</span>
-                  </Link>
+                  <>
+                    <Link
+                      to="/admin/users"
+                      onClick={() => setMobileSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${location.pathname.startsWith('/admin/users') ? 'font-bold' : ''}`}
+                      style={location.pathname.startsWith('/admin/users')
+                        ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
+                        : { color: 'var(--theme-sidebar-muted)' }
+                      }
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>Kullanıcı Yönetimi</span>
+                    </Link>
+
+                    <Link
+                      to="/settings"
+                      onClick={() => setMobileSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${location.pathname.startsWith('/settings') ? 'font-bold' : ''}`}
+                      style={location.pathname.startsWith('/settings')
+                        ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
+                        : { color: 'var(--theme-sidebar-muted)' }
+                      }
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span>Sistem Ayarları</span>
+                    </Link>
+                  </>
                 )}
               </nav>
             </div>
@@ -462,6 +502,17 @@ function MainLayout({ children }) {
 }
 
 export default function App() {
+  // Load saved theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('ditas-theme') || 'default';
+    document.documentElement.className = document.documentElement.className
+      .replace(/theme-\S+/g, '')
+      .trim();
+    if (savedTheme !== 'default') {
+      document.documentElement.classList.add(`theme-${savedTheme}`);
+    }
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -479,7 +530,7 @@ export default function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']}>
               <MainLayout>
                 <DashboardPage />
               </MainLayout>
@@ -490,7 +541,7 @@ export default function App() {
         <Route
           path="/assignments"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']} requiredPermission="assignments:view">
               <MainLayout>
                 <AssignmentList />
               </MainLayout>
@@ -501,7 +552,7 @@ export default function App() {
         <Route
           path="/assignments/create"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'it_staff']}>
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']} requiredPermission="assignments:create">
               <MainLayout>
                 <CreateAssignmentPage />
               </MainLayout>
@@ -512,7 +563,7 @@ export default function App() {
         <Route
           path="/returns"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']} requiredPermission="returns:view">
               <MainLayout>
                 <ReturnList />
               </MainLayout>
@@ -523,7 +574,7 @@ export default function App() {
         <Route
           path="/returns/create"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'it_staff']}>
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']} requiredPermission="returns:create">
               <MainLayout>
                 <CreateReturnPage />
               </MainLayout>
@@ -534,7 +585,7 @@ export default function App() {
         <Route
           path="/hardware"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']} requiredPermission="hardware:view">
               <MainLayout>
                 <HardwareList />
               </MainLayout>
@@ -545,7 +596,7 @@ export default function App() {
         <Route
           path="/licenses"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']} requiredPermission="licenses:view">
               <MainLayout>
                 <LicenseList />
               </MainLayout>
@@ -556,7 +607,7 @@ export default function App() {
         <Route
           path="/accessories"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']} requiredPermission="accessories:view">
               <MainLayout>
                 <AccessoryList />
               </MainLayout>
@@ -567,7 +618,7 @@ export default function App() {
         <Route
           path="/consumables"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']} requiredPermission="consumables:view">
               <MainLayout>
                 <ConsumableList />
               </MainLayout>
@@ -578,7 +629,7 @@ export default function App() {
         <Route
           path="/components"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']} requiredPermission="components:view">
               <MainLayout>
                 <ComponentList />
               </MainLayout>
@@ -589,13 +640,14 @@ export default function App() {
         <Route
           path="/employees"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'it_staff', 'viewer']}>
+            <ProtectedRoute allowedRoles={['admin', 'it_staff']} requiredPermission="employees:view">
               <MainLayout>
                 <EmployeeList />
               </MainLayout>
             </ProtectedRoute>
           }
         />
+
 
         {/* Backward compatibility redirects */}
         <Route path="/software" element={<Navigate to="/licenses" replace />} />
@@ -606,6 +658,17 @@ export default function App() {
             <ProtectedRoute allowedRoles={['admin']}>
               <MainLayout>
                 <UsersList />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/settings/*"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <MainLayout>
+                <SettingsLayout />
               </MainLayout>
             </ProtectedRoute>
           }

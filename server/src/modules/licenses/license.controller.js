@@ -163,3 +163,13 @@ export const getExpiringLicenses = async (req, res, next) => {
     next(error);
   }
 };
+
+export const exportLicenses = async (req, res, next) => {
+  try {
+    const { unitId, status, paymentType, endDateFrom, endDateTo, q } = req.query;
+    await licenseService.exportLicenses({ unitId, status, paymentType, endDateFrom, endDateTo, q }, res);
+  } catch (error) {
+    next(error);
+  }
+};
+

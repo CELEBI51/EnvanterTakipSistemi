@@ -246,8 +246,22 @@ export const markDefective = async (id, { quantity, note }, userId) => {
     return acc;
   });
 
+  // Anlık Kritik Stok Kontrolü
+  try {
+    const { checkAndNotifyItemInstantCriticalStock } = await import('../../jobs/criticalStock.job.js');
+    await checkAndNotifyItemInstantCriticalStock({
+      name: updatedAccessory.name,
+      type: 'Aksesuar',
+      availableQuantity: updatedAccessory.availableQuantity,
+      oldAvailableQuantity: existing.availableQuantity,
+    });
+  } catch (err) {
+    console.error('Kritik stok mail kontrolü yapılırken hata:', err);
+  }
+
   return formatAccessory(updatedAccessory);
 };
+
 
 export const getAccessoryHistory = async (id) => {
   const existing = await prisma.accessory.findUnique({ where: { id } });
@@ -306,3 +320,56 @@ export const getAccessoryStats = async () => {
     totalAssignedQuantity: sumResult._sum.assignedQuantity || 0,
   };
 };
+
+export const exportAccessories = async ({ category, q }, res) => {
+  const where = {};
+
+  if (category) {
+    where.category = {
+      name: category,
+    };
+  }
+
+  if (q && q.trim() !== '') {
+    const searchTerm = q.trim();
+    where.OR = [
+      { name: { contains: searchTerm, mode: 'insensitive' } },
+      { brand: { contains: searchTerm, mode: 'insensitive' } },
+      { supplier: { contains: searchTerm, mode: 'insensitive' } },
+      { invoiceNo: { contains: searchTerm, mode: 'insensitive' } },
+    ];
+  }
+
+  const items = await prisma.accessory.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      category: true,
+    },
+  });
+
+  const columns = [
+    { header: 'Ürün Adı', key: 'name', width: 22 },
+    { header: 'Kategori', key: 'categoryName', width: 18 },
+    { header: 'Marka', key: 'brand', width: 16 },
+    { header: 'Toplam Miktar', key: 'totalQuantity', width: 15 },
+    { header: 'Kullanılabilir', key: 'availableQuantity', width: 15 },
+    { header: 'Zimmetli', key: 'assignedQuantity', width: 15 },
+    { header: 'Kullanım Dışı', key: 'outOfUseQuantity', width: 15 },
+  ];
+
+  const rows = items.map((item) => ({
+    name: item.name || '-',
+    categoryName: item.category ? item.category.name : '-',
+    brand: item.brand || '-',
+    totalQuantity: item.totalQuantity || 0,
+    availableQuantity: item.availableQuantity || 0,
+    assignedQuantity: item.assignedQuantity || 0,
+    outOfUseQuantity: item.outOfUseQuantity || 0,
+  }));
+
+  const { createExcelStream } = await import('../../services/excelExport.service.js');
+  const todayStr = new Date().toISOString().split('T')[0];
+  await createExcelStream('Aksesuarlar', columns, rows, res, `aksesuar_${todayStr}.xlsx`);
+};
+

@@ -110,17 +110,8 @@ export default function DashboardPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Yenile
           </button>
-
-          {canAddHardware && (
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4F8FE0] hover:bg-[#3D75C4] text-white text-xs font-bold transition cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              Yeni Varlık Ekle
-            </button>
-          )}
         </div>
+
       </div>
 
       {error && (
@@ -363,18 +354,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
-      {/* Modal */}
-      {isAddModalOpen && (
-        <AddHardwareModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onSuccess={() => {
-            fetchDashboardData();
-            setIsAddModalOpen(false);
-          }}
-        />
-      )}
     </div>
   );
 }
+

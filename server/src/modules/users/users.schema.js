@@ -8,13 +8,16 @@ export const createUserSchema = z.object({
   email: z
     .string()
     .email('Geçerli bir e-posta adresi giriniz.'),
-  role: z.enum(['admin', 'it_staff', 'viewer'], {
-    errorMap: () => ({ message: 'Geçersiz rol seçimi. (admin, it_staff veya viewer)' }),
+  role: z.enum(['admin', 'it_staff'], {
+    errorMap: () => ({ message: 'Geçersiz rol seçimi. (admin veya it_staff)' }),
   }),
+  permissions: z.array(z.string()).optional(),
 });
 
 export const updateUserRoleSchema = z.object({
-  role: z.enum(['admin', 'it_staff', 'viewer'], {
-    errorMap: () => ({ message: 'Geçersiz rol seçimi. (admin, it_staff veya viewer)' }),
-  }),
+  role: z.enum(['admin', 'it_staff'], {
+    errorMap: () => ({ message: 'Geçersiz rol seçimi. (admin veya it_staff)' }),
+  }).optional(),
+  permissions: z.array(z.string()).optional(),
 });
+
