@@ -5,6 +5,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { z } from 'zod';
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, KeyRound, ShieldCheck } from 'lucide-react';
 import axiosClient from '../../../api/axiosClient';
+import { API_BASE_URL } from '../../../config';
 
 const resetPasswordSchema = z
   .object({

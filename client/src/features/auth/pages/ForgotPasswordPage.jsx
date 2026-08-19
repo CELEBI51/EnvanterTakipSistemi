@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { z } from 'zod';
 import { Mail, Loader2, AlertCircle, CheckCircle2, ArrowLeft, ShieldCheck } from 'lucide-react';
 import axiosClient from '../../../api/axiosClient';
+import { API_BASE_URL } from '../../../config';
 
 const forgotPasswordSchema = z.object({
   email: z
