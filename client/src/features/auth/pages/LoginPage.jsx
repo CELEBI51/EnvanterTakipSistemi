@@ -21,6 +21,14 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [logoSrc, setLogoSrc] = useState(`${API_BASE_URL}/settings/logo`);
 
+  useEffect(() => {
+    const handleLogoChange = () => {
+      setLogoSrc(`${API_BASE_URL}/settings/logo?t=${Date.now()}`);
+    };
+    window.addEventListener('company-logo-changed', handleLogoChange);
+    return () => window.removeEventListener('company-logo-changed', handleLogoChange);
+  }, []);
+
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
 
@@ -79,7 +87,6 @@ export default function LoginPage() {
           <div className="flex flex-col items-center text-center mb-6">
             <img 
               src={logoSrc} 
-              onError={() => setLogoSrc('/ditas-logo.png')}
               alt="Logo" 
               className="h-24 w-auto max-w-full object-contain mb-3" 
             />

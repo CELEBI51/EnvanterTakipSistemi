@@ -155,7 +155,6 @@ function MainLayout({ children }) {
         <div className="p-4 flex items-center justify-center" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
           <img 
             src={logoSrc} 
-            onError={() => setLogoSrc('/ditas-logo.png')}
             alt="Logo" 
             className="h-20 w-auto max-w-full object-contain transition-transform duration-200 hover:scale-105" 
           />
@@ -436,7 +435,6 @@ function MainLayout({ children }) {
               <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
                 <img 
                   src={logoSrc} 
-                  onError={() => setLogoSrc('/ditas-logo.png')}
                   alt="Logo" 
                   className="h-14 w-auto max-w-[180px] object-contain" 
                 />

@@ -80,29 +80,48 @@ export const updateSettings = async (data) => {
 
 export const getLogoInfo = async () => {
   const settings = await getSettings();
-  if (!settings.logoPath) {
+  let targetPath = null;
+
+  if (settings && settings.logoPath) {
+    const absolutePath = path.isAbsolute(settings.logoPath)
+      ? settings.logoPath
+      : path.join(process.cwd(), settings.logoPath);
+
+    if (fs.existsSync(absolutePath)) {
+      targetPath = absolutePath;
+    }
+  }
+
+  // Fallback to default ditas-logo.png if no custom logo uploaded
+  if (!targetPath) {
+    const defaultPaths = [
+      path.join(process.cwd(), '../client/public/ditas-logo.png'),
+      path.join(process.cwd(), 'client/public/ditas-logo.png'),
+      path.join(process.cwd(), 'public/ditas-logo.png'),
+    ];
+    for (const p of defaultPaths) {
+      if (fs.existsSync(p)) {
+        targetPath = p;
+        break;
+      }
+    }
+  }
+
+  if (!targetPath || !fs.existsSync(targetPath)) {
     return null;
   }
 
-  const absolutePath = path.isAbsolute(settings.logoPath)
-    ? settings.logoPath
-    : path.join(process.cwd(), settings.logoPath);
-
-  if (!fs.existsSync(absolutePath)) {
-    return null;
-  }
-
-  const ext = path.extname(absolutePath).toLowerCase().replace('.', '');
+  const ext = path.extname(targetPath).toLowerCase().replace('.', '');
   let mimeType = 'image/png';
   if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
   else if (ext === 'svg') mimeType = 'image/svg+xml';
   else if (ext === 'webp') mimeType = 'image/webp';
 
-  const buffer = fs.readFileSync(absolutePath);
+  const buffer = fs.readFileSync(targetPath);
   const base64 = `data:${mimeType};base64,${buffer.toString('base64')}`;
 
   return {
-    absolutePath,
+    absolutePath: targetPath,
     mimeType,
     buffer,
     base64,
