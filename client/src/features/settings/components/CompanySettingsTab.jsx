@@ -14,6 +14,7 @@ import {
   Save,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import FileUploadField from '../../../components/common/FileUploadField';
 
 export default function CompanySettingsTab() {
@@ -45,7 +46,7 @@ export default function CompanySettingsTab() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:4001/api/settings', {
+      const res = await fetch(`${API_BASE_URL}/settings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -74,7 +75,7 @@ export default function CompanySettingsTab() {
   // Fetch Logo as base64 for reliable display
   const fetchLogoBase64 = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/settings/logo?format=base64', {
+      const res = await fetch(`${API_BASE_URL}/settings/logo?format=base64`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -107,7 +108,7 @@ export default function CompanySettingsTab() {
     formData.append('logo', file);
 
     try {
-      const res = await fetch('http://localhost:4001/api/settings/logo', {
+      const res = await fetch(`${API_BASE_URL}/settings/logo`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -120,6 +121,7 @@ export default function CompanySettingsTab() {
 
       setSuccess('Şirket logosu başarıyla yüklendi.');
       setSelectedLogoFile(null);
+      window.dispatchEvent(new CustomEvent('company-logo-changed'));
       fetchSettings();
     } catch (err) {
       setError(err.message);
@@ -137,7 +139,7 @@ export default function CompanySettingsTab() {
     setSuccess('');
 
     try {
-      const res = await fetch('http://localhost:4001/api/settings', {
+      const res = await fetch(`${API_BASE_URL}/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -152,6 +154,7 @@ export default function CompanySettingsTab() {
       setLogoPath(null);
       setLogoBase64(null);
       setSuccess('Şirket logosu kaldırıldı.');
+      window.dispatchEvent(new CustomEvent('company-logo-changed'));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -172,7 +175,7 @@ export default function CompanySettingsTab() {
     setSuccess('');
 
     try {
-      const res = await fetch('http://localhost:4001/api/settings', {
+      const res = await fetch(`${API_BASE_URL}/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

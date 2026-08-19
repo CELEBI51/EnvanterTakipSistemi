@@ -6,6 +6,7 @@ import useAuthStore from '../../../store/authStore';
 import { hasPermission } from '../../../utils/permissions';
 import ExcelExportButton from '../../../components/common/ExcelExportButton';
 
+import { API_BASE_URL } from '../../../config';
 import AssignmentDetailModal from '../components/AssignmentDetailModal';
 
 export default function AssignmentList() {
@@ -407,7 +408,7 @@ export default function AssignmentList() {
 
                           <button
                             onClick={() =>
-                              window.open(`http://localhost:4001/api/assignments/${item.id}/pdf?token=${token}`, '_blank')
+                              window.open(`${API_BASE_URL}/assignments/${item.id}/pdf?token=${token}`, '_blank')
                             }
                             className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-[#1E2534] transition cursor-pointer"
                             title="PDF İndir"

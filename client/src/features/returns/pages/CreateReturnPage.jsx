@@ -11,6 +11,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import FileUploadField from '../../../components/common/FileUploadField';
 import PendingMaintenanceFormModal from '../components/PendingMaintenanceFormModal';
 
@@ -344,7 +345,7 @@ export default function CreateReturnPage() {
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
             <button
-              onClick={() => window.open(`http://localhost:4001/api/returns/${createdReturn.id}/pdf?token=${token}`, '_blank')}
+              onClick={() => window.open(`${API_BASE_URL}/returns/${createdReturn.id}/pdf?token=${token}`, '_blank')}
               className="px-5 py-2.5 rounded-xl bg-[#1E2534] text-white text-xs font-bold hover:bg-slate-800 transition cursor-pointer flex items-center gap-2"
             >
               <Download className="w-4 h-4" /> İade PDF'ini İndir

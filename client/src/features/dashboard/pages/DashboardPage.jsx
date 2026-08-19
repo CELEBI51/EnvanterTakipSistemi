@@ -18,6 +18,7 @@ import {
   Legend,
 } from 'recharts';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import EmptyState from '../../../components/common/EmptyState';
 import AddHardwareModal from '../../hardware/components/AddHardwareModal';
 
@@ -47,10 +48,10 @@ export default function DashboardPage() {
     setError('');
     try {
       const [statsRes, expiringRes] = await Promise.all([
-        fetch('http://localhost:4001/api/reports/dashboard-stats', {
+        fetch(`${API_BASE_URL}/reports/dashboard-stats`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('http://localhost:4001/api/licenses/expiring?days=15', {
+        fetch(`${API_BASE_URL}/licenses/expiring?days=15`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -92,7 +93,7 @@ export default function DashboardPage() {
       <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-            DİTAŞ Otomotiv • Kurumsal Envanter Portalı
+            KURUMSAL ENVANTER PORTALI
           </span>
           <h1 className="font-heading text-2xl font-bold text-[#1E2534]">
             Sistem Genel Bakış & KPI Göstergeleri

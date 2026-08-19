@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Download, CheckCircle2, RotateCcw, History } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import { hasPermission } from '../../../utils/permissions';
 import FileUploadField from '../../../components/common/FileUploadField';
 
@@ -55,11 +56,11 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
   };
 
   const handleDownloadPdf = () => {
-    window.open(`http://localhost:4001/api/assignments/${assignmentId}/pdf?token=${token}`, '_blank');
+    window.open(`${API_BASE_URL}/assignments/${assignmentId}/pdf?token=${token}`, '_blank');
   };
 
   const handleDownloadSignedForm = () => {
-    window.open(`http://localhost:4001/api/assignments/${assignmentId}/signed-form?token=${token}`, '_blank');
+    window.open(`${API_BASE_URL}/assignments/${assignmentId}/signed-form?token=${token}`, '_blank');
   };
 
   const handleUploadSignedForm = async (e) => {
@@ -348,7 +349,7 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
 
                           <button
                             onClick={() =>
-                              window.open(`http://localhost:4001/api/returns/${ret.id}/pdf?token=${token}`, '_blank')
+                              window.open(`${API_BASE_URL}/returns/${ret.id}/pdf?token=${token}`, '_blank')
                             }
                             className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 transition cursor-pointer flex items-center gap-1.5"
                           >

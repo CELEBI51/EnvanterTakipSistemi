@@ -25,6 +25,7 @@ export default function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [logoSrc, setLogoSrc] = useState(`${API_BASE_URL}/settings/logo`);
 
   const {
     register,
@@ -71,7 +72,12 @@ export default function ResetPasswordPage() {
           
           {/* Header & Logo */}
           <div className="flex flex-col items-center text-center mb-6">
-            <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="h-16 max-w-full object-contain mb-3" />
+            <img 
+              src={logoSrc} 
+              onError={() => setLogoSrc('/ditas-logo.png')}
+              alt="Logo" 
+              className="h-16 max-w-full object-contain mb-3" 
+            />
             <h1 className="font-heading text-xl font-bold text-[#1E2534] tracking-tight">
               Yeni Şifre Belirleyin
             </h1>
@@ -220,7 +226,7 @@ export default function ResetPasswordPage() {
       <div className="flex-1 flex flex-col justify-end pb-2 pt-6">
         <footer className="flex items-center justify-center gap-1.5 text-xs text-slate-500 text-center font-medium">
           <ShieldCheck className="w-3.5 h-3.5 text-[#4C82F7]" />
-          <span>Bu sistem yalnızca DİTAŞ Otomotiv iç ağında kullanılır. © 2026</span>
+          <span>Bu sistem yalnızca kurum içi ağda kullanılır. © 2026</span>
         </footer>
       </div>
     </div>

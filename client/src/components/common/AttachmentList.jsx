@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FileText, Download, Trash2 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import { API_BASE_URL } from '../../config';
 
 export default function AttachmentList({ entityType, entityId, canDelete = true }) {
   const [attachments, setAttachments] = useState([]);
@@ -14,7 +15,7 @@ export default function AttachmentList({ entityType, entityId, canDelete = true 
     setError(null);
     try {
       const res = await fetch(
-        `http://localhost:4001/api/attachments?entityType=${entityType}&entityId=${entityId}`,
+        `${API_BASE_URL}/attachments?entityType=${entityType}&entityId=${entityId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -39,7 +40,7 @@ export default function AttachmentList({ entityType, entityId, canDelete = true 
   const handleDownload = async (attachment) => {
     try {
       const res = await fetch(
-        `http://localhost:4001/api/attachments/${attachment.id}/download`,
+        `${API_BASE_URL}/attachments/${attachment.id}/download`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -62,7 +63,7 @@ export default function AttachmentList({ entityType, entityId, canDelete = true 
   const handleDelete = async (id) => {
     if (!window.confirm('Bu dosyayı silmek istediğinizden emin misiniz?')) return;
     try {
-      const res = await fetch(`http://localhost:4001/api/attachments/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/attachments/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

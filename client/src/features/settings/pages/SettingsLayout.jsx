@@ -115,7 +115,7 @@ export default function SettingsLayout() {
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-            DİTAŞ Otomotiv • Yönetici Paneli
+            Envanter Takip Sistemi • Yönetici Paneli
           </span>
           <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
             Sistem Ayarları

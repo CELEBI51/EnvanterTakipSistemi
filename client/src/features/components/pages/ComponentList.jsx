@@ -189,7 +189,7 @@ export default function ComponentList() {
       <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-            DİTAŞ Otomotiv • Bileşen Yönetimi
+            Envanter Takip Sistemi • Bileşen Yönetimi
           </span>
           <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
             Donanım Bileşen Stok Listesi

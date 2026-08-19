@@ -16,6 +16,7 @@ const forgotPasswordSchema = z.object({
 export default function ForgotPasswordPage() {
   const [infoMessage, setInfoMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [logoSrc, setLogoSrc] = useState(`${API_BASE_URL}/settings/logo`);
 
   const {
     register,
@@ -34,13 +35,19 @@ export default function ForgotPasswordPage() {
 
     try {
       const response = await axiosClient.post('/auth/forgot-password', data);
-      const msg = response.data?.message || 'Eğer bu e-posta sistemde kayıtlıysa, sıfırlama bağlantısı gönderildi.';
-      setInfoMessage(msg);
       setIsSuccess(true);
-    } catch (error) {
-      const errorMsg = error.response?.data?.message || 'Bir hata oluştu. Lütfen tekrar deneyiniz.';
-      setInfoMessage(errorMsg);
+      setInfoMessage(
+        response.data?.message ||
+          'Şifre sıfırlama talimatı başarıyla e-posta adresinize gönderildi. Lütfen e-postanızı kontrol ediniz.'
+      );
+    } catch (err) {
+      console.error('Şifremi unuttum hatası:', err);
       setIsSuccess(false);
+      if (err.response && err.response.data && err.response.data.message) {
+        setInfoMessage(err.response.data.message);
+      } else {
+        setInfoMessage('İstek gönderilirken bir hata oluştu. Lütfen tekrar deneyin.');
+      }
     }
   };
 
@@ -55,7 +62,12 @@ export default function ForgotPasswordPage() {
           
           {/* Header & Logo */}
           <div className="flex flex-col items-center text-center mb-6">
-            <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="h-16 max-w-full object-contain mb-3" />
+            <img 
+              src={logoSrc} 
+              onError={() => setLogoSrc('/ditas-logo.png')}
+              alt="Logo" 
+              className="h-16 max-w-full object-contain mb-3" 
+            />
             <h1 className="font-heading text-xl font-bold text-[#1E2534] tracking-tight">
               Şifremi Unuttum
             </h1>
@@ -144,7 +156,7 @@ export default function ForgotPasswordPage() {
       <div className="flex-1 flex flex-col justify-end pb-2 pt-6">
         <footer className="flex items-center justify-center gap-1.5 text-xs text-slate-500 text-center font-medium">
           <ShieldCheck className="w-3.5 h-3.5 text-[#4C82F7]" />
-          <span>Bu sistem yalnızca DİTAŞ Otomotiv iç ağında kullanılır. © 2026</span>
+          <span>Bu sistem yalnızca kurum içi ağda kullanılır. © 2026</span>
         </footer>
       </div>
     </div>

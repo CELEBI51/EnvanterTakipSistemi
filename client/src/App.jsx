@@ -18,6 +18,7 @@ import ReturnList from './features/returns/pages/ReturnList';
 import CreateReturnPage from './features/returns/pages/CreateReturnPage';
 import SettingsLayout from './features/settings/pages/SettingsLayout';
 import useAuthStore from './store/authStore';
+import { API_BASE_URL } from './config';
 import { hasPermission } from './utils/permissions';
 import {
   LayoutDashboard,
@@ -75,7 +76,16 @@ function MainLayout({ children }) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [notificationsData, setNotificationsData] = useState(null);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const [logoSrc, setLogoSrc] = useState(`${API_BASE_URL}/settings/logo?t=${Date.now()}`);
   const popoverRef = useRef(null);
+
+  useEffect(() => {
+    const handleLogoChange = () => {
+      setLogoSrc(`${API_BASE_URL}/settings/logo?t=${Date.now()}`);
+    };
+    window.addEventListener('company-logo-changed', handleLogoChange);
+    return () => window.removeEventListener('company-logo-changed', handleLogoChange);
+  }, []);
 
   const isAdmin = user?.role === 'admin';
 
@@ -83,7 +93,7 @@ function MainLayout({ children }) {
     if (!token) return;
     setLoadingNotifs(true);
     try {
-      const res = await fetch('http://localhost:4001/api/notifications/summary', {
+      const res = await fetch(`${API_BASE_URL}/notifications/summary`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -141,9 +151,14 @@ function MainLayout({ children }) {
     <div className="min-h-screen flex font-sans transition-colors duration-300" style={{ backgroundColor: 'var(--theme-page-bg)', color: 'var(--theme-text-primary)' }}>
       {/* 1. PERMANENT LEFT SIDEBAR */}
       <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-0 h-screen shadow-xl z-20 transition-colors duration-300" style={{ backgroundColor: 'var(--theme-sidebar-bg)', color: 'var(--theme-sidebar-text)' }}>
-        {/* DİTAŞ Corporate Logo */}
+        {/* Corporate Logo */}
         <div className="p-4 flex items-center justify-center" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
-          <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="h-20 w-auto max-w-full object-contain transition-transform duration-200 hover:scale-105" />
+          <img 
+            src={logoSrc} 
+            onError={() => setLogoSrc('/ditas-logo.png')}
+            alt="Logo" 
+            className="h-20 w-auto max-w-full object-contain transition-transform duration-200 hover:scale-105" 
+          />
         </div>
 
         {/* Sidebar Navigation */}
@@ -203,7 +218,7 @@ function MainLayout({ children }) {
 
         {/* Sidebar Footer */}
         <div className="p-4 text-[11px] flex items-center gap-2" style={{ borderTop: '1px solid var(--theme-sidebar-border)', color: 'var(--theme-sidebar-muted)' }}>
-          <span>DİTAŞ Otomotiv © 2026</span>
+          <span>Envanter Takip Sistemi © 2026</span>
         </div>
       </aside>
 
@@ -419,7 +434,12 @@ function MainLayout({ children }) {
             ></div>
             <div className="relative w-64 flex flex-col h-full shadow-2xl z-50" style={{ backgroundColor: 'var(--theme-sidebar-bg)', color: 'var(--theme-sidebar-text)' }}>
               <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
-                <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="h-14 w-auto max-w-[180px] object-contain" />
+                <img 
+                  src={logoSrc} 
+                  onError={() => setLogoSrc('/ditas-logo.png')}
+                  alt="Logo" 
+                  className="h-14 w-auto max-w-[180px] object-contain" 
+                />
                 <button
                   onClick={() => setMobileSidebarOpen(false)}
                   className="text-slate-300 hover:text-white"

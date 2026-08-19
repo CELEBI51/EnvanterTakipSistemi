@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Download, CheckCircle2, RotateCcw } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import { hasPermission } from '../../../utils/permissions';
 import FileUploadField from '../../../components/common/FileUploadField';
 
@@ -45,11 +46,11 @@ export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
   };
 
   const handleDownloadPdf = () => {
-    window.open(`http://localhost:4001/api/returns/${returnId}/pdf?token=${token}`, '_blank');
+    window.open(`${API_BASE_URL}/returns/${returnId}/pdf?token=${token}`, '_blank');
   };
 
   const handleDownloadSignedForm = () => {
-    window.open(`http://localhost:4001/api/returns/${returnId}/signed-form?token=${token}`, '_blank');
+    window.open(`${API_BASE_URL}/returns/${returnId}/signed-form?token=${token}`, '_blank');
   };
 
   const handleUploadSignedForm = async (e) => {

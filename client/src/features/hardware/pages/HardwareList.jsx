@@ -12,6 +12,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 import AddHardwareModal from '../components/AddHardwareModal';
@@ -82,7 +83,7 @@ export default function HardwareList() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/hardware/stats', {
+      const res = await fetch(`${API_BASE_URL}/hardware/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -96,7 +97,7 @@ export default function HardwareList() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/categories?parentType=Varlık', {
+      const res = await fetch(`${API_BASE_URL}/categories?parentType=Varlık`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -126,7 +127,7 @@ export default function HardwareList() {
         params.append('q', searchQuery.trim());
       }
 
-      const res = await fetch(`http://localhost:4001/api/hardware?${params.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/hardware?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -184,7 +185,7 @@ export default function HardwareList() {
   const handleBarcodeDownload = async (ids) => {
     setIsDownloading(true);
     try {
-      const response = await fetch('http://localhost:4001/api/hardware/barcodes/pdf', {
+      const response = await fetch(`${API_BASE_URL}/hardware/barcodes/pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -263,7 +264,7 @@ export default function HardwareList() {
       <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-            DİTAŞ Otomotiv • Bilgisayar & Ekipman Yönetimi
+            Envanter Takip Sistemi • Bilgisayar & Ekipman Yönetimi
           </span>
           <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
             Bilgisayar & Ekipman Envanteri

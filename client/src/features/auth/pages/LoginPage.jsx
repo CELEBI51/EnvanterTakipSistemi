@@ -6,6 +6,7 @@ import { Eye, EyeOff, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { z } from 'zod';
 import axiosClient from '../../../api/axiosClient';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 
 const loginSchema = z.object({
   email: z
@@ -18,8 +19,10 @@ const loginSchema = z.object({
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const [logoSrc, setLogoSrc] = useState(`${API_BASE_URL}/settings/logo`);
+
   const navigate = useNavigate();
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const {
     register,
@@ -37,19 +40,29 @@ export default function LoginPage() {
     setErrorMessage('');
     try {
       const response = await axiosClient.post('/auth/login', data);
-      
-      const resData = response.data?.data || response.data;
-      const token = resData?.accessToken || resData?.token;
-      const user = resData?.user;
+      const resData = response.data?.data;
 
-      if (token && user) {
-        setAuth({ user, accessToken: token });
-        navigate('/dashboard');
+      if (resData && resData.accessToken && resData.user) {
+        setAuth({
+          user: resData.user,
+          accessToken: resData.accessToken,
+        });
+
+        if (resData.user.mustChangePassword) {
+          navigate('/force-change-password');
+        } else {
+          navigate('/');
+        }
       } else {
-        setErrorMessage('E-posta veya şifre hatalı');
+        setErrorMessage('Giriş başarılı fakat kullanıcı bilgisi alınamadı.');
       }
-    } catch (error) {
-      setErrorMessage('E-posta veya şifre hatalı');
+    } catch (err) {
+      console.error('Giriş hatası:', err);
+      if (err.response && err.response.data && err.response.data.message) {
+        setErrorMessage(err.response.data.message);
+      } else {
+        setErrorMessage('Sunucuya bağlanırken bir hata oluştu. Lütfen tekrar deneyin.');
+      }
     }
   };
 
@@ -62,15 +75,17 @@ export default function LoginPage() {
       <main className="w-full max-w-[400px] mx-auto my-auto">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-6 sm:p-8">
           
-          {/* DİTAŞ Logo & Başlık Alanı */}
+          {/* Logo & Başlık Alanı */}
           <div className="flex flex-col items-center text-center mb-6">
-            <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="h-24 w-auto max-w-full object-contain mb-4" />
-            <h1 className="font-heading text-xl font-bold text-[#1E2534] tracking-tight">
-              DİTAŞ OTOMOTİV
+            <img 
+              src={logoSrc} 
+              onError={() => setLogoSrc('/ditas-logo.png')}
+              alt="Logo" 
+              className="h-24 w-auto max-w-full object-contain mb-3" 
+            />
+            <h1 className="font-heading text-lg font-bold text-[#1E2534] tracking-tight">
+              ENVANTER TAKİP SİSTEMİ
             </h1>
-            <p className="text-xs text-slate-500 mt-1 font-semibold uppercase tracking-wider">
-              Demirbaş Takip Sistemi
-            </p>
           </div>
 
           {/* Hata Bildirimi */}
@@ -184,7 +199,7 @@ export default function LoginPage() {
       <div className="flex-1 flex flex-col justify-end pb-2 pt-6">
         <footer className="flex items-center justify-center gap-1.5 text-xs text-slate-500 text-center font-medium">
           <ShieldCheck className="w-3.5 h-3.5 text-[#4C82F7]" />
-          <span>Bu sistem yalnızca DİTAŞ Otomotiv iç ağında kullanılır. © 2026</span>
+          <span>Bu sistem yalnızca kurum içi ağda kullanılır. © 2026</span>
         </footer>
       </div>
     </div>

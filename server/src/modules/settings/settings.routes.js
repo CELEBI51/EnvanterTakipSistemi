@@ -44,7 +44,10 @@ const upload = multer({
   },
 });
 
-// All routes require authentication
+// GET /api/settings/logo - Public (Login page / App branding)
+router.get('/logo', settingsController.getLogo);
+
+// All routes below require authentication
 router.use(authMiddleware);
 
 // GET /api/settings - All authenticated users
@@ -52,9 +55,6 @@ router.get('/', settingsController.getSettings);
 
 // PUT /api/settings - Admin ONLY
 router.put('/', roleMiddleware(['admin']), settingsController.updateSettings);
-
-// GET /api/settings/logo - All authenticated users
-router.get('/logo', settingsController.getLogo);
 
 // POST /api/settings/logo - Admin ONLY
 router.post(
