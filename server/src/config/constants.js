@@ -1,2 +1,1 @@
-export const CRITICAL_STOCK_THRESHOLD = 5;
-export const EXPIRING_LICENSE_DAYS_THRESHOLD = 15;
+// Central constants (Deprecated - thresholds are now dynamically stored in SystemSettings database model)

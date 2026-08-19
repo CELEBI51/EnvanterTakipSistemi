@@ -55,7 +55,7 @@ export default function ComponentList() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/components/stats', {
+      const res = await fetch('http://localhost:4001/api/components/stats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -69,7 +69,7 @@ export default function ComponentList() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/categories?parentType=Bileşen', {
+      const res = await fetch('http://localhost:4001/api/categories?parentType=Bileşen', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -96,7 +96,7 @@ export default function ComponentList() {
         params.append('q', searchQuery.trim());
       }
 
-      const res = await fetch(`http://localhost:5000/api/components?${params.toString()}`, {
+      const res = await fetch(`http://localhost:4001/api/components?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -130,7 +130,7 @@ export default function ComponentList() {
     if (!canManage || !selectedComponent) return;
     setDeleting(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/components/${selectedComponent.id}`, {
+      const res = await fetch(`http://localhost:4001/api/components/${selectedComponent.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -142,6 +142,8 @@ export default function ComponentList() {
       fetchComponents();
     } catch (err) {
       alert(err.message);
+      setIsDeleteConfirmOpen(false);
+      setSelectedComponent(null);
     } finally {
       setDeleting(false);
     }
@@ -234,7 +236,7 @@ export default function ComponentList() {
       {/* Component Statistics Summary Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Toplam Ürün Çeşidi */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 border-l-4 border-l-[#4C82F7] shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
             Toplam Ürün Çeşidi
           </span>
@@ -244,21 +246,21 @@ export default function ComponentList() {
         </div>
 
         {/* Stokta Tükenen */}
-        <div className="bg-amber-50/60 p-5 rounded-2xl border border-amber-200 shadow-xs flex flex-col justify-between">
-          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block mb-1">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 border-l-4 border-l-[#F59E0B] shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-bold text-[#F59E0B] uppercase tracking-wider block mb-1">
             Stokta Tükenen
           </span>
-          <div className="text-2xl font-bold font-heading text-amber-900">
+          <div className="text-2xl font-bold font-heading text-[#F59E0B]">
             {stats.outOfStock}
           </div>
         </div>
 
         {/* Toplam Kullanılmış Adet */}
-        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 border-l-4 border-l-[#4C82F7] shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
             Toplam Kullanılmış Adet
           </span>
-          <div className="text-2xl font-bold font-heading text-slate-700">
+          <div className="text-2xl font-bold font-heading text-[#4C82F7]">
             {stats.totalUsedQuantity}
           </div>
         </div>

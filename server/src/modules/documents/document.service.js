@@ -3,9 +3,53 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import puppeteer from 'puppeteer';
 import prisma from '../../config/db.js';
+import * as settingsService from '../settings/settings.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+async function injectCompanySettingsInfo(html) {
+  let updatedHtml = html;
+  const settings = await settingsService.getSettings();
+  const logoInfo = await settingsService.getLogoInfo();
+
+  const companyName = settings.companyName || 'DİTAŞ Otomotiv';
+  updatedHtml = updatedHtml.replaceAll('{{companyName}}', companyName);
+
+  // Logo rendering
+  if (logoInfo && logoInfo.base64) {
+    updatedHtml = updatedHtml.replace('{{#hasLogo}}', '');
+    updatedHtml = updatedHtml.replace('{{/hasLogo}}', '');
+    updatedHtml = updatedHtml.replaceAll('{{logoBase64}}', logoInfo.base64);
+  } else {
+    // Check fallback ditas-logo.png in templates if no logo in settings
+    const fallbackLogoPath = path.join(__dirname, 'templates', 'ditas-logo.png');
+    if (fs.existsSync(fallbackLogoPath)) {
+      const fallbackBase64 = `data:image/png;base64,${fs.readFileSync(fallbackLogoPath).toString('base64')}`;
+      updatedHtml = updatedHtml.replace('{{#hasLogo}}', '');
+      updatedHtml = updatedHtml.replace('{{/hasLogo}}', '');
+      updatedHtml = updatedHtml.replaceAll('{{logoBase64}}', fallbackBase64);
+    } else {
+      updatedHtml = updatedHtml.replace(/{{#hasLogo}}[\s\S]*?{{\/hasLogo}}/, '');
+    }
+  }
+
+  // Company details (address, phone)
+  const detailsParts = [];
+  if (settings.companyAddress) detailsParts.push(settings.companyAddress);
+  if (settings.companyPhone) detailsParts.push(`Tel: ${settings.companyPhone}`);
+  if (settings.companyEmail) detailsParts.push(`E-posta: ${settings.companyEmail}`);
+
+  if (detailsParts.length > 0) {
+    updatedHtml = updatedHtml.replace('{{#hasCompanyDetails}}', '');
+    updatedHtml = updatedHtml.replace('{{/hasCompanyDetails}}', '');
+    updatedHtml = updatedHtml.replaceAll('{{companyDetails}}', detailsParts.join(' • '));
+  } else {
+    updatedHtml = updatedHtml.replace(/{{#hasCompanyDetails}}[\s\S]*?{{\/hasCompanyDetails}}/, '');
+  }
+
+  return updatedHtml;
+}
 
 export const generateAssignmentPdf = async (assignmentId) => {
   const assignment = await prisma.assignment.findUnique({
@@ -49,14 +93,8 @@ export const generateAssignmentPdf = async (assignmentId) => {
   const templatePath = path.join(__dirname, 'templates', 'assignment-form.html');
   let html = fs.readFileSync(templatePath, 'utf8');
 
-  // Load Logo Base64
-  const logoPath = path.join(__dirname, 'templates', 'ditas-logo.png');
-  let logoHtml = '';
-  if (fs.existsSync(logoPath)) {
-    const logoBase64 = fs.readFileSync(logoPath).toString('base64');
-    logoHtml = `<img src="data:image/png;base64,${logoBase64}" style="height: 34px; vertical-align: middle; margin-right: 8px;" alt="DİTAŞ Logo" />`;
-  }
-  html = html.replace('{{logoHtml}}', logoHtml);
+  // Inject Company Settings Info (Logo, Name, Address)
+  html = await injectCompanySettingsInfo(html);
 
   // Format Date
   const dateStr = new Date(assignment.teslimTarihi).toLocaleDateString('tr-TR');
@@ -245,14 +283,8 @@ export const generateReturnPdf = async (returnId) => {
   const templatePath = path.join(__dirname, 'templates', 'assignment-form.html');
   let html = fs.readFileSync(templatePath, 'utf8');
 
-  // Load Logo Base64
-  const logoPath = path.join(__dirname, 'templates', 'ditas-logo.png');
-  let logoHtml = '';
-  if (fs.existsSync(logoPath)) {
-    const logoBase64 = fs.readFileSync(logoPath).toString('base64');
-    logoHtml = `<img src="data:image/png;base64,${logoBase64}" style="height: 34px; vertical-align: middle; margin-right: 8px;" alt="DİTAŞ Logo" />`;
-  }
-  html = html.replace('{{logoHtml}}', logoHtml);
+  // Inject Company Settings Info (Logo, Name, Address)
+  html = await injectCompanySettingsInfo(html);
 
   // Replace Titles for Return Form
   html = html.replace('ZİMMETLEME FORMU', 'ZİMMET İADE FORMU');

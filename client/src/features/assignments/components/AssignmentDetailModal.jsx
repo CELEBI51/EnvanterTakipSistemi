@@ -29,7 +29,7 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:5000/api/assignments/${assignmentId}`, {
+      const res = await fetch(`http://localhost:4001/api/assignments/${assignmentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -40,7 +40,7 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
       }
 
       // Fetch Returns History
-      const returnRes = await fetch(`http://localhost:5000/api/returns?assignmentId=${assignmentId}`, {
+      const returnRes = await fetch(`http://localhost:4001/api/returns?assignmentId=${assignmentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (returnRes.ok) {
@@ -55,11 +55,11 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
   };
 
   const handleDownloadPdf = () => {
-    window.open(`http://localhost:5000/api/assignments/${assignmentId}/pdf?token=${token}`, '_blank');
+    window.open(`http://localhost:4001/api/assignments/${assignmentId}/pdf?token=${token}`, '_blank');
   };
 
   const handleDownloadSignedForm = () => {
-    window.open(`http://localhost:5000/api/assignments/${assignmentId}/signed-form?token=${token}`, '_blank');
+    window.open(`http://localhost:4001/api/assignments/${assignmentId}/signed-form?token=${token}`, '_blank');
   };
 
   const handleUploadSignedForm = async (e) => {
@@ -73,7 +73,7 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
       const formData = new FormData();
       formData.append('file', signedFile);
 
-      const res = await fetch(`http://localhost:5000/api/assignments/${assignmentId}/signed-form`, {
+      const res = await fetch(`http://localhost:4001/api/assignments/${assignmentId}/signed-form`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -348,7 +348,7 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
 
                           <button
                             onClick={() =>
-                              window.open(`http://localhost:5000/api/returns/${ret.id}/pdf?token=${token}`, '_blank')
+                              window.open(`http://localhost:4001/api/returns/${ret.id}/pdf?token=${token}`, '_blank')
                             }
                             className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 transition cursor-pointer flex items-center gap-1.5"
                           >

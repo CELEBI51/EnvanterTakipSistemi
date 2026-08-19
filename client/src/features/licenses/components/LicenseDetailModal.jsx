@@ -37,7 +37,7 @@ export default function LicenseDetailModal({ isOpen, onClose, licenseId, onSucce
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:5000/api/licenses/${licenseId}`, {
+      const res = await fetch(`http://localhost:4001/api/licenses/${licenseId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -63,7 +63,7 @@ export default function LicenseDetailModal({ isOpen, onClose, licenseId, onSucce
 
     setActionLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/licenses/${licenseId}/status`, {
+      const res = await fetch(`http://localhost:4001/api/licenses/${licenseId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -91,7 +91,7 @@ export default function LicenseDetailModal({ isOpen, onClose, licenseId, onSucce
     setActionError('');
     setActionLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/licenses/${licenseId}/status`, {
+      const res = await fetch(`http://localhost:4001/api/licenses/${licenseId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

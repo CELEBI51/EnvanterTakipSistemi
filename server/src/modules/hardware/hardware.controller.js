@@ -142,3 +142,19 @@ export const exportHardware = async (req, res, next) => {
   }
 };
 
+export const generateBarcodesPdf = async (req, res, next) => {
+  try {
+    const { hardwareIds } = req.body || {};
+    const pdfBuffer = await hardwareService.generateBarcodesPdf(hardwareIds);
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Content-Disposition', `attachment; filename="barkodlar-${todayStr}.pdf"`);
+    return res.end(pdfBuffer);
+  } catch (error) {
+    next(error);
+  }
+};
+
+

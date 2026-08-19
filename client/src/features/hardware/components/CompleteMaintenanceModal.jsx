@@ -44,7 +44,7 @@ export default function CompleteMaintenanceModal({ isOpen, onClose, maintenance,
     setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/maintenance/${maintenance.id}/complete`, {
+      const res = await fetch(`http://localhost:4001/api/maintenance/${maintenance.id}/complete`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

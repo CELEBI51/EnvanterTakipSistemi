@@ -7,7 +7,7 @@ import prisma from './src/config/db.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = 'http://localhost:4001/api';
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 async function fetchJsonWithRetry(url, options, retries = 10) {

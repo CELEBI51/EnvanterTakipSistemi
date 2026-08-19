@@ -21,7 +21,7 @@ async function runModalIntegrationTest() {
     specs: { cpu: 'i9-13900H', ram: '32 GB', dvd: false },
   };
 
-  const res1 = await fetch('http://localhost:5000/api/hardware', {
+  const res1 = await fetch('http://localhost:4001/api/hardware', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

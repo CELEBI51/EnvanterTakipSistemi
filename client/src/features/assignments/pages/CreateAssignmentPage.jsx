@@ -67,7 +67,7 @@ export default function CreateAssignmentPage() {
     const timer = setTimeout(async () => {
       setLoadingEmployees(true);
       try {
-        const res = await fetch(`http://localhost:5000/api/employees?isActive=true&q=${encodeURIComponent(employeeSearch.trim())}`, {
+        const res = await fetch(`http://localhost:4001/api/employees?isActive=true&q=${encodeURIComponent(employeeSearch.trim())}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -100,7 +100,7 @@ export default function CreateAssignmentPage() {
         else if (activeTab === 'accessory') endpoint = `/api/accessories?q=${encodeURIComponent(productSearch.trim())}`;
         else if (activeTab === 'consumable') endpoint = `/api/consumables?q=${encodeURIComponent(productSearch.trim())}`;
 
-        const res = await fetch(`http://localhost:5000${endpoint}`, {
+        const res = await fetch(`http://localhost:4001${endpoint}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -230,7 +230,7 @@ export default function CreateAssignmentPage() {
         consumableItems,
       };
 
-      const res = await fetch('http://localhost:5000/api/assignments', {
+      const res = await fetch('http://localhost:4001/api/assignments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -262,7 +262,7 @@ export default function CreateAssignmentPage() {
       const formData = new FormData();
       formData.append('file', signedFile);
 
-      const res = await fetch(`http://localhost:5000/api/assignments/${createdAssignment.id}/signed-form`, {
+      const res = await fetch(`http://localhost:4001/api/assignments/${createdAssignment.id}/signed-form`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -310,7 +310,7 @@ export default function CreateAssignmentPage() {
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
             <button
-              onClick={() => window.open(`http://localhost:5000/api/assignments/${createdAssignment.id}/pdf?token=${token}`, '_blank')}
+              onClick={() => window.open(`http://localhost:4001/api/assignments/${createdAssignment.id}/pdf?token=${token}`, '_blank')}
               className="px-5 py-2.5 rounded-xl bg-[#1E2534] text-white text-xs font-bold hover:bg-slate-800 transition cursor-pointer flex items-center gap-2"
             >
               <Download className="w-4 h-4" /> PDF'i İndir

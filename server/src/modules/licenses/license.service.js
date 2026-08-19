@@ -300,15 +300,26 @@ export const updateLicenseStatus = async (id, { status, newEndDate }) => {
  * Get License Statistics Summary (total, expiringSoon, cancelled).
  */
 export const getLicenseStats = async () => {
+  let warningDays = 15;
+  try {
+    const { getSettings } = await import('../settings/settings.service.js');
+    const settings = await getSettings();
+    if (settings?.licenseWarningDays) {
+      warningDays = settings.licenseWarningDays;
+    }
+  } catch {
+    warningDays = 15;
+  }
+
   const now = new Date();
-  const target15Days = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 15, 23, 59, 59, 999);
+  const targetDays = new Date(now.getFullYear(), now.getMonth(), now.getDate() + warningDays, 23, 59, 59, 999);
 
   const [total, expiringSoon, cancelled, expired] = await Promise.all([
     prisma.license.count(),
     prisma.license.count({
       where: {
         status: { not: 'IPTAL_EDILDI' },
-        endDate: { lte: target15Days },
+        endDate: { lte: targetDays },
       },
     }),
     prisma.license.count({

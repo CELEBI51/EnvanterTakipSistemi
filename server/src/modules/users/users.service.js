@@ -64,6 +64,18 @@ export const createUser = async ({ fullName, email, role, permissions = [] }) =>
     },
   });
 
+  // Log Kaydı
+  try {
+    const { createLog } = await import('../../services/log.service.js');
+    await createLog({
+      action: 'CREATE',
+      module: 'user',
+      description: `Yeni kullanıcı oluşturuldu: ${newUser.email} (Rol: ${newUser.role})`,
+      entityId: newUser.id,
+      statusCode: 201,
+    });
+  } catch (lErr) {}
+
   // Üretilen düz metin geçici şifre tek seferlik response'ta döner, DB'ye asla düz metin yazılmaz!
   return {
     user: newUser,
@@ -140,6 +152,17 @@ export const updateUserRole = async (targetUserId, newRole, permissions, current
       createdAt: true,
     },
   });
+
+  try {
+    const { createLog } = await import('../../services/log.service.js');
+    await createLog({
+      action: 'UPDATE',
+      module: 'user',
+      description: `${updatedUser.email} kullanıcısının yetkisi güncellendi`,
+      entityId: updatedUser.id,
+      statusCode: 200,
+    });
+  } catch (lErr) {}
 
   return updatedUser;
 };

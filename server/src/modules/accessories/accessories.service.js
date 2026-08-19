@@ -300,7 +300,30 @@ export const deleteAccessory = async (id) => {
     throw error;
   }
 
-  await prisma.accessory.delete({ where: { id } });
+  // Geçmiş zimmet ve iade kayıtları kontrolü
+  const [assignCount, returnCount] = await Promise.all([
+    prisma.assignmentAccessoryItem.count({ where: { accessoryId: id } }),
+    prisma.returnAccessoryItem.count({ where: { accessoryId: id } }),
+  ]);
+
+  if (assignCount > 0 || returnCount > 0) {
+    const error = new Error(
+      'Bu aksesuara ait geçmiş zimmet veya iade kayıtları bulunduğu için silinemez.'
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Stok hareketlerini ve aksesuarı güvenli transaction içinde sil
+  await prisma.$transaction([
+    prisma.stockMovement.deleteMany({
+      where: { entityType: 'accessory', entityId: id },
+    }),
+    prisma.accessory.delete({
+      where: { id },
+    }),
+  ]);
+
   return { message: 'Aksesuar başarıyla silindi.' };
 };
 

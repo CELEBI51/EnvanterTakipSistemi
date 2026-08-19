@@ -22,11 +22,11 @@ import EmptyState from '../../../components/common/EmptyState';
 import AddHardwareModal from '../../hardware/components/AddHardwareModal';
 
 const STATUS_COLORS = {
-  Hazır: '#16A34A',
-  Kullanımda: '#2F6BFF',
-  Arızalı: '#DC2626',
+  Hazır: '#34D399',
+  Kullanımda: '#4C82F7',
+  Arızalı: '#F87171',
   Serviste: '#F59E0B',
-  'Kullanım Dışı': '#6B7280',
+  'Kullanım Dışı': '#64748B',
 };
 
 export default function DashboardPage() {
@@ -47,10 +47,10 @@ export default function DashboardPage() {
     setError('');
     try {
       const [statsRes, expiringRes] = await Promise.all([
-        fetch('http://localhost:5000/api/reports/dashboard-stats', {
+        fetch('http://localhost:4001/api/reports/dashboard-stats', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('http://localhost:5000/api/licenses/expiring?days=15', {
+        fetch('http://localhost:4001/api/licenses/expiring?days=15', {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -123,7 +123,7 @@ export default function DashboardPage() {
       {/* 2. KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Toplam Varlık */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-3">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-[#4C82F7] space-y-3 shadow-xs">
           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
             Toplam Varlık
           </span>
@@ -136,12 +136,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Zimmetli */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-3">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-[#4C82F7] space-y-3 shadow-xs">
           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
             Zimmetli Varlık
           </span>
           <div>
-            <div className="text-3xl font-bold font-heading text-[#4F8FE0]">
+            <div className="text-3xl font-bold font-heading text-[#4C82F7]">
               {loading ? '...' : stats?.assignedCount ?? 0}
             </div>
             <span className="text-[11px] text-slate-500 mt-1 block">Personelde zimmetli</span>
@@ -149,12 +149,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Hazır Stok */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-3">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-[#34D399] space-y-3 shadow-xs">
           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
             Hazır Stok
           </span>
           <div>
-            <div className="text-3xl font-bold font-heading text-emerald-600">
+            <div className="text-3xl font-bold font-heading text-[#34D399]">
               {loading ? '...' : stats?.readyCount ?? 0}
             </div>
             <span className="text-[11px] text-slate-500 mt-1 block">Boşta hazır stok</span>
@@ -162,12 +162,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Arızalı / Bakım */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-3">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-[#F87171] space-y-3 shadow-xs">
           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
             Bakım / Arızalı
           </span>
           <div>
-            <div className="text-3xl font-bold font-heading text-rose-600">
+            <div className="text-3xl font-bold font-heading text-[#F87171]">
               {loading ? '...' : stats?.faultyCount ?? 0}
             </div>
             <span className="text-[11px] text-slate-500 mt-1 block">Arızalı veya serviste</span>
@@ -177,16 +177,16 @@ export default function DashboardPage() {
         {/* Bitişi Yaklaşan Lisans */}
         <div
           onClick={() => navigate('/licenses')}
-          className="bg-white p-5 rounded-xl border border-slate-200 space-y-3 cursor-pointer hover:border-[#4F8FE0] transition group"
+          className="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-[#F59E0B] space-y-3 cursor-pointer hover:border-[#4C82F7] transition group shadow-xs"
         >
-          <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider block">
+          <span className="text-[11px] font-bold text-[#F59E0B] uppercase tracking-wider block">
             Bitişi Yaklaşan Lisans
           </span>
           <div>
-            <div className="text-3xl font-bold font-heading text-amber-600">
+            <div className="text-3xl font-bold font-heading text-[#F59E0B]">
               {loading ? '...' : (stats?.expiringLicenseCount ?? stats?.expiringSoftwareCount ?? 0)}
             </div>
-            <span className="text-[11px] text-amber-600 font-medium mt-1 block">
+            <span className="text-[11px] text-[#F59E0B] font-medium mt-1 block">
               15 gün içinde dolacak
             </span>
           </div>

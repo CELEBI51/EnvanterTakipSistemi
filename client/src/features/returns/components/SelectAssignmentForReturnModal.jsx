@@ -26,7 +26,7 @@ export default function SelectAssignmentForReturnModal({ isOpen, onClose, initia
 
     try {
       // Fetch assignments (page 1, pageSize 100)
-      const res = await fetch('http://localhost:5000/api/assignments?pageSize=100', {
+      const res = await fetch('http://localhost:4001/api/assignments?pageSize=100', {
         headers: { Authorization: `Bearer ${token}` },
       });
 

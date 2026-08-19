@@ -80,7 +80,7 @@ export default function ConsumableDetailManageModal({
   const fetchLatestConsumable = async () => {
     if (!consumable?.id || !token) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/consumables/${consumable.id}`, {
+      const res = await fetch(`http://localhost:4001/api/consumables/${consumable.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -96,7 +96,7 @@ export default function ConsumableDetailManageModal({
     if (!token) return;
     setLoadingUnits(true);
     try {
-      const res = await fetch('http://localhost:5000/api/units', {
+      const res = await fetch('http://localhost:4001/api/units', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -113,7 +113,7 @@ export default function ConsumableDetailManageModal({
   const fetchEmployees = async () => {
     if (!token) return;
     try {
-      const res = await fetch('http://localhost:5000/api/employees?isActive=true&pageSize=100', {
+      const res = await fetch('http://localhost:4001/api/employees?isActive=true&pageSize=100', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -130,7 +130,7 @@ export default function ConsumableDetailManageModal({
     setHistoryLoading(true);
     setHistoryError('');
     try {
-      const res = await fetch(`http://localhost:5000/api/consumables/${consumable.id}/history`, {
+      const res = await fetch(`http://localhost:4001/api/consumables/${consumable.id}/history`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -158,7 +158,7 @@ export default function ConsumableDetailManageModal({
 
     setRestockLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/consumables/${consumable.id}/restock`, {
+      const res = await fetch(`http://localhost:4001/api/consumables/${consumable.id}/restock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -221,7 +221,7 @@ export default function ConsumableDetailManageModal({
 
     setIssueLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/consumables/${consumable.id}/issue`, {
+      const res = await fetch(`http://localhost:4001/api/consumables/${consumable.id}/issue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

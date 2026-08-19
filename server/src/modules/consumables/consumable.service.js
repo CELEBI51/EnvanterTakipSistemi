@@ -279,7 +279,25 @@ export const deleteConsumable = async (id) => {
     throw error;
   }
 
-  await prisma.consumable.delete({ where: { id } });
+  const assignCount = await prisma.assignmentConsumableItem.count({
+    where: { consumableId: id },
+  });
+
+  if (assignCount > 0) {
+    const error = new Error(
+      'Bu sarf malzemeye ait geçmiş zimmet veya düşüm kayıtları bulunduğu için silinemez.'
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await prisma.$transaction([
+    prisma.stockMovement.deleteMany({
+      where: { entityType: 'consumable', entityId: id },
+    }),
+    prisma.consumable.delete({ where: { id } }),
+  ]);
+
   return { message: 'Sarf malzeme başarıyla silindi.' };
 };
 

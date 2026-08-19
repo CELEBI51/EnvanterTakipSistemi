@@ -28,7 +28,7 @@ export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:5000/api/returns/${returnId}`, {
+      const res = await fetch(`http://localhost:4001/api/returns/${returnId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -45,11 +45,11 @@ export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
   };
 
   const handleDownloadPdf = () => {
-    window.open(`http://localhost:5000/api/returns/${returnId}/pdf?token=${token}`, '_blank');
+    window.open(`http://localhost:4001/api/returns/${returnId}/pdf?token=${token}`, '_blank');
   };
 
   const handleDownloadSignedForm = () => {
-    window.open(`http://localhost:5000/api/returns/${returnId}/signed-form?token=${token}`, '_blank');
+    window.open(`http://localhost:4001/api/returns/${returnId}/signed-form?token=${token}`, '_blank');
   };
 
   const handleUploadSignedForm = async (e) => {
@@ -63,7 +63,7 @@ export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
       const formData = new FormData();
       formData.append('file', signedFile);
 
-      const res = await fetch(`http://localhost:5000/api/returns/${returnId}/signed-form`, {
+      const res = await fetch(`http://localhost:4001/api/returns/${returnId}/signed-form`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

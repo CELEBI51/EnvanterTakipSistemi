@@ -181,6 +181,23 @@ export const createAssignment = async (data, currentUser) => {
     return newAssignment;
   });
 
+  // 5. System Log Kaydı
+  try {
+    const { createLog } = await import('../../services/log.service.js');
+    const kalemSayisi = hardwareItems.length + accessoryItems.length + consumableItems.length;
+    await createLog({
+      userId: createdById,
+      userEmail: typeof currentUser === 'object' ? currentUser.email : null,
+      action: 'CREATE',
+      module: 'assignment',
+      description: `${teslimEden} — ${employee.fullName} adlı personele zimmet oluşturdu (${kalemSayisi} kalem)`,
+      entityId: assignment.id,
+      statusCode: 201,
+    });
+  } catch (logErr) {
+    console.error('Zimmet log hatası:', logErr);
+  }
+
   // Otomatik PDF üretimi (Puppeteer)
   try {
     await generateAssignmentPdf(assignment.id);
@@ -220,93 +237,36 @@ export const createAssignment = async (data, currentUser) => {
     });
 
     if (fullAssignment) {
-      const { sendMailToAdmins, buildEmailTemplate } = await import('../../services/mail.service.js');
+      const { sendMailToAdmins, getEmailTemplate } = await import('../../services/mail.service.js');
 
       const empName = fullAssignment.employee ? fullAssignment.employee.fullName : 'Bilinmiyor';
       const unitName = fullAssignment.employee && fullAssignment.employee.unit ? fullAssignment.employee.unit.name : 'Belirtilmedi';
       const teslimTarihiFormatted = new Date(fullAssignment.teslimTarihi).toLocaleDateString('tr-TR');
 
-      let itemsRows = '';
-
-      // Demirbaş kalemleri
+      const kalemler = [];
       fullAssignment.items.forEach((it) => {
-        const hw = it.hardware;
-        if (hw) {
-          itemsRows += `
-            <tr>
-              <td><span class="badge" style="background-color: #1E2534;">Demirbaş</span></td>
-              <td>${hw.demirbasNo}</td>
-              <td>${hw.brand}${hw.model ? ' ' + hw.model : ''}</td>
-              <td>1 Adet</td>
-            </tr>
-          `;
-        }
+        if (it.hardware) kalemler.push(`• 1 Adet ${it.hardware.brand} ${it.hardware.model || ''} (Demirbaş No: ${it.hardware.demirbasNo})`);
       });
-
-      // Aksesuar kalemleri
       fullAssignment.accessoryItems.forEach((accItem) => {
-        if (accItem.accessory) {
-          itemsRows += `
-            <tr>
-              <td><span class="badge" style="background-color: #4F8FE0;">Aksesuar</span></td>
-              <td>-</td>
-              <td>${accItem.accessory.name}</td>
-              <td>${accItem.quantityGiven} Adet</td>
-            </tr>
-          `;
-        }
+        if (accItem.accessory) kalemler.push(`• ${accItem.quantityGiven} Adet ${accItem.accessory.name} (Aksesuar)`);
       });
-
-      // Sarf Malzeme kalemleri
       fullAssignment.consumableItems.forEach((conItem) => {
-        if (conItem.consumable) {
-          itemsRows += `
-            <tr>
-              <td><span class="badge" style="background-color: #f0ad4e;">Sarf Malzeme</span></td>
-              <td>-</td>
-              <td>${conItem.consumable.name}</td>
-              <td>${conItem.quantityGiven} Adet</td>
-            </tr>
-          `;
-        }
+        if (conItem.consumable) kalemler.push(`• ${conItem.quantityGiven} Adet ${conItem.consumable.name} (Sarf Malzeme)`);
       });
 
-      const bodyHtml = `
-        <p>Sisteme yeni bir zimmet kaydı eklendi. Zimmet detayları aşağıdadır:</p>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
-          <tr><td style="padding: 4px 0; font-weight: bold; width: 130px;">Zimmetlenen Personel:</td><td>${empName} (${unitName})</td></tr>
-          <tr><td style="padding: 4px 0; font-weight: bold;">Teslim Eden:</td><td>${fullAssignment.teslimEden}</td></tr>
-          <tr><td style="padding: 4px 0; font-weight: bold;">Teslim Tarihi:</td><td>${teslimTarihiFormatted}</td></tr>
-        </table>
-        
-        <h4>Zimmetlenen Kalemler</h4>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Tür</th>
-              <th>Demirbaş No</th>
-              <th>Ürün / Model</th>
-              <th>Miktar</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsRows}
-          </tbody>
-        </table>
-      `;
-
-      const subject = `📦 Yeni Zimmet — ${empName}`;
-      const html = buildEmailTemplate({
-        title: `📦 Yeni Zimmet Bildirimi`,
-        bodyHtml,
+      const rendered = await getEmailTemplate('new_assignment', {
+        personelAdi: empName,
+        birimAdi: unitName,
+        tarih: teslimTarihiFormatted,
+        teslimEden: fullAssignment.teslimEden || 'Bilgi Teknolojileri',
+        kalemListesi: kalemler.join('\n'),
       });
 
-      const text = `📦 Yeni Zimmet — ${empName}\n\n` +
-        `Personel: ${empName} (${unitName})\n` +
-        `Teslim Eden: ${fullAssignment.teslimEden}\n` +
-        `Tarih: ${teslimTarihiFormatted}\n`;
-
-      await sendMailToAdmins({ subject, text, html });
+      await sendMailToAdmins({
+        subject: rendered.subject,
+        text: rendered.bodyText,
+        html: rendered.html,
+      });
 
       // Zimmetleme sonrası kritik stok seviyesine düşen Aksesuar/Sarf Malzeme kontrolü
       const { checkAndNotifyItemInstantCriticalStock } = await import('../../jobs/criticalStock.job.js');

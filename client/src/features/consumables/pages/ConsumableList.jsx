@@ -58,7 +58,7 @@ export default function ConsumableList() {
     if (consumableIdParam && token) {
       const fetchTarget = async () => {
         try {
-          const res = await fetch(`http://localhost:5000/api/consumables/${consumableIdParam}`, {
+          const res = await fetch(`http://localhost:4001/api/consumables/${consumableIdParam}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
@@ -77,7 +77,7 @@ export default function ConsumableList() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/categories?parentType=Sarf Malzeme', {
+      const res = await fetch('http://localhost:4001/api/categories?parentType=Sarf Malzeme', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -104,7 +104,7 @@ export default function ConsumableList() {
         params.append('q', searchQuery.trim());
       }
 
-      const res = await fetch(`http://localhost:5000/api/consumables?${params.toString()}`, {
+      const res = await fetch(`http://localhost:4001/api/consumables?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -138,7 +138,7 @@ export default function ConsumableList() {
     if (!canManage || !selectedConsumable) return;
     setDeleting(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/consumables/${selectedConsumable.id}`, {
+      const res = await fetch(`http://localhost:4001/api/consumables/${selectedConsumable.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -150,6 +150,8 @@ export default function ConsumableList() {
       fetchConsumables();
     } catch (err) {
       alert(err.message);
+      setIsDeleteConfirmOpen(false);
+      setSelectedConsumable(null);
     } finally {
       setDeleting(false);
     }

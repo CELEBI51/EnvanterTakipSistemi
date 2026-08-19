@@ -34,7 +34,7 @@ export default function AddComponentModal({ isOpen, onClose, onSuccess }) {
   const fetchCategories = async () => {
     setLoadingCategories(true);
     try {
-      const res = await fetch('http://localhost:5000/api/categories?parentType=Bileşen', {
+      const res = await fetch('http://localhost:4001/api/categories?parentType=Bileşen', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -87,7 +87,7 @@ export default function AddComponentModal({ isOpen, onClose, onSuccess }) {
     };
 
     try {
-      const res = await fetch('http://localhost:5000/api/components', {
+      const res = await fetch('http://localhost:4001/api/components', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ export default function AddComponentModal({ isOpen, onClose, onSuccess }) {
           formData.append('entityId', createdItem.id);
           formData.append('fileType', 'invoice');
 
-          await fetch('http://localhost:5000/api/attachments', {
+          await fetch('http://localhost:4001/api/attachments', {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: formData,

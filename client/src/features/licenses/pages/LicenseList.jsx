@@ -92,7 +92,7 @@ export default function LicenseList() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/licenses/stats', {
+      const res = await fetch('http://localhost:4001/api/licenses/stats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -106,7 +106,7 @@ export default function LicenseList() {
 
   const fetchUnits = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/units', {
+      const res = await fetch('http://localhost:4001/api/units', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -131,7 +131,7 @@ export default function LicenseList() {
       if (selectedPaymentType) params.append('paymentType', selectedPaymentType);
       if (searchQuery.trim()) params.append('q', searchQuery.trim());
 
-      const res = await fetch(`http://localhost:5000/api/licenses?${params.toString()}`, {
+      const res = await fetch(`http://localhost:4001/api/licenses?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -205,38 +205,38 @@ export default function LicenseList() {
     switch (status) {
       case 'AKTIF':
         return (
-          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span> Aktif
+          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Aktif
           </span>
         );
       case 'YENILENDI':
         return (
-          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Yenilendi
+          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Yenilendi
           </span>
         );
       case 'YENILENMEDI':
         return (
-          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span> Yenilenmedi
+          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Yenilenmedi
           </span>
         );
       case 'YENILENMEYECEK':
         return (
-          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200 inline-flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-600"></span> Yenilenmeyecek
+          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Yenilenmeyecek
           </span>
         );
       case 'IPTAL_EDILDI':
         return (
-          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 inline-flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> İptal Edildi / Yenilenmeyecek
+          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span> İptal Edildi
           </span>
         );
       case 'SURESI_DOLDU':
         return (
-          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700 border border-red-300 inline-flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span> Süresi Doldu
+          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Süresi Doldu
           </span>
         );
       default:
@@ -300,7 +300,7 @@ export default function LicenseList() {
       {/* Statistics Summary Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         {/* Toplam Lisans */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 border-l-4 border-l-[#4C82F7] shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
             Toplam Lisans
           </span>
@@ -310,31 +310,31 @@ export default function LicenseList() {
         </div>
 
         {/* Süresi Yaklaşan */}
-        <div className="bg-amber-50/60 p-5 rounded-2xl border border-amber-200 shadow-xs flex flex-col justify-between">
-          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block mb-1 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-amber-600" /> Süresi Yaklaşan (&le; 15 Gün)
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 border-l-4 border-l-[#F59E0B] shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-bold text-[#F59E0B] uppercase tracking-wider block mb-1 flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-[#F59E0B]" /> Süresi Yaklaşan (&le; 15 Gün)
           </span>
-          <div className="text-2xl font-bold font-heading text-amber-900">
+          <div className="text-2xl font-bold font-heading text-[#F59E0B]">
             {stats.expiringSoon}
           </div>
         </div>
 
         {/* Süresi Dolmuş */}
-        <div className="bg-red-50/60 p-5 rounded-2xl border border-red-200 shadow-xs flex flex-col justify-between">
-          <span className="text-xs font-bold text-red-800 uppercase tracking-wider block mb-1 flex items-center gap-1.5">
-            <AlertTriangle className="w-3.5 h-3.5 text-red-600" /> Süresi Dolmuş
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 border-l-4 border-l-[#F87171] shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-bold text-[#F87171] uppercase tracking-wider block mb-1 flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-[#F87171]" /> Süresi Dolmuş
           </span>
-          <div className="text-2xl font-bold font-heading text-red-900">
+          <div className="text-2xl font-bold font-heading text-[#F87171]">
             {stats.expired || 0}
           </div>
         </div>
 
         {/* İptal Edilmiş / Yenilenmeyecek */}
-        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 border-l-4 border-l-[#64748B] shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
             İptal Edilmiş / Yenilenmeyecek
           </span>
-          <div className="text-2xl font-bold font-heading text-slate-700">
+          <div className="text-2xl font-bold font-heading text-[#64748B]">
             {stats.cancelled}
           </div>
         </div>

@@ -1,32 +1,49 @@
 import prisma from '../../config/db.js';
-import { CRITICAL_STOCK_THRESHOLD, EXPIRING_LICENSE_DAYS_THRESHOLD } from '../../config/constants.js';
 
 export const getNotificationSummary = async () => {
+  let criticalStockThreshold = 5;
+  let licenseWarningDays = 15;
+
+  try {
+    const { getSettings } = await import('../settings/settings.service.js');
+    const settings = await getSettings();
+    if (settings) {
+      if (typeof settings.criticalStockThreshold === 'number') {
+        criticalStockThreshold = settings.criticalStockThreshold;
+      }
+      if (typeof settings.licenseWarningDays === 'number') {
+        licenseWarningDays = settings.licenseWarningDays;
+      }
+    }
+  } catch (err) {
+    console.error('[NotificationsService] Ayarlar okunamadı, varsayılan değerler kullanılıyor:', err);
+  }
+
   const now = new Date();
   const thresholdDate = new Date(
     now.getFullYear(),
     now.getMonth(),
-    now.getDate() + EXPIRING_LICENSE_DAYS_THRESHOLD,
+    now.getDate() + licenseWarningDays,
     23,
     59,
     59,
     999
   );
 
-  // 1. Expiring Licenses (status != IPTAL_EDILDI and endDate <= 15 days)
+  // 1. Expiring Licenses (status != IPTAL_EDILDI and endDate <= licenseWarningDays)
   const licenseWhere = {
     status: { not: 'IPTAL_EDILDI' },
     endDate: { lte: thresholdDate },
   };
 
-  // 2. Critical Accessories (availableQuantity <= 5)
+  // 2. Critical Accessories (availableQuantity <= criticalStockThreshold)
   const accessoryWhere = {
-    availableQuantity: { lte: CRITICAL_STOCK_THRESHOLD },
+    availableQuantity: { lte: criticalStockThreshold },
   };
 
-  // 3. Critical Consumables (availableQuantity <= 5)
+  // 3. Critical Consumables (availableQuantity <= criticalStockThreshold)
   const consumableWhere = {
-    availableQuantity: { lte: CRITICAL_STOCK_THRESHOLD },
+    availableQuantity: { lte: criticalStockThreshold },
   };
 
   // 4. Expired Licenses (status == SURESI_DOLDU)

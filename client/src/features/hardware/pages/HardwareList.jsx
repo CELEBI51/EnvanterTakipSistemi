@@ -9,6 +9,7 @@ import {
   Download,
   Wrench,
   FileSpreadsheet,
+  Loader2,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import { hasPermission } from '../../../utils/permissions';
@@ -65,6 +66,9 @@ export default function HardwareList() {
   const [maintenanceHardwareId, setMaintenanceHardwareId] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const [stats, setStats] = useState({ total: 0, inUse: 0, ready: 0, needsAttention: 0 });
 
   const canCreate = hasPermission(user, 'hardware:create');
@@ -78,7 +82,7 @@ export default function HardwareList() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/hardware/stats', {
+      const res = await fetch('http://localhost:4001/api/hardware/stats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -92,7 +96,7 @@ export default function HardwareList() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/categories?parentType=Varlık', {
+      const res = await fetch('http://localhost:4001/api/categories?parentType=Varlık', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -122,7 +126,7 @@ export default function HardwareList() {
         params.append('q', searchQuery.trim());
       }
 
-      const res = await fetch(`http://localhost:5000/api/hardware?${params.toString()}`, {
+      const res = await fetch(`http://localhost:4001/api/hardware?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -152,6 +156,64 @@ export default function HardwareList() {
     e.preventDefault();
     setPage(1);
     fetchHardwareList();
+  };
+
+  const isAllSelected = items.length > 0 && items.every((i) => selectedIds.has(i.id));
+
+  const handleSelectAll = (e) => {
+    const newSet = new Set(selectedIds);
+    if (e.target.checked) {
+      items.forEach((item) => newSet.add(item.id));
+    } else {
+      items.forEach((item) => newSet.delete(item.id));
+    }
+    setSelectedIds(newSet);
+  };
+
+  const handleSelectRow = (e, id) => {
+    e.stopPropagation();
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const handleBarcodeDownload = async (ids) => {
+    setIsDownloading(true);
+    try {
+      const response = await fetch('http://localhost:4001/api/hardware/barcodes/pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          hardwareIds: ids,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Barkod PDF oluşturulamadı.');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `barkodlar-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Barkod PDF hatası:', err);
+      alert(err.message || 'Barkod PDF oluşturulurken bir hata oluştu.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const openBarcodeModal = (e, hw) => {
@@ -248,7 +310,7 @@ export default function HardwareList() {
       {/* Hardware Statistics Summary Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Toplam */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 border-l-4 border-l-[#4C82F7] shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
             Toplam
           </span>
@@ -258,31 +320,31 @@ export default function HardwareList() {
         </div>
 
         {/* Kullanımda */}
-        <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-200 shadow-xs flex flex-col justify-between">
-          <span className="text-xs font-bold text-[#2F6BFF] uppercase tracking-wider block mb-1">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 border-l-4 border-l-[#4C82F7] shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-bold text-[#4C82F7] uppercase tracking-wider block mb-1">
             Kullanımda
           </span>
-          <div className="text-2xl font-bold font-heading text-blue-950">
+          <div className="text-2xl font-bold font-heading text-[#4C82F7]">
             {stats.inUse}
           </div>
         </div>
 
         {/* Hazır */}
-        <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-200 shadow-xs flex flex-col justify-between">
-          <span className="text-xs font-bold text-[#16A34A] uppercase tracking-wider block mb-1">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 border-l-4 border-l-[#34D399] shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-bold text-[#34D399] uppercase tracking-wider block mb-1">
             Hazır
           </span>
-          <div className="text-2xl font-bold font-heading text-emerald-950">
+          <div className="text-2xl font-bold font-heading text-[#34D399]">
             {stats.ready}
           </div>
         </div>
 
         {/* Arızalı/Serviste/Hurda */}
-        <div className="bg-amber-50/60 p-5 rounded-2xl border border-amber-200 shadow-xs flex flex-col justify-between">
-          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block mb-1">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 border-l-4 border-l-[#F59E0B] shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-bold text-[#F59E0B] uppercase tracking-wider block mb-1">
             Arızalı/Serviste/Hurda
           </span>
-          <div className="text-2xl font-bold font-heading text-amber-900">
+          <div className="text-2xl font-bold font-heading text-[#F59E0B]">
             {stats.needsAttention}
           </div>
         </div>
@@ -290,39 +352,89 @@ export default function HardwareList() {
 
       {/* Filter & Search Bar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
-        <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Marka, model, seri no veya demirbaş no ara..."
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs text-[#1E2534] placeholder-slate-400 focus:border-[#4F8FE0]"
-            />
+        <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+          <div className="flex flex-1 flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Marka, model, seri no veya demirbaş no ara..."
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs text-[#1E2534] placeholder-slate-400 focus:border-[#4F8FE0]"
+              />
+            </div>
+
+            <select
+              value={selectedStatus}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setPage(1);
+              }}
+              className="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-medium text-[#1E2534] bg-white cursor-pointer"
+            >
+              {STATUSES.map((st) => (
+                <option key={st.value} value={st.value}>
+                  {st.label}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-xl bg-[#1E2534] hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer shrink-0"
+            >
+              Filtrele
+            </button>
           </div>
 
-          <select
-            value={selectedStatus}
-            onChange={(e) => {
-              setSelectedStatus(e.target.value);
-              setPage(1);
-            }}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-medium text-[#1E2534] bg-white cursor-pointer"
-          >
-            {STATUSES.map((st) => (
-              <option key={st.value} value={st.value}>
-                {st.label}
-              </option>
-            ))}
-          </select>
+          {/* Barcode Actions & Selection Badge */}
+          <div className="flex items-center gap-2 shrink-0">
+            {selectedIds.size > 0 && (
+              <span className="inline-flex items-center px-2.5 py-1.5 rounded-xl bg-blue-50 text-[#2F6BFF] border border-blue-200 text-xs font-bold whitespace-nowrap">
+                {selectedIds.size} varlık seçildi
+              </span>
+            )}
 
-          <button
-            type="submit"
-            className="px-4 py-2 rounded-xl bg-[#1E2534] hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer"
-          >
-            Filtrele
-          </button>
+            <button
+              type="button"
+              disabled={selectedIds.size === 0 || isDownloading}
+              onClick={() => handleBarcodeDownload([...selectedIds])}
+              title={selectedIds.size === 0 ? 'Önce varlık seçin' : ''}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1E2534] hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold transition cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Hazırlanıyor...
+                </>
+              ) : (
+                <>
+                  <Barcode className="w-4 h-4" />
+                  Seçililerin Barkodu
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              disabled={isDownloading}
+              onClick={() => handleBarcodeDownload([])}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 text-[#1E2534] text-xs font-bold transition cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Hazırlanıyor...
+                </>
+              ) : (
+                <>
+                  <Barcode className="w-4 h-4" />
+                  Tümünün Barkodu
+                </>
+              )}
+            </button>
+          </div>
         </form>
 
         {/* Dynamic Category Pills */}
@@ -365,6 +477,14 @@ export default function HardwareList() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="py-3.5 px-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 rounded border-slate-300 text-[#4F8FE0] focus:ring-[#4F8FE0] cursor-pointer"
+                    />
+                  </th>
                   <th className="py-3.5 px-4">Demirbaş No</th>
                   <th className="py-3.5 px-4">Ürün Adı / Marka & Model</th>
                   <th className="py-3.5 px-4">Kategori</th>
@@ -390,6 +510,15 @@ export default function HardwareList() {
                       }}
                       className="hover:bg-slate-50/80 transition cursor-pointer"
                     >
+                      <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(item.id)}
+                          onChange={(e) => handleSelectRow(e, item.id)}
+                          className="w-4 h-4 rounded border-slate-300 text-[#4F8FE0] focus:ring-[#4F8FE0] cursor-pointer"
+                        />
+                      </td>
+
                       <td className="py-3 px-4 font-mono font-bold text-[#1E2534] whitespace-nowrap">
                         {item.demirbasNo}
                       </td>

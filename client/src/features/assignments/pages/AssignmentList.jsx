@@ -49,7 +49,7 @@ export default function AssignmentList() {
   useEffect(() => {
     const fetchUnits = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/units', {
+        const res = await fetch('http://localhost:4001/api/units', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -66,7 +66,7 @@ export default function AssignmentList() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/assignments/stats', {
+      const res = await fetch('http://localhost:4001/api/assignments/stats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -94,7 +94,7 @@ export default function AssignmentList() {
       if (dateTo) query += `&dateTo=${encodeURIComponent(dateTo)}`;
       if (debouncedSearch.trim()) query += `&q=${encodeURIComponent(debouncedSearch.trim())}`;
 
-      const res = await fetch(`http://localhost:5000/api/assignments${query}`, {
+      const res = await fetch(`http://localhost:4001/api/assignments${query}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -407,7 +407,7 @@ export default function AssignmentList() {
 
                           <button
                             onClick={() =>
-                              window.open(`http://localhost:5000/api/assignments/${item.id}/pdf?token=${token}`, '_blank')
+                              window.open(`http://localhost:4001/api/assignments/${item.id}/pdf?token=${token}`, '_blank')
                             }
                             className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-[#1E2534] transition cursor-pointer"
                             title="PDF İndir"

@@ -83,6 +83,7 @@ model User {
   mustChangePassword Boolean  @default(true) @map("must_change_password")
   createdAt          DateTime @default(now()) @map("created_at")
 
+  passwordResetTokens PasswordResetToken[]
 
   createdHardware       Hardware[]
   createdAssignments    Assignment[]
@@ -93,8 +94,23 @@ model User {
   createdConsumables    Consumable[]
   createdComponents     Component[]
   createdMaintenances   MaintenanceRecord[]
+  systemLogs            SystemLog[]
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+  @@index([userId])
 }
 
 model Employee {
@@ -479,5 +495,49 @@ model Unit {
   licenses  License[]
 
   @@map("units")
+}
+
+model SystemSettings {
+  id                     Int      @id @default(1)
+  companyName            String   @default("") @map("company_name")
+  companyAddress         String?  @map("company_address")
+  companyPhone           String?  @map("company_phone")
+  companyEmail           String?  @map("company_email")
+  companyTaxNo           String?  @map("company_tax_no")
+  logoPath               String?  @map("logo_path")
+  criticalStockThreshold Int      @default(5) @map("critical_stock_threshold")
+  licenseWarningDays     Int      @default(15) @map("license_warning_days")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+model EmailTemplate {
+  id        Int      @id @default(autoincrement())
+  type      String   @unique
+  subject   String
+  bodyText  String   @map("body_text") @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("email_templates")
+}
+
+model SystemLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  user        User?    @relation(fields: [userId], references: [id])
+  userEmail   String?  @map("user_email")
+  action      String
+  module      String
+  description String   @db.Text
+  entityId    String?  @map("entity_id")
+  ipAddress   String?  @map("ip_address")
+  statusCode  Int?     @map("status_code")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([module])
+  @@map("system_logs")
 }
 

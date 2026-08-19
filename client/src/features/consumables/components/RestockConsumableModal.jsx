@@ -25,7 +25,7 @@ export default function RestockConsumableModal({ isOpen, onClose, consumable, on
     setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/consumables/${consumable.id}/restock`, {
+      const res = await fetch(`http://localhost:4001/api/consumables/${consumable.id}/restock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

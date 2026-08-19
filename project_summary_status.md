@@ -14,7 +14,7 @@
 ```mermaid
 graph TD
     User[Kullanıcı / IT Personeli] --> Client[React + Vite Frontend]
-    Client --> API[Express REST API - Port 5000]
+    Client --> API[Express REST API - Port 4001]
     API --> Auth[JWT + Rol Bazlı Yetkilendirme]
     API --> DB[(PostgreSQL Veritabanı)]
     API --> Storage[Yerel Disk Depolama]

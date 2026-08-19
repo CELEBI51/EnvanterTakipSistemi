@@ -1,6 +1,16 @@
+import { z } from 'zod';
 import * as authService from './auth.service.js';
 
-export const login = async (req, res) => {
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Geçerli bir e-posta adresi giriniz.'),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().length(64, 'Geçersiz sıfırlama bağlantısı.'),
+  newPassword: z.string().min(8, 'Yeni şifre en az 8 karakter olmalıdır.'),
+});
+
+export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -13,13 +23,11 @@ export const login = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    return res.status(error.statusCode || 500).json({
-      message: error.message || 'Giriş yapılırken bir hata oluştu.',
-    });
+    next(error);
   }
 };
 
-export const changePassword = async (req, res) => {
+export const changePassword = async (req, res, next) => {
   try {
     const { newPassword, confirmPassword } = req.body;
     const userId = req.user.id;
@@ -31,8 +39,64 @@ export const changePassword = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    return res.status(error.statusCode || 500).json({
-      message: error.message || 'Şifre değiştirilirken bir hata oluştu.',
+    next(error);
+  }
+};
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const parsed = forgotPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      return res.status(400).json({ message: firstIssue?.message || 'Geçersiz e-posta adresi.' });
+    }
+
+    const result = await authService.requestPasswordReset(parsed.data.email);
+    return res.status(200).json({
+      status: 'success',
+      message: result.message,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const parsed = resetPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      return res.status(400).json({ message: firstIssue?.message || 'Geçersiz istek parametreleri.' });
+    }
+
+    const result = await authService.resetPassword(parsed.data.token, parsed.data.newPassword);
+    return res.status(200).json({
+      status: 'success',
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const logout = async (req, res, next) => {
+  try {
+    const { createLog } = await import('../../services/log.service.js');
+    if (req.user) {
+      createLog({
+        userId: req.user.id,
+        userEmail: req.user.email,
+        action: 'LOGOUT',
+        module: 'auth',
+        description: `${req.user.email} sistemden çıkış yaptı`,
+        statusCode: 200,
+      });
+    }
+    return res.status(200).json({
+      status: 'success',
+      message: 'Başarıyla çıkış yapıldı.',
+    });
+  } catch (error) {
+    next(error);
   }
 };

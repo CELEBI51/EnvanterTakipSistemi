@@ -19,7 +19,7 @@ export default function ComponentHistoryModal({ isOpen, onClose, componentId, co
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`http://localhost:5000/api/components/${componentId}/history`, {
+        const res = await fetch(`http://localhost:4001/api/components/${componentId}/history`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

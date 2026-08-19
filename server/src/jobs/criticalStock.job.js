@@ -1,7 +1,6 @@
 import cron from 'node-cron';
 import prisma from '../config/db.js';
-import { CRITICAL_STOCK_THRESHOLD } from '../config/constants.js';
-import { sendMailToAdmins, buildEmailTemplate } from '../services/mail.service.js';
+import { sendMailToAdmins, getEmailTemplate } from '../services/mail.service.js';
 
 /**
  * Checks accessories and consumables for critical stock level (<= CRITICAL_STOCK_THRESHOLD)
@@ -9,11 +8,22 @@ import { sendMailToAdmins, buildEmailTemplate } from '../services/mail.service.j
  */
 export const checkCriticalStock = async () => {
   try {
+    let criticalStockThreshold = 5;
+    try {
+      const { getSettings } = await import('../modules/settings/settings.service.js');
+      const settings = await getSettings();
+      if (settings?.criticalStockThreshold) {
+        criticalStockThreshold = settings.criticalStockThreshold;
+      }
+    } catch {
+      criticalStockThreshold = 5;
+    }
+
     const [criticalAccessories, criticalConsumables] = await Promise.all([
       prisma.accessory.findMany({
         where: {
           availableQuantity: {
-            lte: CRITICAL_STOCK_THRESHOLD,
+            lte: criticalStockThreshold,
           },
         },
         select: { id: true, name: true, availableQuantity: true },
@@ -21,7 +31,7 @@ export const checkCriticalStock = async () => {
       prisma.consumable.findMany({
         where: {
           availableQuantity: {
-            lte: CRITICAL_STOCK_THRESHOLD,
+            lte: criticalStockThreshold,
           },
         },
         select: { id: true, name: true, availableQuantity: true },
@@ -35,60 +45,21 @@ export const checkCriticalStock = async () => {
       return { count: 0 };
     }
 
-    // Build email content
-    let itemsTableRows = '';
+    const urunListesi = [
+      ...criticalAccessories.map((a) => `- Aksesuar: ${a.name} (Kalan: ${a.availableQuantity} adet, Eşik: ${CRITICAL_STOCK_THRESHOLD})`),
+      ...criticalConsumables.map((c) => `- Sarf Malzeme: ${c.name} (Kalan: ${c.availableQuantity} adet, Eşik: ${CRITICAL_STOCK_THRESHOLD})`),
+    ].join('\n');
 
-    criticalAccessories.forEach((acc) => {
-      itemsTableRows += `
-        <tr>
-          <td><span class="badge" style="background-color: #4F8FE0;">Aksesuar</span></td>
-          <td><strong>${acc.name}</strong></td>
-          <td style="color: #d9534f; font-weight: bold;">${acc.availableQuantity} adet</td>
-          <td>${CRITICAL_STOCK_THRESHOLD} adet</td>
-        </tr>
-      `;
+    const rendered = await getEmailTemplate('critical_stock', {
+      urunSayisi: totalCriticalCount,
+      urunListesi,
     });
 
-    criticalConsumables.forEach((con) => {
-      itemsTableRows += `
-        <tr>
-          <td><span class="badge" style="background-color: #f0ad4e;">Sarf Malzeme</span></td>
-          <td><strong>${con.name}</strong></td>
-          <td style="color: #d9534f; font-weight: bold;">${con.availableQuantity} adet</td>
-          <td>${CRITICAL_STOCK_THRESHOLD} adet</td>
-        </tr>
-      `;
+    await sendMailToAdmins({
+      subject: rendered.subject,
+      text: rendered.bodyText,
+      html: rendered.html,
     });
-
-    const bodyHtml = `
-      <p>Aşağıda belirtilen ürünlerin stok miktarları kritik eşik değerinin (<strong>${CRITICAL_STOCK_THRESHOLD}</strong>) altına düşmüştür:</p>
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Tür</th>
-            <th>Ürün Adı</th>
-            <th>Mevcut Stok</th>
-            <th>Kritik Eşik</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsTableRows}
-        </tbody>
-      </table>
-      <p>Lütfen stok tedarik işlemlerini kontrol ediniz.</p>
-    `;
-
-    const subject = `⚠️ Kritik Stok Uyarısı — ${totalCriticalCount} ürün kritik seviyede`;
-    const html = buildEmailTemplate({
-      title: `⚠️ Kritik Stok Uyarısı (${totalCriticalCount} Ürün)`,
-      bodyHtml,
-    });
-
-    const text = `⚠️ Kritik Stok Uyarısı — ${totalCriticalCount} ürün kritik seviyede\n\n` +
-      criticalAccessories.map(a => `- Aksesuar: ${a.name} (Stok: ${a.availableQuantity}, Eşik: ${CRITICAL_STOCK_THRESHOLD})`).join('\n') + '\n' +
-      criticalConsumables.map(c => `- Sarf Malzeme: ${c.name} (Stok: ${c.availableQuantity}, Eşik: ${CRITICAL_STOCK_THRESHOLD})`).join('\n');
-
-    await sendMailToAdmins({ subject, text, html });
 
     return { count: totalCriticalCount };
   } catch (error) {
@@ -108,12 +79,20 @@ export const checkCriticalStock = async () => {
  */
 export const checkAndNotifyItemInstantCriticalStock = async ({ name, type, availableQuantity, oldAvailableQuantity }) => {
   try {
-    // Eşik değerinin (5) altında veya eşit mi?
-    if (availableQuantity <= CRITICAL_STOCK_THRESHOLD) {
-      // Eğer önceden de kritik seviyenin altındaysa ve tekrar düşürüldüyse ya da yeni düştüyse:
-      // (Opsiyonel: Eğer önceden de <= 5 ise tekrar bildirim gönderilsin mi? "Düştüğü an" kuralı gereği stok düşürüldüğünde veya güncellendiğinde eşik altındaysa anında atılır)
+    let criticalStockThreshold = 5;
+    try {
+      const { getSettings } = await import('../modules/settings/settings.service.js');
+      const settings = await getSettings();
+      if (settings?.criticalStockThreshold) {
+        criticalStockThreshold = settings.criticalStockThreshold;
+      }
+    } catch {
+      criticalStockThreshold = 5;
+    }
+
+    if (availableQuantity <= criticalStockThreshold) {
       const bodyHtml = `
-        <p>Aşağıdaki ürün yapılan stok işlemi / güncelleme sonrasında kritik stok eşik değerinin (<strong>${CRITICAL_STOCK_THRESHOLD}</strong>) altına düşmüştür:</p>
+        <p>Aşağıdaki ürün yapılan stok işlemi / güncelleme sonrasında kritik stok eşik değerinin (<strong>${criticalStockThreshold}</strong>) altına düşmüştür:</p>
         <table class="table">
           <thead>
             <tr>
@@ -128,7 +107,7 @@ export const checkAndNotifyItemInstantCriticalStock = async ({ name, type, avail
               <td><span class="badge" style="background-color: ${type === 'Aksesuar' ? '#4F8FE0' : '#f0ad4e'};">${type}</span></td>
               <td><strong>${name}</strong></td>
               <td style="color: #d9534f; font-weight: bold;">${availableQuantity} adet</td>
-              <td>${CRITICAL_STOCK_THRESHOLD} adet</td>
+              <td>${criticalStockThreshold} adet</td>
             </tr>
           </tbody>
         </table>
@@ -145,7 +124,7 @@ export const checkAndNotifyItemInstantCriticalStock = async ({ name, type, avail
         `Tür: ${type}\n` +
         `Ürün: ${name}\n` +
         `Mevcut Stok: ${availableQuantity}\n` +
-        `Kritik Eşik: ${CRITICAL_STOCK_THRESHOLD}`;
+        `Kritik Eşik: ${criticalStockThreshold}`;
 
       await sendMailToAdmins({ subject, text, html });
     }

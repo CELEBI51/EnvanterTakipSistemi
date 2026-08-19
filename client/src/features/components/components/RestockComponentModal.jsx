@@ -25,7 +25,7 @@ export default function RestockComponentModal({ isOpen, onClose, component, onSu
     setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/components/${component.id}/restock`, {
+      const res = await fetch(`http://localhost:4001/api/components/${component.id}/restock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

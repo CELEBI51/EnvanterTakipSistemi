@@ -131,11 +131,110 @@ export const buildEmailTemplate = ({ title, bodyHtml }) => {
   `.trim();
 };
 
+/**
+ * Varsayılan E-posta Şablonları (Fallback)
+ */
+const DEFAULT_TEMPLATES = {
+  license_expiry: {
+    subject: '⚠️ Lisans Yenileme Hatırlatması — {{lisansSayisi}} lisans süresi yaklaşıyor',
+    bodyText: 'Sayın Yönetici,\n\nAşağıdaki lisansların süresi yaklaşmaktadır:\n\n{{lisansListesi}}\n\nLütfen gerekli yenileme işlemlerini yapınız.\n\nSaygılarımızla,\n{{sirketAdi}}',
+  },
+  critical_stock: {
+    subject: '⚠️ Kritik Stok Uyarısı — {{urunSayisi}} ürün kritik seviyede',
+    bodyText: 'Sayın Yönetici,\n\nAşağıdaki ürünler kritik stok seviyesinin altına düşmüştür:\n\n{{urunListesi}}\n\nLütfen stok yenileme işlemlerini yapınız.\n\nSaygılarımızla,\n{{sirketAdi}}',
+  },
+  license_expired: {
+    subject: '🔴 Lisans Süresi Doldu — {{lisansSayisi}} lisans süresi doldu',
+    bodyText: 'Sayın Yönetici,\n\nAşağıdaki lisansların süresi dolmuştur:\n\n{{lisansListesi}}\n\nLütfen en kısa sürede gerekli işlemleri yapınız.\n\nSaygılarımızla,\n{{sirketAdi}}',
+  },
+  new_assignment: {
+    subject: '📦 Yeni Zimmet — {{personelAdi}}',
+    bodyText: 'Sayın Yönetici,\n\n{{personelAdi}} ({{birimAdi}}) adlı personele yeni zimmet oluşturulmuştur.\n\nZimmet Tarihi: {{tarih}}\nTeslim Eden: {{teslimEden}}\nZimmetlenen Kalemler:\n{{kalemListesi}}\n\nSaygılarımızla,\n{{sirketAdi}}',
+  },
+};
+
+const ALLOWED_VARIABLES = [
+  'lisansSayisi',
+  'lisansListesi',
+  'urunSayisi',
+  'urunListesi',
+  'personelAdi',
+  'birimAdi',
+  'tarih',
+  'teslimEden',
+  'kalemListesi',
+  'sirketAdi',
+];
+
+/**
+ * DB'den e-posta şablonunu çeker, değişkenleri yerleştirir ve konu/metin döner
+ * @param {string} type Şablon türü ('license_expiry', 'critical_stock', 'license_expired', 'new_assignment')
+ * @param {Object} variables Değişken anahtar-değer çiftleri
+ * @returns {Promise<{ subject: string, bodyText: string, html: string }>}
+ */
+export const getEmailTemplate = async (type, variables = {}) => {
+  let template = null;
+
+  try {
+    template = await prisma.emailTemplate.findUnique({
+      where: { type },
+    });
+  } catch (error) {
+    console.error(`[MailService] DB'den '${type}' şablonu çekilirken hata (fallback kullanılacak):`, error.message);
+  }
+
+  if (!template) {
+    template = DEFAULT_TEMPLATES[type] || {
+      subject: 'Bildirim',
+      bodyText: 'Sayın Yönetici,\n\nSistem bildirimi.\n\nSaygılarımızla,\n{{sirketAdi}}',
+    };
+  }
+
+  let { subject, bodyText } = template;
+
+  // sirketAdi varsayılanını DB settings'ten al (variables'ta verilmediyse)
+  const mergedVariables = { ...variables };
+  if (!mergedVariables.sirketAdi) {
+    try {
+      const settings = await prisma.systemSettings.findUnique({ where: { id: 1 } });
+      mergedVariables.sirketAdi = settings?.companyName || 'DİTAŞ Otomotiv';
+    } catch {
+      mergedVariables.sirketAdi = 'DİTAŞ Otomotiv';
+    }
+  }
+
+  // Değişkenleri allowlist süzgecinden geçirerek placeholder'ları değiştir
+  for (const key of ALLOWED_VARIABLES) {
+    if (Object.prototype.hasOwnProperty.call(mergedVariables, key)) {
+      const val = mergedVariables[key] !== undefined && mergedVariables[key] !== null ? String(mergedVariables[key]) : '';
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+      subject = subject.replace(regex, val);
+      bodyText = bodyText.replace(regex, val);
+    }
+  }
+
+  // HTML formatına dönüştürme (satır başlarını <br/> yaparak)
+  const bodyHtml = bodyText.replace(/\n/g, '<br/>');
+  const html = buildEmailTemplate({
+    title: subject,
+    bodyHtml: `<div style="white-space: pre-line;">${bodyText}</div>`,
+  });
+
+  return {
+    subject,
+    bodyText,
+    body: bodyText,
+    html,
+  };
+};
+
 export default {
   sendEmail,
   sendMailToAdmins,
   getAdminEmails,
   buildEmailTemplate,
+  getEmailTemplate,
   transporter,
 };
+
 

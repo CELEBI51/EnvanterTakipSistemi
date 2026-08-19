@@ -1,4 +1,6 @@
 import prisma from '../../config/db.js';
+import bwipjs from 'bwip-js';
+import puppeteer from 'puppeteer';
 
 async function resolveCategoryId(categoryId, categoryName, parentType = 'VARLIK') {
   if (categoryId) return categoryId;
@@ -463,4 +465,155 @@ export const getHardwareHistory = async (hardwareId) => {
 
   return history;
 };
+
+export const getHardwareForBarcodes = async (hardwareIds) => {
+  const where = {};
+  if (Array.isArray(hardwareIds) && hardwareIds.length > 0) {
+    where.id = { in: hardwareIds };
+  }
+
+  const items = await prisma.hardware.findMany({
+    where,
+    select: {
+      id: true,
+      demirbasNo: true,
+      brand: true,
+      model: true,
+    },
+    orderBy: {
+      demirbasNo: 'asc',
+    },
+  });
+
+  return items;
+};
+
+export const generateBarcodesPdf = async (hardwareIds) => {
+  const items = await getHardwareForBarcodes(hardwareIds);
+
+  const barcodeItems = await Promise.all(
+    items.map(async (hw) => {
+      const textToEncode = (hw.demirbasNo && hw.demirbasNo.trim()) || 'BARCODE';
+      const pngBuffer = await bwipjs.toBuffer({
+        bcid: 'code128',
+        text: textToEncode,
+        scale: 3,
+        height: 10,
+        includetext: false,
+        backgroundcolor: 'ffffff',
+      });
+
+      const barcodeBase64 = `data:image/png;base64,${pngBuffer.toString('base64')}`;
+      const rawTitle = `${hw.brand || ''} ${hw.model || ''}`.trim() || 'Donanım Varlığı';
+      const productTitle = rawTitle.length > 20 ? `${rawTitle.slice(0, 20)}...` : rawTitle;
+
+      return {
+        id: hw.id,
+        demirbasNo: textToEncode,
+        productTitle,
+        barcodeBase64,
+      };
+    })
+  );
+
+  const labelCardsHtml = barcodeItems
+    .map(
+      (item) => `
+      <div class="label-card">
+        <img src="${item.barcodeBase64}" alt="Barcode" class="barcode-img" />
+        <div class="demirbas-no">${item.demirbasNo}</div>
+        <div class="product-title">${item.productTitle}</div>
+      </div>`
+    )
+    .join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: A4;
+      margin: 8mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #ffffff;
+    }
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4mm;
+    }
+    .label-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 3mm;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      height: 32mm;
+      overflow: hidden;
+    }
+    .barcode-img {
+      max-height: 35px;
+      max-width: 100%;
+      object-fit: contain;
+    }
+    .demirbas-no {
+      font-family: monospace;
+      font-size: 8pt;
+      font-weight: bold;
+      color: #0f172a;
+      margin-top: 2px;
+      line-height: 1.1;
+    }
+    .product-title {
+      font-size: 7.5pt;
+      color: #334155;
+      margin-top: 2px;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-container">
+    ${labelCardsHtml}
+  </div>
+</body>
+</html>`;
+
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdfUint8Array = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '8mm', bottom: '8mm', left: '8mm', right: '8mm' },
+    });
+    return Buffer.from(pdfUint8Array);
+  } finally {
+    await browser.close();
+  }
+};
+
 

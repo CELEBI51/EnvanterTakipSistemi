@@ -130,7 +130,7 @@ export default function CreateReturnPage() {
     setLoadingAssignment(true);
     setAssignmentError('');
     try {
-      const res = await fetch(`http://localhost:5000/api/assignments/${id}`, {
+      const res = await fetch(`http://localhost:4001/api/assignments/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -242,7 +242,7 @@ export default function CreateReturnPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/returns', {
+      const res = await fetch('http://localhost:4001/api/returns', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -268,7 +268,7 @@ export default function CreateReturnPage() {
         if (itemState && itemState.selected && itemState.resultStatus === 'Serviste') {
           const mData = pendingMaintenanceData[hwId];
           if (mData) {
-            const maintRes = await fetch(`http://localhost:5000/api/maintenance`, {
+            const maintRes = await fetch(`http://localhost:4001/api/maintenance`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -309,7 +309,7 @@ export default function CreateReturnPage() {
       const formData = new FormData();
       formData.append('file', signedFile);
 
-      const res = await fetch(`http://localhost:5000/api/returns/${createdReturn.id}/signed-form`, {
+      const res = await fetch(`http://localhost:4001/api/returns/${createdReturn.id}/signed-form`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -344,7 +344,7 @@ export default function CreateReturnPage() {
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
             <button
-              onClick={() => window.open(`http://localhost:5000/api/returns/${createdReturn.id}/pdf?token=${token}`, '_blank')}
+              onClick={() => window.open(`http://localhost:4001/api/returns/${createdReturn.id}/pdf?token=${token}`, '_blank')}
               className="px-5 py-2.5 rounded-xl bg-[#1E2534] text-white text-xs font-bold hover:bg-slate-800 transition cursor-pointer flex items-center gap-2"
             >
               <Download className="w-4 h-4" /> İade PDF'ini İndir

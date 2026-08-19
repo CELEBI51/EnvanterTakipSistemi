@@ -87,7 +87,7 @@ export default function CategorySettingsTab() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:5000/api/categories', {
+      const res = await fetch('http://localhost:4001/api/categories', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -136,7 +136,7 @@ export default function CategorySettingsTab() {
 
     try {
       if (modalMode === 'create') {
-        const res = await fetch('http://localhost:5000/api/categories', {
+        const res = await fetch('http://localhost:4001/api/categories', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ export default function CategorySettingsTab() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Kategori eklenemedi.');
       } else {
-        const res = await fetch(`http://localhost:5000/api/categories/${selectedCategory.id}`, {
+        const res = await fetch(`http://localhost:4001/api/categories/${selectedCategory.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -191,7 +191,7 @@ export default function CategorySettingsTab() {
     setDeleteError('');
 
     try {
-      const res = await fetch(`http://localhost:5000/api/categories/${categoryToDelete.id}`, {
+      const res = await fetch(`http://localhost:4001/api/categories/${categoryToDelete.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -263,8 +263,8 @@ export default function CategorySettingsTab() {
               onClick={() => setActiveParentType(pt.id)}
               className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 isSelected
-                  ? 'bg-white border-[#4F8FE0] shadow-sm ring-2 ring-[#4F8FE0]/20'
-                  : 'bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white'
+                  ? 'bg-white border-[#4C82F7] shadow-sm ring-2 ring-[#4C82F7]/20'
+                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 hover:bg-slate-100'
               }`}
             >
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -276,8 +276,8 @@ export default function CategorySettingsTab() {
                 <span
                   className={`font-mono text-xs font-bold px-2 py-0.5 rounded-full ${
                     isSelected
-                      ? 'bg-[#4F8FE0] text-white'
-                      : 'bg-slate-100 text-slate-600'
+                      ? 'bg-[#4C82F7] text-white'
+                      : 'bg-slate-200 text-slate-700'
                   }`}
                 >
                   {count}
@@ -299,7 +299,7 @@ export default function CategorySettingsTab() {
       {/* Selected Parent Type Category List Container */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
         {/* Container Header */}
-        <div className="px-6 py-4 bg-[#F5F4EF] border-b border-slate-200 flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Seçili Ana Tip:

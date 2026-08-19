@@ -18,7 +18,7 @@ export default function AccessoryHistoryModal({ isOpen, onClose, accessoryId, ac
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`http://localhost:5000/api/accessories/${accessoryId}/history`, {
+        const res = await fetch(`http://localhost:4001/api/accessories/${accessoryId}/history`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

@@ -30,7 +30,7 @@ export default function MarkDefectiveModal({ isOpen, onClose, accessory, onSucce
     setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/accessories/${accessory.id}/mark-defective`, {
+      const res = await fetch(`http://localhost:4001/api/accessories/${accessory.id}/mark-defective`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import prisma from '../config/db.js';
 import { calculateDaysRemaining } from '../modules/licenses/license.service.js';
-import { sendMailToAdmins, buildEmailTemplate } from '../services/mail.service.js';
+import { sendMailToAdmins, getEmailTemplate } from '../services/mail.service.js';
 
 /**
  * Checks all active licenses for upcoming expiration dates (15, 7, 3, 0 days or expired)
@@ -14,6 +14,17 @@ import { sendMailToAdmins, buildEmailTemplate } from '../services/mail.service.j
 export const checkLicenseExpirations = async () => {
   try {
     const now = new Date();
+
+    let licenseWarningDays = 15;
+    try {
+      const { getSettings } = await import('../modules/settings/settings.service.js');
+      const settings = await getSettings();
+      if (settings?.licenseWarningDays) {
+        licenseWarningDays = settings.licenseWarningDays;
+      }
+    } catch (sErr) {
+      console.error('[LicenseExpiryJob] Ayarlar okunamadı, varsayılan 15 gün kullanılıyor:', sErr);
+    }
 
     // 1. SURESI_DOLDU Durum Güncellemesi & Süresi Dolan Lisansların Tespiti
     const licensesToMarkExpired = await prisma.license.findMany({
@@ -43,48 +54,21 @@ export const checkLicenseExpirations = async () => {
 
       // BİLDİRİM 3: Süresi Dolan Lisanslar İçin Adminlere Anlık Mail Bildirimi
       try {
-        let expiredRows = '';
-        licensesToMarkExpired.forEach((lic) => {
-          const endDateFormatted = new Date(lic.endDate).toLocaleDateString('tr-TR');
-          const unitName = lic.unit ? lic.unit.name : 'Belirtilmedi';
-          expiredRows += `
-            <tr>
-              <td><strong>${lic.brand}</strong></td>
-              <td>${lic.productInfo}</td>
-              <td>${unitName}</td>
-              <td>${endDateFormatted}</td>
-            </tr>
-          `;
-        });
-
-        const bodyHtml = `
-          <p>Aşağıdaki lisans(lar)ın geçerlilik süresi dolmuş ve durumları <strong>SÜRESİ DOLDU</strong> olarak güncellenmiştir:</p>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Marka</th>
-                <th>Ürün Bilgisi</th>
-                <th>Birim</th>
-                <th>Bitiş Tarihi</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${expiredRows}
-            </tbody>
-          </table>
-        `;
-
         const count = licensesToMarkExpired.length;
-        const subject = `🔴 Lisans Süresi Doldu — ${count} lisans süresi doldu`;
-        const html = buildEmailTemplate({
-          title: `🔴 Lisans Süresi Doldu (${count} Lisans)`,
-          bodyHtml,
+        const lisansListesi = licensesToMarkExpired
+          .map((l) => `- ${l.brand} - ${l.productInfo} (${l.unit?.name || 'Belirtilmedi'}, Bitiş: ${new Date(l.endDate).toLocaleDateString('tr-TR')})`)
+          .join('\n');
+
+        const rendered = await getEmailTemplate('license_expired', {
+          lisansSayisi: count,
+          lisansListesi,
         });
 
-        const text = `🔴 Lisans Süresi Doldu — ${count} lisans süresi doldu\n\n` +
-          licensesToMarkExpired.map(l => `- ${l.brand} - ${l.productInfo} (Bitiş: ${new Date(l.endDate).toLocaleDateString('tr-TR')})`).join('\n');
-
-        await sendMailToAdmins({ subject, text, html });
+        await sendMailToAdmins({
+          subject: rendered.subject,
+          text: rendered.bodyText,
+          html: rendered.html,
+        });
       } catch (mailErr) {
         console.error('[LicenseExpiryJob] Süresi dolan lisans maili gönderilirken hata:', mailErr);
       }
@@ -115,8 +99,8 @@ export const checkLicenseExpirations = async () => {
       const daysRemaining = calculateDaysRemaining(lic.endDate);
       const licTitle = `${lic.brand} - ${lic.productInfo}${lic.unit ? ` (${lic.unit.name})` : ''}`;
 
-      // BİLDİRİM 1 için: 15 gün veya daha az kalmış (gün >= 0) lisansları topla
-      if (daysRemaining <= 15 && daysRemaining >= 0) {
+      // BİLDİRİM 1 için: licenseWarningDays gün veya daha az kalmış (gün >= 0) lisansları topla
+      if (daysRemaining <= licenseWarningDays && daysRemaining >= 0) {
         approachingLicensesForEmail.push({
           lic,
           daysRemaining,
@@ -141,8 +125,8 @@ export const checkLicenseExpirations = async () => {
 
       let message = null;
 
-      // Positive thresholds: 15, 7, 3, 0 days remaining
-      if ([15, 7, 3, 0].includes(daysRemaining)) {
+      // Positive thresholds: licenseWarningDays ve belirli basamaklardaki lisanslar
+      if (daysRemaining <= licenseWarningDays && daysRemaining >= 0) {
         if (daysRemaining === 0) {
           message = `"${licTitle}" lisansı bugün doluyor.`;
         } else {
@@ -180,54 +164,21 @@ export const checkLicenseExpirations = async () => {
     // BİLDİRİM 1: Tarihi Yaklaşan Lisanslar İçin Adminlere Tek Bir Özet Mail
     if (approachingLicensesForEmail.length > 0) {
       try {
-        let approachingRows = '';
-        approachingLicensesForEmail.forEach(({ lic, daysRemaining }) => {
-          const endDateFormatted = new Date(lic.endDate).toLocaleDateString('tr-TR');
-          const unitName = lic.unit ? lic.unit.name : 'Belirtilmedi';
-          const badgeClass = daysRemaining <= 3 ? 'badge-danger' : 'badge-warning';
-          const dayText = daysRemaining === 0 ? 'Bugün doluyor' : `${daysRemaining} gün kaldı`;
-
-          approachingRows += `
-            <tr>
-              <td><strong>${lic.brand}</strong></td>
-              <td>${lic.productInfo}</td>
-              <td>${unitName}</td>
-              <td>${endDateFormatted}</td>
-              <td><span class="badge ${badgeClass}">${dayText}</span></td>
-            </tr>
-          `;
-        });
-
         const count = approachingLicensesForEmail.length;
-        const bodyHtml = `
-          <p>Aşağıdaki ${count} lisansın kullanım süresi 15 gün veya daha az bir zaman içinde dolacaktır:</p>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Marka</th>
-                <th>Ürün Bilgisi</th>
-                <th>Birim</th>
-                <th>Bitiş Tarihi</th>
-                <th>Kalan Süre</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${approachingRows}
-            </tbody>
-          </table>
-          <p>Lütfen lisans yenileme işlemlerini gözden geçiriniz.</p>
-        `;
+        const lisansListesi = approachingLicensesForEmail
+          .map(({ lic, daysRemaining }) => `- ${lic.brand} - ${lic.productInfo} (${lic.unit ? lic.unit.name : 'Belirtilmedi'}, Kalan: ${daysRemaining === 0 ? 'Bugün' : `${daysRemaining} gün`}, Bitiş: ${new Date(lic.endDate).toLocaleDateString('tr-TR')})`)
+          .join('\n');
 
-        const subject = `⚠️ Lisans Yenileme Hatırlatması — ${count} lisans süresi yaklaşıyor`;
-        const html = buildEmailTemplate({
-          title: `⚠️ Lisans Yenileme Hatırlatması (${count} Lisans)`,
-          bodyHtml,
+        const rendered = await getEmailTemplate('license_expiry', {
+          lisansSayisi: count,
+          lisansListesi,
         });
 
-        const text = `⚠️ Lisans Yenileme Hatırlatması — ${count} lisans süresi yaklaşıyor\n\n` +
-          approachingLicensesForEmail.map(({ lic, daysRemaining }) => `- ${lic.brand} - ${lic.productInfo} (Kalan: ${daysRemaining} gün, Bitiş: ${new Date(lic.endDate).toLocaleDateString('tr-TR')})`).join('\n');
-
-        await sendMailToAdmins({ subject, text, html });
+        await sendMailToAdmins({
+          subject: rendered.subject,
+          text: rendered.bodyText,
+          html: rendered.html,
+        });
       } catch (mailErr) {
         console.error('[LicenseExpiryJob] Tarihi yaklaşan lisans maili gönderilirken hata:', mailErr);
       }

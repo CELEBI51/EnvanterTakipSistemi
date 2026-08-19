@@ -213,7 +213,25 @@ export const deleteComponent = async (id) => {
     throw error;
   }
 
-  await prisma.component.delete({ where: { id } });
+  const maintCount = await prisma.maintenanceComponent.count({
+    where: { componentId: id },
+  });
+
+  if (maintCount > 0) {
+    const error = new Error(
+      'Bu bileşene ait geçmiş bakım / parça değişim kayıtları bulunduğu için silinemez.'
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await prisma.$transaction([
+    prisma.stockMovement.deleteMany({
+      where: { entityType: 'component', entityId: id },
+    }),
+    prisma.component.delete({ where: { id } }),
+  ]);
+
   return { message: 'Bileşen başarıyla silindi.' };
 };
 

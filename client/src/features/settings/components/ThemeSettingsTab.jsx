@@ -22,11 +22,11 @@ const THEMES = [
     icon: Moon,
     isDark: true,
     preview: {
-      sidebar: '#0c1322',
-      accent: '#60a5fa',
-      pageBg: '#0f172a',
-      cardBg: '#1e293b',
-      text: '#e2e8f0',
+      sidebar: '#0D1526',
+      accent: '#4C82F7',
+      pageBg: '#0B1220',
+      cardBg: '#131C2E',
+      text: '#E8ECF3',
     },
   },
   {

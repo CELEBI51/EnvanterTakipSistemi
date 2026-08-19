@@ -23,7 +23,7 @@ export default function QuickAddEmployeeModal({ isOpen, onClose, onSuccess }) {
     const fetchUnits = async () => {
       setUnitsLoading(true);
       try {
-        const res = await fetch('http://localhost:5000/api/units', {
+        const res = await fetch('http://localhost:4001/api/units', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -71,7 +71,7 @@ export default function QuickAddEmployeeModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/employees', {
+      const res = await fetch('http://localhost:4001/api/employees', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

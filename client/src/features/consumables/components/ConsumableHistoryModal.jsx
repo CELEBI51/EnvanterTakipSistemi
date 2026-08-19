@@ -19,7 +19,7 @@ export default function ConsumableHistoryModal({ isOpen, onClose, consumableId, 
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`http://localhost:5000/api/consumables/${consumableId}/history`, {
+        const res = await fetch(`http://localhost:4001/api/consumables/${consumableId}/history`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

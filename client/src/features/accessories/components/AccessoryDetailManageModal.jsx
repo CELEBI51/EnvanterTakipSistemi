@@ -71,7 +71,7 @@ export default function AccessoryDetailManageModal({
   const fetchLatestAccessory = async () => {
     if (!accessory?.id || !token) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/accessories/${accessory.id}`, {
+      const res = await fetch(`http://localhost:4001/api/accessories/${accessory.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -88,7 +88,7 @@ export default function AccessoryDetailManageModal({
     setHistoryLoading(true);
     setHistoryError('');
     try {
-      const res = await fetch(`http://localhost:5000/api/accessories/${accessory.id}/history`, {
+      const res = await fetch(`http://localhost:4001/api/accessories/${accessory.id}/history`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -116,7 +116,7 @@ export default function AccessoryDetailManageModal({
 
     setRestockLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/accessories/${accessory.id}/restock`, {
+      const res = await fetch(`http://localhost:4001/api/accessories/${accessory.id}/restock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -163,7 +163,7 @@ export default function AccessoryDetailManageModal({
 
     setDefectiveLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/accessories/${accessory.id}/mark-defective`, {
+      const res = await fetch(`http://localhost:4001/api/accessories/${accessory.id}/mark-defective`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

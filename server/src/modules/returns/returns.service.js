@@ -198,11 +198,21 @@ export const createReturn = async (data, createdById) => {
     });
   });
 
-  // Otomatik İade PDF üretimi
+  // System Log Kaydı
   try {
-    await generateReturnPdf(newReturn.id);
-  } catch (pdfErr) {
-    console.error('İade PDF üretilirken hata oluştu (İade kaydı oluşturuldu):', pdfErr);
+    const { createLog } = await import('../../services/log.service.js');
+    const personelAdi = assignment.employee?.fullName || 'Bilinmeyen Personel';
+    await createLog({
+      userId: createdById,
+      userEmail: null,
+      action: 'CREATE',
+      module: 'return',
+      description: `${personelAdi} adlı personelin zimmeti iade alındı`,
+      entityId: newReturn.id,
+      statusCode: 201,
+    });
+  } catch (logErr) {
+    console.error('İade log hatası:', logErr);
   }
 
   return newReturn;

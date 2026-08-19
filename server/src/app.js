@@ -18,13 +18,16 @@ import employeeRoutes from './modules/employees/employees.routes.js';
 import unitRoutes from './modules/units/units.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
 import importRoutes from './modules/import/import.routes.js';
+import settingsRoutes from './modules/settings/settings.routes.js';
 import { errorHandler } from './middlewares/error.middleware.js';
+import { activityLogMiddleware } from './middlewares/activityLog.middleware.js';
 
 const app = express();
 
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(activityLogMiddleware);
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
@@ -70,6 +73,7 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Global Error Handler Middleware
 app.use(errorHandler);

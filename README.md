@@ -88,7 +88,7 @@ npm run dev:web
 ```
 
 - API → http://localhost:3001
-- Arayüz → http://localhost:3000
+- Arayüz → http://localhost:4000
 
 > `dev:db` kullanırken `apps/api/.env` içinde `DB_POOL_MAX=1` olmalıdır.
 > PGlite tek bağlantı destekler. Gerçek PostgreSQL'de bu değer 10'dur.

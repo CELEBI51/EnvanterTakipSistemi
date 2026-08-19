@@ -1,7 +1,7 @@
 import prisma from './src/config/db.js';
 import { checkLicenseExpirations } from './src/jobs/licenseExpiry.job.js';
 
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = 'http://localhost:4001/api';
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 async function fetchJsonWithRetry(url, options, retries = 5) {

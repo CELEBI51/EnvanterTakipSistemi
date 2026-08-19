@@ -82,7 +82,7 @@ export default function AddMaintenanceModal({ isOpen, onClose, hardwareId, onSuc
     };
 
     try {
-      const res = await fetch('http://localhost:5000/api/maintenance', {
+      const res = await fetch('http://localhost:4001/api/maintenance', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

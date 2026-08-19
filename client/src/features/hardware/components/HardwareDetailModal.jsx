@@ -43,13 +43,13 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
     setError('');
     try {
       const [resHw, resHist, resMaint] = await Promise.all([
-        fetch(`http://localhost:5000/api/hardware/${hardwareId}`, {
+        fetch(`http://localhost:4001/api/hardware/${hardwareId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`http://localhost:5000/api/hardware/${hardwareId}/history`, {
+        fetch(`http://localhost:4001/api/hardware/${hardwareId}/history`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`http://localhost:5000/api/maintenance?hardwareId=${hardwareId}`, {
+        fetch(`http://localhost:4001/api/maintenance?hardwareId=${hardwareId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -79,7 +79,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
     if (!canEdit || !hardware) return;
     setUpdatingStatus(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/hardware/${hardware.id}`, {
+      const res = await fetch(`http://localhost:4001/api/hardware/${hardware.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +102,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
     if (!canEdit || !hardware) return;
     setDeleting(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/hardware/${hardware.id}`, {
+      const res = await fetch(`http://localhost:4001/api/hardware/${hardware.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

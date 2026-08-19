@@ -23,7 +23,7 @@ export default function MaintenanceDetailModal({ isOpen, onClose, maintenanceId,
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:5000/api/maintenance/${maintenanceId}`, {
+      const res = await fetch(`http://localhost:4001/api/maintenance/${maintenanceId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

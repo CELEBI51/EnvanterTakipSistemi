@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import LoginPage from './features/auth/pages/LoginPage';
 import ForceChangePasswordPage from './features/auth/pages/ForceChangePasswordPage';
+import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import UsersList from './features/admin/users/UsersList';
 import DashboardPage from './features/dashboard/pages/DashboardPage';
 import HardwareList from './features/hardware/pages/HardwareList';
@@ -81,7 +83,7 @@ function MainLayout({ children }) {
     if (!token) return;
     setLoadingNotifs(true);
     try {
-      const res = await fetch('http://localhost:5000/api/notifications/summary', {
+      const res = await fetch('http://localhost:4001/api/notifications/summary', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -140,18 +142,8 @@ function MainLayout({ children }) {
       {/* 1. PERMANENT LEFT SIDEBAR */}
       <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-0 h-screen shadow-xl z-20 transition-colors duration-300" style={{ backgroundColor: 'var(--theme-sidebar-bg)', color: 'var(--theme-sidebar-text)' }}>
         {/* DİTAŞ Corporate Logo */}
-        <div className="p-5 flex items-center gap-3" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center p-1.5 shadow-md shrink-0" style={{ backgroundColor: 'var(--theme-sidebar-logo-bg)' }}>
-            <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <h1 className="font-heading text-base font-bold tracking-tight leading-tight" style={{ color: 'var(--theme-sidebar-text)' }}>
-              DİTAŞ
-            </h1>
-            <p className="text-[11px] font-medium tracking-wide uppercase" style={{ color: 'var(--theme-sidebar-muted)' }}>
-              Demirbaş Takip Sistemi
-            </p>
-          </div>
+        <div className="p-4 flex items-center justify-center" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
+          <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="h-20 w-auto max-w-full object-contain transition-transform duration-200 hover:scale-105" />
         </div>
 
         {/* Sidebar Navigation */}
@@ -426,11 +418,8 @@ function MainLayout({ children }) {
               onClick={() => setMobileSidebarOpen(false)}
             ></div>
             <div className="relative w-64 flex flex-col h-full shadow-2xl z-50" style={{ backgroundColor: 'var(--theme-sidebar-bg)', color: 'var(--theme-sidebar-text)' }}>
-              <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
-                <div className="flex items-center gap-2.5">
-                  <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="w-7 h-7 object-contain bg-white rounded-lg p-0.5" />
-                  <span className="font-heading font-bold text-white text-base">DİTAŞ Takip</span>
-                </div>
+              <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
+                <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="h-14 w-auto max-w-[180px] object-contain" />
                 <button
                   onClick={() => setMobileSidebarOpen(false)}
                   className="text-slate-300 hover:text-white"
@@ -517,6 +506,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route
           path="/force-change-password"

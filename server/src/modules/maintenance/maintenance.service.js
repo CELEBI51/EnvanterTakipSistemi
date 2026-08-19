@@ -344,6 +344,18 @@ export const completeMaintenance = async (id, endDate, resultStatus) => {
       },
     });
 
+    try {
+      const { createLog } = await import('../../services/log.service.js');
+      const demirbasNo = updatedRecord.hardware?.demirbasNo || 'Bilinmeyen Demirbaş';
+      await createLog({
+        action: 'UPDATE',
+        module: 'maintenance',
+        description: `${demirbasNo} demirbaşının bakımı tamamlandı`,
+        entityId: updatedRecord.id,
+        statusCode: 200,
+      });
+    } catch (lErr) {}
+
     return updatedRecord;
   });
 };

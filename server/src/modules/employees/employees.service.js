@@ -180,7 +180,7 @@ export const updateEmployeeStatus = async (id, { isActive, terminationDate }) =>
 
     const tDate = terminationDate ? new Date(terminationDate) : new Date();
 
-    return await prisma.employee.update({
+    const updated = await prisma.employee.update({
       where: { id },
       data: {
         isActive: false,
@@ -190,6 +190,19 @@ export const updateEmployeeStatus = async (id, { isActive, terminationDate }) =>
         unit: { select: { id: true, name: true } },
       },
     });
+
+    try {
+      const { createLog } = await import('../../services/log.service.js');
+      await createLog({
+        action: 'UPDATE',
+        module: 'employee',
+        description: `${employee.fullName} adlı personel işten çıkarıldı`,
+        entityId: id,
+        statusCode: 200,
+      });
+    } catch (lErr) {}
+
+    return updated;
   } else {
     return await prisma.employee.update({
       where: { id },

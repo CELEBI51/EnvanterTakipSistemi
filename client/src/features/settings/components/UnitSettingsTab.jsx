@@ -59,8 +59,8 @@ export default function UnitSettingsTab() {
     setError('');
     try {
       const url = showInactive
-        ? 'http://localhost:5000/api/units?includeInactive=true'
-        : 'http://localhost:5000/api/units';
+        ? 'http://localhost:4001/api/units?includeInactive=true'
+        : 'http://localhost:4001/api/units';
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -124,7 +124,7 @@ export default function UnitSettingsTab() {
 
       let res;
       if (modalMode === 'create') {
-        res = await fetch('http://localhost:5000/api/units', {
+        res = await fetch('http://localhost:4001/api/units', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -133,7 +133,7 @@ export default function UnitSettingsTab() {
           body: JSON.stringify(payload),
         });
       } else {
-        res = await fetch(`http://localhost:5000/api/units/${selectedUnit.id}`, {
+        res = await fetch(`http://localhost:4001/api/units/${selectedUnit.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -171,7 +171,7 @@ export default function UnitSettingsTab() {
     setDeleteError('');
 
     try {
-      const res = await fetch(`http://localhost:5000/api/units/${unitToDelete.id}`, {
+      const res = await fetch(`http://localhost:4001/api/units/${unitToDelete.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -201,7 +201,7 @@ export default function UnitSettingsTab() {
     setActivateLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/units/${unitToActivate.id}`, {
+      const res = await fetch(`http://localhost:4001/api/units/${unitToActivate.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

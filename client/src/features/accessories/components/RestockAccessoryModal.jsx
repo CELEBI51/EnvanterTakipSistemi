@@ -25,7 +25,7 @@ export default function RestockAccessoryModal({ isOpen, onClose, accessory, onSu
     setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/accessories/${accessory.id}/restock`, {
+      const res = await fetch(`http://localhost:4001/api/accessories/${accessory.id}/restock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

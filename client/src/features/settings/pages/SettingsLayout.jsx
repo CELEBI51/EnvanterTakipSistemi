@@ -15,6 +15,11 @@ import {
 import CategorySettingsTab from '../components/CategorySettingsTab';
 import UnitSettingsTab from '../components/UnitSettingsTab';
 import ThemeSettingsTab from '../components/ThemeSettingsTab';
+import CompanySettingsTab from '../components/CompanySettingsTab';
+import EmailTemplatesSettingsTab from '../components/EmailTemplatesSettingsTab';
+import BackupSettingsTab from '../components/BackupSettingsTab';
+import ThresholdsSettingsTab from '../components/ThresholdsSettingsTab';
+import LogsSettingsTab from '../components/LogsSettingsTab';
 
 export const SETTINGS_TABS = [
   {
@@ -73,20 +78,13 @@ export const SETTINGS_TABS = [
     icon: FileText,
     description: 'Kullanıcı aktiviteleri, hata logları ve sistem olay kayıtları.',
   },
-  {
-    id: 'sessions',
-    label: 'Oturum Yönetimi',
-    path: '/settings/sessions',
-    icon: Shield,
-    description: 'Aktif kullanıcı oturumları ve güvenlik denetimi.',
-  },
 ];
 
 function TabPlaceholder({ tab }) {
   const Icon = tab.icon;
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center shadow-xs flex flex-col items-center justify-center min-h-[420px]">
-      <div className="w-16 h-16 rounded-2xl bg-[#4F8FE0]/10 text-[#4F8FE0] flex items-center justify-center mb-4 shadow-2xs">
+      <div className="w-16 h-16 rounded-2xl bg-[#4C82F7]/10 text-[#4C82F7] flex items-center justify-center mb-4 shadow-2xs">
         <Icon className="w-8 h-8" />
       </div>
       <h3 className="text-lg font-bold font-heading text-[#1E2534] mb-2">
@@ -95,7 +93,7 @@ function TabPlaceholder({ tab }) {
       <p className="text-xs text-slate-500 max-w-md mb-6 leading-relaxed">
         {tab.description}
       </p>
-      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#F5F4EF] border border-slate-200 text-xs font-semibold text-slate-600">
+      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600">
         <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
         Geliştirme Aşamasında • Çok Yakında
       </div>
@@ -114,7 +112,7 @@ export default function SettingsLayout() {
   return (
     <div className="space-y-6 pb-12">
       {/* Page Header */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
             DİTAŞ Otomotiv • Yönetici Paneli
@@ -128,9 +126,9 @@ export default function SettingsLayout() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#F5F4EF] border border-slate-200 text-xs font-bold text-slate-700">
-            <Layers className="w-4 h-4 text-[#4F8FE0]" />
-            <span>9 Yapılandırma Modülü</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700">
+            <Layers className="w-4 h-4 text-[#4C82F7]" />
+            <span>8 Yapılandırma Modülü</span>
           </div>
         </div>
       </div>
@@ -153,8 +151,8 @@ export default function SettingsLayout() {
                 onClick={() => navigate(tab.path)}
                 className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
                   isActive
-                    ? 'bg-[#4F8FE0] text-white font-bold shadow-md shadow-[#4F8FE0]/20'
-                    : 'text-[#1E2534] hover:bg-slate-50 hover:text-[#4F8FE0]'
+                    ? 'bg-[#4C82F7] text-white font-bold shadow-md shadow-[#4C82F7]/20'
+                    : 'text-[#1E2534] hover:bg-slate-50 hover:text-[#4C82F7]'
                 }`}
               >
                 <Icon
@@ -174,7 +172,12 @@ export default function SettingsLayout() {
             <Route path="categories" element={<CategorySettingsTab />} />
             <Route path="units" element={<UnitSettingsTab />} />
             <Route path="theme" element={<ThemeSettingsTab />} />
-            {SETTINGS_TABS.filter((t) => t.id !== 'categories' && t.id !== 'units' && t.id !== 'theme').map((tab) => (
+            <Route path="company" element={<CompanySettingsTab />} />
+            <Route path="email-templates" element={<EmailTemplatesSettingsTab />} />
+            <Route path="backup" element={<BackupSettingsTab />} />
+            <Route path="thresholds" element={<ThresholdsSettingsTab />} />
+            <Route path="logs" element={<LogsSettingsTab />} />
+            {SETTINGS_TABS.filter((t) => !['categories', 'units', 'theme', 'company', 'email-templates', 'backup', 'thresholds', 'logs'].includes(t.id)).map((tab) => (
               <Route
                 key={tab.id}
                 path={tab.id}

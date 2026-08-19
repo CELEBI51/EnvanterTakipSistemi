@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, AlertCircle, ShieldCheck, Building2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { z } from 'zod';
 import axiosClient from '../../../api/axiosClient';
 import useAuthStore from '../../../store/authStore';
@@ -54,23 +54,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F7F9FC] flex flex-col justify-between items-center p-4 sm:p-6 md:p-8 font-sans">
+    <div className="min-h-screen w-full bg-[#F5F4EF] flex flex-col justify-between items-center p-4 sm:p-6 md:p-8 font-sans">
       {/* Üst Dengeleme Boşluğu */}
       <div className="flex-1" />
 
       {/* Kart Konteyneri */}
       <main className="w-full max-w-[400px] mx-auto my-auto">
-        <div className="bg-white rounded-[10px] border border-[#E5E7EB] shadow-xs p-6 sm:p-8">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-6 sm:p-8">
           
           {/* DİTAŞ Logo & Başlık Alanı */}
           <div className="flex flex-col items-center text-center mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center p-2 mb-3 shadow-md border border-slate-100">
-              <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="w-full h-full object-contain" />
-            </div>
-            <h1 className="font-heading text-xl font-bold text-[#0B2C55] tracking-tight">
+            <img src="/ditas-logo.png" alt="DİTAŞ Logo" className="h-24 w-auto max-w-full object-contain mb-4" />
+            <h1 className="font-heading text-xl font-bold text-[#1E2534] tracking-tight">
               DİTAŞ OTOMOTİV
             </h1>
-            <p className="text-xs text-[#6B7280] mt-1 font-semibold uppercase tracking-wider">
+            <p className="text-xs text-slate-500 mt-1 font-semibold uppercase tracking-wider">
               Demirbaş Takip Sistemi
             </p>
           </div>
@@ -79,9 +77,9 @@ export default function LoginPage() {
           {errorMessage && (
             <div
               role="alert"
-              className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-[10px] flex items-start gap-2.5 text-[#DC2626] text-xs font-medium"
+              className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-700 text-xs font-semibold"
             >
-              <AlertCircle className="w-4 h-4 text-[#DC2626] shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -92,7 +90,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-xs font-semibold text-[#1F2937] mb-1.5"
+                className="block text-xs font-bold text-[#1E2534] mb-1.5"
               >
                 Kurumsal E-posta
               </label>
@@ -101,13 +99,13 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 placeholder="kullanici@ditas.com.tr"
-                className={`w-full h-11 px-3.5 text-xs font-normal bg-white text-[#1F2937] placeholder-[#6B7280] rounded-[10px] border ${
-                  errors.email ? 'border-[#DC2626] focus:border-[#DC2626]' : 'border-[#E5E7EB] focus:border-[#2F6BFF]'
+                className={`w-full h-11 px-3.5 text-xs font-semibold bg-slate-50 text-[#1E2534] placeholder-slate-400 rounded-xl border ${
+                  errors.email ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200 focus:border-[#4C82F7]'
                 } outline-none transition-all duration-150`}
                 {...register('email')}
               />
               {errors.email && (
-                <p className="mt-1 text-[11px] text-[#DC2626] font-medium">
+                <p className="mt-1 text-[11px] text-rose-600 font-medium">
                   {errors.email.message}
                 </p>
               )}
@@ -117,7 +115,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-xs font-semibold text-[#1F2937] mb-1.5"
+                className="block text-xs font-bold text-[#1E2534] mb-1.5"
               >
                 Şifre
               </label>
@@ -127,8 +125,8 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  className={`w-full h-11 pl-3.5 pr-10 text-xs font-normal bg-white text-[#1F2937] placeholder-[#6B7280] rounded-[10px] border ${
-                    errors.password ? 'border-[#DC2626] focus:border-[#DC2626]' : 'border-[#E5E7EB] focus:border-[#2F6BFF]'
+                  className={`w-full h-11 pl-3.5 pr-10 text-xs font-semibold bg-slate-50 text-[#1E2534] placeholder-slate-400 rounded-xl border ${
+                    errors.password ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200 focus:border-[#4C82F7]'
                   } outline-none transition-all duration-150`}
                   {...register('password')}
                 />
@@ -137,7 +135,7 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
                   aria-label={showPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
-                  className="absolute right-0 top-0 h-11 px-3.5 flex items-center justify-center text-[#6B7280] hover:text-[#0B2C55] transition-colors focus:outline-none"
+                  className="absolute right-0 top-0 h-11 px-3.5 flex items-center justify-center text-slate-400 hover:text-[#4C82F7] transition-colors focus:outline-none"
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -147,17 +145,27 @@ export default function LoginPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-[11px] text-[#DC2626] font-medium">
+                <p className="mt-1 text-[11px] text-rose-600 font-medium">
                   {errors.password.message}
                 </p>
               )}
             </div>
 
-            {/* Giriş Yap Butonu (Primary Filled Navy #0B2C55, 10px radius) */}
+            {/* Şifremi Unuttum Bağlantısı */}
+            <div className="flex items-center justify-end">
+              <Link
+                to="/forgot-password"
+                className="text-xs font-semibold text-[#4C82F7] hover:underline"
+              >
+                Şifremi Unuttum?
+              </Link>
+            </div>
+
+            {/* Giriş Yap Butonu */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-11 mt-2 bg-[#0B2C55] hover:bg-[#163B6B] active:bg-[#082243] text-white font-semibold text-xs rounded-[10px] shadow-xs transition-all duration-150 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full h-11 mt-2 bg-[#4C82F7] hover:bg-[#3D6FE0] active:bg-[#3566AD] text-white font-bold text-xs rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -174,8 +182,8 @@ export default function LoginPage() {
 
       {/* Alt Dengeleme Boşluğu ve Bilgi Notu */}
       <div className="flex-1 flex flex-col justify-end pb-2 pt-6">
-        <footer className="flex items-center justify-center gap-1.5 text-xs text-[#6B7280] text-center font-medium">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#0B2C55]" />
+        <footer className="flex items-center justify-center gap-1.5 text-xs text-slate-500 text-center font-medium">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#4C82F7]" />
           <span>Bu sistem yalnızca DİTAŞ Otomotiv iç ağında kullanılır. © 2026</span>
         </footer>
       </div>

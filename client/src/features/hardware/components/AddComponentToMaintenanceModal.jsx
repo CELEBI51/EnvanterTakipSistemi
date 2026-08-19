@@ -22,7 +22,7 @@ export default function AddComponentToMaintenanceModal({ isOpen, onClose, mainte
   const fetchComponents = async () => {
     setLoadingComponents(true);
     try {
-      const res = await fetch('http://localhost:5000/api/components?pageSize=100', {
+      const res = await fetch('http://localhost:4001/api/components?pageSize=100', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -63,7 +63,7 @@ export default function AddComponentToMaintenanceModal({ isOpen, onClose, mainte
     setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/maintenance/${maintenanceId}/components`, {
+      const res = await fetch(`http://localhost:4001/api/maintenance/${maintenanceId}/components`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

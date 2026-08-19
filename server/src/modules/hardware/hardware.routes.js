@@ -8,6 +8,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // Public for authenticated users (including viewer)
+router.post('/barcodes/pdf', hardwareController.generateBarcodesPdf);
 router.get('/export', hardwareController.exportHardware);
 router.get('/', hardwareController.listHardware);
 router.get('/stats', hardwareController.getHardwareStats);

@@ -31,7 +31,7 @@
   --theme-sidebar-muted: #94a3b8;
   --theme-sidebar-border: rgba(100, 116, 139, 0.4);
   --theme-sidebar-hover: rgba(100, 116, 139, 0.35);
-  --theme-sidebar-logo-bg: #ffffff;
+  --theme-sidebar-logo-bg: transparent;
 
   --theme-accent: #4F8FE0;
   --theme-accent-hover: #3D75C4;
@@ -51,34 +51,55 @@
   --theme-user-badge-text: #ffffff;
 }
 
-/* TEMA 2: Koyu Mod — Premium Dark
-   Material Design elevation: katmanlar yukarıya çıktıkça açılır.
-   Base #0f172a → Surface #1e293b → Elevated #334155 → Raised #475569
-   Saf siyah KULLANILMAZ. Derin koyu lacivert (Slate 900+) kullanılır.
+/* TEMA 2: Koyu Mod — Premium Cool Navy Dark
+   Base #0B1220 → Sidebar #0D1526 → Card/Header #131C2E → Hover/Input #182338 → Border #223049
+   Saf siyah VEYA sıcak gri KULLANILMAZ. Derin soğuk lacivert slate ailesi kullanılır.
 */
 :root.theme-dark {
-  --theme-sidebar-bg: #0c1322;
-  --theme-sidebar-text: #e2e8f0;
-  --theme-sidebar-muted: #94a3b8;
-  --theme-sidebar-border: rgba(71, 85, 105, 0.4);
-  --theme-sidebar-hover: rgba(71, 85, 105, 0.35);
-  --theme-sidebar-logo-bg: #1e293b;
+  --bg-base: #0B1220;
+  --bg-sidebar: #0D1526;
+  --bg-card: #131C2E;
+  --bg-card-hover: #182338;
+  --border-subtle: #223049;
 
-  --theme-accent: #60a5fa;
-  --theme-accent-hover: #93c5fd;
-  --theme-accent-shadow: rgba(96, 165, 250, 0.2);
+  --text-primary: #E8ECF3;
+  --text-secondary: #8A94A8;
+  --text-muted: #5B6478;
 
-  --theme-page-bg: #0f172a;
-  --theme-card-bg: #1e293b;
-  --theme-card-border: #334155;
-  --theme-header-bg: #1e293b;
-  --theme-header-border: #334155;
+  --color-accent: #4C82F7;
+  --color-accent-hover: #3D6FE0;
 
-  --theme-text-primary: #e2e8f0;
-  --theme-text-secondary: #94a3b8;
-  --theme-text-muted: #64748b;
+  --status-success: #34D399;
+  --status-success-bg: rgba(52, 211, 153, 0.12);
+  --status-warning: #F59E0B;
+  --status-warning-bg: rgba(245, 158, 11, 0.12);
+  --status-danger: #F87171;
+  --status-danger-bg: rgba(248, 113, 113, 0.12);
+  --status-neutral: #64748B;
+  --status-neutral-bg: rgba(100, 116, 139, 0.12);
 
-  --theme-user-badge-bg: #60a5fa;
+  --theme-sidebar-bg: #0D1526;
+  --theme-sidebar-text: #E8ECF3;
+  --theme-sidebar-muted: #8A94A8;
+  --theme-sidebar-border: #223049;
+  --theme-sidebar-hover: #182338;
+  --theme-sidebar-logo-bg: transparent;
+
+  --theme-accent: #4C82F7;
+  --theme-accent-hover: #3D6FE0;
+  --theme-accent-shadow: rgba(76, 130, 247, 0.25);
+
+  --theme-page-bg: #0B1220;
+  --theme-card-bg: #131C2E;
+  --theme-card-border: #223049;
+  --theme-header-bg: #131C2E;
+  --theme-header-border: #223049;
+
+  --theme-text-primary: #E8ECF3;
+  --theme-text-secondary: #8A94A8;
+  --theme-text-muted: #5B6478;
+
+  --theme-user-badge-bg: #4C82F7;
   --theme-user-badge-text: #ffffff;
 }
 
@@ -89,7 +110,7 @@
   --theme-sidebar-muted: #a7c4bc;
   --theme-sidebar-border: rgba(120, 170, 150, 0.35);
   --theme-sidebar-hover: rgba(120, 170, 150, 0.25);
-  --theme-sidebar-logo-bg: #ffffff;
+  --theme-sidebar-logo-bg: transparent;
 
   --theme-accent: #059669;
   --theme-accent-hover: #047857;
@@ -156,248 +177,228 @@ body {
 
 /* ═══════════════════════════════════════════════════════════
    KOYU MOD — GLOBAL OVERRIDE KATMANI
-   Bileşen dosyalarına dokunmadan bg-white, bg-slate-50,
-   border-slate-200, text-[#1E2534] gibi Tailwind sınıflarını
-   otomatik koyu moda dönüştürür.
+   Bileşen dosyalarında kullanılan sınıfları tutarlı Cool Navy
+   katmanlarına dönüştürür.
 
-   Elevation Katmanları:
-   ─ Base     #0f172a  (sayfa arka planı)
-   ─ Surface  #1e293b  (kartlar, sidebar)
-   ─ Raised   #283548  (inputlar, hover durumları)
-   ─ Overlay  #334155  (kenarlıklar, ayırıcılar)
+   Palet Mimarisi:
+   ─ Sayfa Arka Planı (--bg-base)     : #0B1220
+   ─ Sidebar (--bg-sidebar)           : #0D1526
+   ─ Kartlar & Tablo Header (--bg-card): #131C2E
+   ─ Hover / Input (--bg-card-hover)  : #182338
+   ─ İnce Kenarlıklar (--border-subtle): #223049
    ═══════════════════════════════════════════════════════════ */
 :root.theme-dark {
 
   /* ── BACKGROUND OVERRIDES ── */
 
-  /* bg-white → koyu surface */
+  /* bg-white → #131C2E (Cool Slate Navy) */
   .bg-white {
-    background-color: #1e293b !important;
+    background-color: #131C2E !important;
   }
-  /* bg-[#F5F4EF] (mevcut page bg) → dark base */
-  .bg-\[\#F5F4EF\] {
-    background-color: #0f172a !important;
+  /* bg-[#F5F4EF], bg-[#F7F9FC], bg-[#F0F4F8] (page bg variants) → #0B1220 */
+  .bg-\[\#F5F4EF\], .bg-\[\#F7F9FC\], .bg-\[\#F0F4F8\] {
+    background-color: #0B1220 !important;
   }
 
-  /* Slate / Gray background renklerini dönüştür */
+  /* Slate / Gray background renklerini dönüştür (sıcak griler kaldırıldı) */
   .bg-slate-50 {
-    background-color: #283548 !important;
+    background-color: #131C2E !important;
   }
   .bg-slate-100 {
-    background-color: #334155 !important;
+    background-color: #182338 !important;
   }
   .bg-slate-200 {
-    background-color: #3f4f63 !important;
+    background-color: #223049 !important;
   }
 
-  /* Notification popover header */
-  .bg-\[\#1E2534\] {
-    background-color: #0c1322 !important;
+  /* Opaklık değişkenli sınıflar için özel dönüşümler */
+  .bg-white\/80, .bg-white\/70, .bg-white\/90, .bg-white\/50, .bg-white\/60 {
+    background-color: #131C2E !important;
   }
-  .bg-\[\#F5F4EF\] {
-    background-color: #0f172a !important;
+  .bg-slate-50\/70, .bg-slate-50\/80, .bg-slate-50\/90, .bg-slate-50\/50, .bg-slate-50\/60 {
+    background-color: #182338 !important;
+  }
+  .bg-slate-100\/70, .bg-slate-100\/80, .bg-slate-100\/90, .bg-slate-100\/50 {
+    background-color: #182338 !important;
+  }
+  .bg-blue-50\/60, .bg-blue-50\/50, .bg-blue-50\/70, .bg-blue-50\/80 {
+    background-color: rgba(76, 130, 247, 0.12) !important;
+  }
+
+  /* Header & Popover backgrounds */
+  .bg-\[\#1E2534\] {
+    background-color: #0D1526 !important;
   }
 
   /* ── TEXT OVERRIDES ── */
 
-  /* Koyu metin → açık metin */
+  /* Koyu metin (#1E2534) → #E8ECF3 */
   .text-\[\#1E2534\] {
-    color: #e2e8f0 !important;
+    color: #E8ECF3 !important;
   }
 
-  /* Slate text renklerini açık tonlara dönüştür */
+  /* Slate text renklerini açık/soğuk tonlara dönüştür */
+  .text-slate-800, .text-slate-900 {
+    color: #E8ECF3 !important;
+  }
   .text-slate-700 {
-    color: #cbd5e1 !important;
+    color: #E8ECF3 !important;
   }
   .text-slate-600 {
-    color: #94a3b8 !important;
+    color: #8A94A8 !important;
   }
   .text-slate-500 {
-    color: #94a3b8 !important;
+    color: #8A94A8 !important;
   }
   .text-slate-400 {
-    color: #64748b !important;
+    color: #5B6478 !important;
   }
   .text-slate-300 {
-    color: #94a3b8 !important;
+    color: #8A94A8 !important;
   }
 
   /* ── BORDER OVERRIDES ── */
 
-  .border-slate-200 {
-    border-color: #334155 !important;
-  }
-  .border-slate-100 {
-    border-color: #283548 !important;
-  }
-  .border-slate-300 {
-    border-color: #475569 !important;
-  }
-  .border-\[\#E2E8F0\] {
-    border-color: #334155 !important;
+  .border-slate-200, .border-slate-100, .border-slate-300, .border-\[\#E2E8F0\] {
+    border-color: #223049 !important;
   }
 
   /* ── DIVIDE (tablo ayırıcılar) ── */
-  .divide-slate-100 > :not(:last-child) {
-    border-color: #283548 !important;
-  }
-  .divide-slate-200 > :not(:last-child) {
-    border-color: #334155 !important;
+  .divide-slate-100 > :not(:last-child), .divide-slate-200 > :not(:last-child) {
+    border-color: #223049 !important;
   }
 
   /* ── FORM / INPUT OVERRIDES ── */
 
   input, select, textarea {
-    background-color: #283548 !important;
-    border-color: #475569 !important;
-    color: #e2e8f0 !important;
+    background-color: #182338 !important;
+    border-color: #223049 !important;
+    color: #E8ECF3 !important;
   }
   input::placeholder, textarea::placeholder {
-    color: #64748b !important;
+    color: #5B6478 !important;
   }
   input:focus, select:focus, textarea:focus {
-    border-color: #60a5fa !important;
+    border-color: #4C82F7 !important;
   }
 
   /* ── SHADOW OVERRIDES ── */
   .shadow-xs, .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl {
-    --tw-shadow-color: rgba(0, 0, 0, 0.4) !important;
+    --tw-shadow-color: rgba(5, 10, 20, 0.5) !important;
   }
 
-  /* ── RENKLİ ARKA PLAN KARTLARI (stat kartları, bilgi kutuları) ── */
+  /* ── STATUS & BADGE OVERRIDES (%12 opaklık arkaplan + renkli border/yazı) ── */
 
-  /* Mavi tonları */
-  .bg-blue-50, .bg-\[\#EAF2FC\]\/50 {
-    background-color: rgba(96, 165, 250, 0.08) !important;
+  /* Success (Aktif / Hazır) → #34D399 */
+  .bg-emerald-50, .bg-emerald-100, .bg-emerald-50\/50, .bg-emerald-50\/80 {
+    background-color: rgba(52, 211, 153, 0.12) !important;
+  }
+  .border-emerald-200, .border-emerald-100, .border-emerald-300 {
+    border-color: rgba(52, 211, 153, 0.3) !important;
+  }
+  .text-\[\#16A34A\], .text-emerald-600, .text-emerald-700, .text-emerald-800, .text-emerald-950 {
+    color: #34D399 !important;
+  }
+
+  /* Warning (Süresi Yaklaşan / Serviste) → #F59E0B */
+  .bg-amber-50, .bg-amber-100, .bg-amber-50\/50, .bg-amber-50\/60, .bg-amber-50\/80 {
+    background-color: rgba(245, 158, 11, 0.12) !important;
+  }
+  .border-amber-200, .border-amber-100, .border-amber-300 {
+    border-color: rgba(245, 158, 11, 0.3) !important;
+  }
+  .text-\[\#F59E0B\], .text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900, .text-amber-950 {
+    color: #F59E0B !important;
+  }
+
+  /* Danger (Süresi Dolmuş / Arızalı) → #F87171 */
+  .bg-rose-50, .bg-rose-100, .bg-rose-50\/50, .bg-rose-50\/80, .bg-red-50, .bg-red-100 {
+    background-color: rgba(248, 113, 113, 0.12) !important;
+  }
+  .border-rose-200, .border-rose-100, .border-rose-300, .border-red-200 {
+    border-color: rgba(248, 113, 113, 0.3) !important;
+  }
+  .text-\[\#DC2626\], .text-rose-600, .text-rose-700, .text-rose-800, .text-rose-950, .text-red-600 {
+    color: #F87171 !important;
+  }
+
+  /* Neutral (İptal / Pasif / Kullanım Dışı) → #64748B */
+  .bg-slate-100\/80 {
+    background-color: rgba(100, 116, 139, 0.12) !important;
+  }
+  .text-\[\#6B7280\] {
+    color: #64748B !important;
+  }
+
+  /* Primary Blue / Accent → #4C82F7 */
+  .bg-blue-50, .bg-blue-100, .bg-blue-50\/50, .bg-blue-50\/80 {
+    background-color: rgba(76, 130, 247, 0.12) !important;
   }
   .border-blue-200, .border-blue-100 {
-    border-color: rgba(96, 165, 250, 0.2) !important;
+    border-color: rgba(76, 130, 247, 0.3) !important;
+  }
+  .text-\[\#2F6BFF\], .text-blue-600, .text-blue-700, .text-blue-950 {
+    color: #4C82F7 !important;
   }
 
-  /* Yeşil / Emerald tonları */
-  .bg-emerald-50 {
-    background-color: rgba(16, 185, 129, 0.08) !important;
-  }
-  .border-emerald-200 {
-    border-color: rgba(16, 185, 129, 0.2) !important;
-  }
+  /* ── PRIMARY BUTTON & ACCENT OVERRIDES ── */
 
-  /* Kırmızı / Rose tonları */
-  .bg-rose-50 {
-    background-color: rgba(244, 63, 94, 0.08) !important;
-  }
-  .border-rose-200 {
-    border-color: rgba(244, 63, 94, 0.2) !important;
-  }
-
-  /* Amber / Sarı tonları */
-  .bg-amber-50 {
-    background-color: rgba(245, 158, 11, 0.08) !important;
-  }
-  .bg-amber-100 {
-    background-color: rgba(245, 158, 11, 0.12) !important;
-  }
-  .border-amber-200 {
-    border-color: rgba(245, 158, 11, 0.2) !important;
-  }
-
-  /* Mor / Purple tonları */
-  .bg-purple-50, .bg-purple-50\/60 {
-    background-color: rgba(139, 92, 246, 0.08) !important;
-  }
-  .border-purple-200 {
-    border-color: rgba(139, 92, 246, 0.2) !important;
-  }
-
-  /* Indigo tonları */
-  .bg-indigo-50 {
-    background-color: rgba(99, 102, 241, 0.08) !important;
-  }
-  .border-indigo-200 {
-    border-color: rgba(99, 102, 241, 0.2) !important;
-  }
-
-  /* Sky / Teal tonları */
-  .bg-sky-50 {
-    background-color: rgba(14, 165, 233, 0.08) !important;
-  }
-  .border-sky-200 {
-    border-color: rgba(14, 165, 233, 0.2) !important;
-  }
-
-  /* ── BADGE / TAG renkleri → desaturated, koyu arkaplana uyumlu ── */
-
-  .bg-emerald-100 {
-    background-color: rgba(16, 185, 129, 0.12) !important;
-  }
-  .bg-rose-100 {
-    background-color: rgba(244, 63, 94, 0.12) !important;
-  }
-  .bg-amber-100 {
-    background-color: rgba(245, 158, 11, 0.12) !important;
-  }
-  .bg-blue-100 {
-    background-color: rgba(96, 165, 250, 0.12) !important;
-  }
-  .bg-purple-100 {
-    background-color: rgba(139, 92, 246, 0.12) !important;
-  }
-
-  /* ── ACCENT COLOR AYARLARI ── */
-
-  /* [#4F8FE0] referanslarını açık mavi'ye dönüştür */
   .bg-\[\#4F8FE0\] {
-    background-color: #60a5fa !important;
+    background-color: #4C82F7 !important;
+  }
+  .hover\:bg-\[\#3D75C4\]:hover {
+    background-color: #3D6FE0 !important;
   }
   .text-\[\#4F8FE0\] {
-    color: #60a5fa !important;
-  }
-  .bg-\[\#4F8FE0\]\/20 {
-    background-color: rgba(96, 165, 250, 0.2) !important;
-  }
-  .bg-\[\#4F8FE0\]\/10 {
-    background-color: rgba(96, 165, 250, 0.1) !important;
+    color: #4C82F7 !important;
   }
   .border-\[\#4F8FE0\] {
-    border-color: #60a5fa !important;
+    border-color: #4C82F7 !important;
   }
 
-  /* ── HOVER STATE OVERRIDES ── */
+  /* ── TABLE ROW HOVER STYLES — SOFT ELEGANT ANIMATION & GLOW ── */
 
-  .hover\:bg-slate-50:hover {
-    background-color: #283548 !important;
+  tbody tr {
+    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
-  .hover\:bg-slate-100:hover {
-    background-color: #334155 !important;
-  }
+
+  tbody tr:hover,
+  tr.hover\:bg-slate-50\/80:hover,
+  tr.hover\:bg-slate-50\/50:hover,
+  tr.hover\:bg-slate-50:hover,
+  tr.hover\:bg-slate-100:hover,
+  .hover\:bg-slate-50\/80:hover,
+  .hover\:bg-slate-50\/70:hover,
+  .hover\:bg-slate-50\/60:hover,
+  .hover\:bg-slate-50\/50:hover,
+  .hover\:bg-slate-50:hover,
+  .hover\:bg-slate-100:hover,
   .hover\:bg-slate-200:hover {
-    background-color: #3f4f63 !important;
+    background-color: #182338 !important;
+    box-shadow: inset 3px 0 0 #4C82F7, 0 4px 14px rgba(0, 0, 0, 0.35) !important;
   }
 
   /* ── MODAL OVERRIDES ── */
 
   .bg-slate-900\/50, .bg-slate-900\/60 {
-    background-color: rgba(2, 6, 23, 0.75) !important;
+    background-color: rgba(5, 10, 20, 0.8) !important;
   }
 
-  /* ── SCROLLBAR STİLİ (webkit) ── */
+  /* ── SCROLLBAR STİLİ ── */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: #1e293b;
+    background: #0B1220;
   }
   ::-webkit-scrollbar-thumb {
-    background: #475569;
+    background: #223049;
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+    background: #3B4B68;
   }
-
-  /* ── LOGIN SAYFASI (bu sayfanın kendi bg'si var) ── */
-  /* Login sayfası bg-gradient kullanıyorsa dokunma */
 }
 
 

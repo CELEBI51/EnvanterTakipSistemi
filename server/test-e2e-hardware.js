@@ -1,6 +1,6 @@
 import prisma from './src/config/db.js';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'http://localhost:4001/api';
 
 async function runE2ETests() {
   console.log('\n======================================================');
