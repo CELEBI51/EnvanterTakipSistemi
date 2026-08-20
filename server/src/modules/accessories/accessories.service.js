@@ -122,6 +122,7 @@ export const listAccessories = async ({ page = 1, category, q }) => {
       { brand: { contains: searchTerm, mode: 'insensitive' } },
       { supplier: { contains: searchTerm, mode: 'insensitive' } },
       { invoiceNo: { contains: searchTerm, mode: 'insensitive' } },
+      { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
     ];
   }
 
@@ -360,6 +361,7 @@ export const exportAccessories = async ({ category, q }, res) => {
       { brand: { contains: searchTerm, mode: 'insensitive' } },
       { supplier: { contains: searchTerm, mode: 'insensitive' } },
       { invoiceNo: { contains: searchTerm, mode: 'insensitive' } },
+      { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
     ];
   }
 
@@ -430,4 +432,3 @@ export const updateAccessory = async (id, data) => {
 
   return formatAccessory(updated);
 };
-

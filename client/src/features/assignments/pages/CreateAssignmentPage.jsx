@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   UserCheck,
@@ -19,6 +19,7 @@ import useAuthStore from '../../../store/authStore';
 import { API_BASE_URL } from '../../../config';
 import QuickAddEmployeeModal from '../components/QuickAddEmployeeModal';
 import FileUploadField from '../../../components/common/FileUploadField';
+import { getSearchVariants } from '../../../utils/search';
 
 export default function CreateAssignmentPage() {
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ export default function CreateAssignmentPage() {
   const [productSearch, setProductSearch] = useState('');
   const [productResults, setProductResults] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const productRequestId = useRef(0);
 
   // Quantity modal / selection state for non-hardware items
   const [selectedProductItem, setSelectedProductItem] = useState(null);
@@ -88,6 +90,7 @@ export default function CreateAssignmentPage() {
 
   // Search Products Effect
   useEffect(() => {
+    const requestId = ++productRequestId.current;
     if (!productSearch.trim()) {
       setProductResults([]);
       return;
@@ -101,24 +104,38 @@ export default function CreateAssignmentPage() {
         else if (activeTab === 'accessory') endpoint = `/accessories?q=${encodeURIComponent(productSearch.trim())}`;
         else if (activeTab === 'consumable') endpoint = `/consumables?q=${encodeURIComponent(productSearch.trim())}`;
 
-        const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok && data) {
-          let list = Array.isArray(data.data) ? data.data : (data.data?.items || data.items || []);
-          // Filter eligible items
-          if (activeTab === 'hardware') {
-            list = list.filter((h) => h.status === 'Hazır' || h.status === 'Hazir');
-          } else {
-            list = list.filter((i) => i.availableQuantity > 0);
-          }
+        const variants = getSearchVariants(productSearch);
+        const responses = await Promise.all(variants.map((variant) => fetch(
+          `${API_BASE_URL}${endpoint.replace(encodeURIComponent(productSearch.trim()), encodeURIComponent(variant))}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        )));
+        const resultMap = new Map();
+        for (const res of responses) {
+          const data = await res.json();
+          if (!res.ok || !data) continue;
+          const list = Array.isArray(data.data) ? data.data : (data.data?.items || data.items || []);
+          list.forEach((item) => resultMap.set(item.id, item));
+        }
+        let list = [...resultMap.values()];
+        // Filter eligible items
+        if (activeTab === 'hardware') {
+          list = list.filter((h) => h.status === 'Hazır' || h.status === 'Hazir');
+        } else {
+          list = list.filter((i) => i.availableQuantity > 0);
+        }
+        // The user may have typed another character while the requests were
+        // in flight. Never let an older (shorter) query overwrite the latest.
+        if (requestId === productRequestId.current) {
           setProductResults(list);
         }
       } catch (err) {
-        console.error('Ürün arama hatası:', err);
+        if (requestId === productRequestId.current) {
+          console.error('Ürün arama hatası:', err);
+        }
       } finally {
-        setLoadingProducts(false);
+        if (requestId === productRequestId.current) {
+          setLoadingProducts(false);
+        }
       }
     }, 300);
 
@@ -567,8 +584,8 @@ export default function CreateAssignmentPage() {
             onChange={(e) => setProductSearch(e.target.value)}
             placeholder={
               activeTab === 'hardware'
-                ? 'Demirbaş no, marka veya model ile Varlık ara...'
-                : `${activeTab === 'accessory' ? 'Aksesuar' : 'Sarf malzeme'} adı ile ara...`
+                ? 'Kategori, demirbaş no, marka veya model ile varlık ara...'
+                : `${activeTab === 'accessory' ? 'Kategori, aksesuar adı veya marka' : 'Kategori, sarf malzeme adı veya üretici'} ile ara...`
             }
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
           />

@@ -255,7 +255,17 @@ export const listReturns = async ({ assignmentId, employeeId, unitId, status, q,
                   { model: { contains: searchTerm, mode: 'insensitive' } },
                   { serialNo: { contains: searchTerm, mode: 'insensitive' } },
                   { demirbasNo: { contains: searchTerm, mode: 'insensitive' } },
+                  { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
                 ],
+              },
+            },
+          },
+        },
+        {
+          accessoryItems: {
+            some: {
+              accessory: {
+                category: { name: { contains: searchTerm, mode: 'insensitive' } },
               },
             },
           },
@@ -357,12 +367,10 @@ export const getReturnPdfFile = async (id) => {
     throw error;
   }
 
-  if (returnRecord.pdfPath && fs.existsSync(returnRecord.pdfPath)) {
-    return returnRecord.pdfPath;
-  }
-
-  const newPdfPath = await generateReturnPdf(id);
-  return newPdfPath;
+  // Return PDFs are generated from the current assignment/product relations.
+  // Do not serve the previously persisted file: product edits must be visible
+  // in the next download immediately.
+  return generateReturnPdf(id);
 };
 
 export const uploadSignedReturnForm = async (id, file, userId) => {
@@ -448,7 +456,17 @@ export const exportReturns = async ({ assignmentId, employeeId, unitId, q }, res
                   { model: { contains: searchTerm, mode: 'insensitive' } },
                   { serialNo: { contains: searchTerm, mode: 'insensitive' } },
                   { demirbasNo: { contains: searchTerm, mode: 'insensitive' } },
+                  { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
                 ],
+              },
+            },
+          },
+        },
+        {
+          accessoryItems: {
+            some: {
+              accessory: {
+                category: { name: { contains: searchTerm, mode: 'insensitive' } },
               },
             },
           },
@@ -570,5 +588,3 @@ export const exportReturns = async ({ assignmentId, employeeId, unitId, q }, res
   const todayStr = new Date().toISOString().split('T')[0];
   await createExcelStream('İadeler', columns, rows, res, `iade_${todayStr}.xlsx`);
 };
-
-

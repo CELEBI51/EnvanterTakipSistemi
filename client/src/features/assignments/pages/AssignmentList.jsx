@@ -239,7 +239,7 @@ export default function AssignmentList() {
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Personel adı, Sicil No, teslim eden veya varlık bilgisi ile canlı ara..."
+            placeholder="Personel, kategori, marka, model, sicil no veya varlık bilgisi ile canlı ara..."
 
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-[#1E2534] focus:border-[#4F8FE0] focus:bg-white transition"
           />

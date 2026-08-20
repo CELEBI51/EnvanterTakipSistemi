@@ -91,6 +91,7 @@ export const listConsumables = async ({ page = 1, pageSize = 10, categoryId, q }
       { manufacturer: { contains: searchTerm, mode: 'insensitive' } },
       { supplier: { contains: searchTerm, mode: 'insensitive' } },
       { location: { contains: searchTerm, mode: 'insensitive' } },
+      { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
     ];
   }
 
@@ -351,6 +352,7 @@ export const exportConsumables = async ({ categoryId, q }, res) => {
       { manufacturer: { contains: searchTerm, mode: 'insensitive' } },
       { supplier: { contains: searchTerm, mode: 'insensitive' } },
       { location: { contains: searchTerm, mode: 'insensitive' } },
+      { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
     ];
   }
 
@@ -382,4 +384,3 @@ export const exportConsumables = async ({ categoryId, q }, res) => {
   const todayStr = new Date().toISOString().split('T')[0];
   await createExcelStream('Sarf Malzemeler', columns, rows, res, `sarf_malzeme_${todayStr}.xlsx`);
 };
-

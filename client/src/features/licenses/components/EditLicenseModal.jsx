@@ -243,7 +243,7 @@ export default function EditLicenseModal({ isOpen, onClose, license, onSuccess }
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Fatura Tutarı (₺)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Fatura Tutarı ($)</label>
               <input
                 type="number"
                 step="0.01"

@@ -118,6 +118,52 @@ export const getEmployeeById = async (id) => {
           status: true,
           teslimEden: true,
           pdfUrl: true,
+          items: {
+            select: {
+              id: true,
+              returned: true,
+              returnDate: true,
+              hardware: {
+                select: {
+                  id: true,
+                  brand: true,
+                  model: true,
+                  serialNo: true,
+                  demirbasNo: true,
+                  category: { select: { name: true } },
+                },
+              },
+            },
+          },
+          accessoryItems: {
+            select: {
+              id: true,
+              quantityGiven: true,
+              quantityReturned: true,
+              accessory: {
+                select: {
+                  id: true,
+                  name: true,
+                  brand: true,
+                  category: { select: { name: true } },
+                },
+              },
+            },
+          },
+          consumableItems: {
+            select: {
+              id: true,
+              quantityGiven: true,
+              consumable: {
+                select: {
+                  id: true,
+                  name: true,
+                  manufacturer: true,
+                  category: { select: { name: true } },
+                },
+              },
+            },
+          },
           _count: {
             select: {
               items: true,
@@ -339,4 +385,3 @@ export const updateEmployee = async (id, data) => {
 
   return updated;
 };
-

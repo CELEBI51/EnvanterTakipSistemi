@@ -1,5 +1,37 @@
 import prisma from '../../config/db.js';
 
+async function resolveCategoryId(categoryId, categoryName, parentType = 'BILESEN') {
+  if (categoryId) {
+    const category = await prisma.category.findFirst({
+      where: { id: categoryId, parentType },
+      select: { id: true },
+    });
+
+    if (!category) {
+      const error = new Error('Geçerli bir bileşen kategorisi seçiniz.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return category.id;
+  }
+
+  const name = (categoryName || 'Diğer').trim();
+  let category = await prisma.category.findUnique({
+    where: {
+      parentType_name: { parentType, name },
+    },
+  });
+
+  if (!category) {
+    category = await prisma.category.create({
+      data: { parentType, name },
+    });
+  }
+
+  return category.id;
+}
+
 function formatComponent(item) {
   if (!item) return null;
   const { category, ...rest } = item;
@@ -94,6 +126,7 @@ export const listComponents = async ({ page = 1, pageSize = 10, categoryId, q })
       { model: { contains: searchTerm, mode: 'insensitive' } },
       { supplier: { contains: searchTerm, mode: 'insensitive' } },
       { location: { contains: searchTerm, mode: 'insensitive' } },
+      { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
     ];
   }
 
@@ -251,10 +284,7 @@ export const updateComponent = async (id, data) => {
   if (data.name !== undefined) updateData.name = data.name.trim();
   if (data.brand !== undefined) updateData.brand = data.brand ? data.brand.trim() : null;
   if (data.model !== undefined) updateData.model = data.model ? data.model.trim() : null;
-  if (data.serialNo !== undefined) updateData.serialNo = data.serialNo ? data.serialNo.trim() : null;
   if (data.supplier !== undefined) updateData.supplier = data.supplier ? data.supplier.trim() : null;
-  if (data.minThreshold !== undefined) updateData.minThreshold = parseInt(data.minThreshold, 10) || 0;
-  if (data.specs !== undefined) updateData.specs = data.specs ? data.specs : null;
   if (data.notes !== undefined) updateData.notes = data.notes ? data.notes.trim() : null;
 
   if (data.totalQuantity !== undefined) {
@@ -288,6 +318,7 @@ export const exportComponents = async ({ categoryId, q }, res) => {
       { model: { contains: searchTerm, mode: 'insensitive' } },
       { location: { contains: searchTerm, mode: 'insensitive' } },
       { supplier: { contains: searchTerm, mode: 'insensitive' } },
+      { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
     ];
   }
 

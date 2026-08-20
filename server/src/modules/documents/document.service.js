@@ -58,12 +58,11 @@ function renderEk10Pdf(doc, data) {
   doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#000000');
   doc.text(toAsciiTurkish(data.ek_no || 'EK10'), leftMargin, 20, { width: pageWidth, align: 'right' });
 
-  // --- Header Box (3 columns) ---
+  // --- Header Box (logo + title) ---
   const headerY = 30;
   const headerH = 40;
   doc.rect(leftMargin, headerY, pageWidth, headerH).strokeColor('#000000').lineWidth(0.8).stroke();
   doc.moveTo(leftMargin + 145, headerY).lineTo(leftMargin + 145, headerY + headerH).stroke();
-  doc.moveTo(leftMargin + 210, headerY).lineTo(leftMargin + 210, headerY + headerH).stroke();
 
   // Logo / Company Name in Col 1
   if (data.logoPath && fs.existsSync(data.logoPath)) {
@@ -76,17 +75,9 @@ function renderEk10Pdf(doc, data) {
     doc.font('Helvetica-Bold').fontSize(14).fillColor('#1c3f94').text(toAsciiTurkish(data.sirket_adi || 'DITAS'), leftMargin + 10, headerY + 12);
   }
 
-  // Hatching / Diagonal lines in Col 2 (Middle)
-  doc.save();
-  doc.lineWidth(0.5).strokeColor('#888888');
-  for (let i = 0; i < 45; i += 5) {
-    doc.moveTo(leftMargin + 145 + i, headerY).lineTo(leftMargin + 145 + i + 20, headerY + headerH).stroke();
-  }
-  doc.restore();
-
-  // Header Title in Col 3
+  // Header Title in the area beside the logo
   doc.font('Helvetica-Bold').fontSize(13).fillColor('#000000');
-  doc.text(toAsciiTurkish(data.baslik || 'ZIMMETLEME FORMU'), leftMargin + 210, headerY + 13, { width: pageWidth - 210, align: 'center' });
+  doc.text(toAsciiTurkish(data.baslik || 'ZIMMETLEME FORMU'), leftMargin + 145, headerY + 13, { width: pageWidth - 145, align: 'center' });
 
   // --- Demirbas No Row ---
   const demirbasY = 76;
@@ -204,29 +195,21 @@ function renderEk10Pdf(doc, data) {
     doc.text('TESLIM ALAN', leftMargin + halfWidth, nextY + 3, { width: halfWidth, align: 'center' });
     nextY += 14;
 
-    // Body (Lokasyon / Isim / Imza)
+    // Body (Isim Soyisim / Imza)
     const bodyH = 50;
     doc.rect(leftMargin, nextY, blockWidth, bodyH).strokeColor('#000000').stroke();
     doc.moveTo(leftMargin + halfWidth, nextY).lineTo(leftMargin + halfWidth, nextY + bodyH).stroke();
 
     // Left Col
     doc.font('Helvetica-Bold').fontSize(8).fillColor('#000000');
-    doc.text('LOKASYON/MASRAF MRK.:', leftMargin + 6, nextY + 5);
-    doc.font('Helvetica').fontSize(8).text(toAsciiTurkish(edenLok), leftMargin + 125, nextY + 5);
-
-    doc.font('Helvetica-Bold').text('ISIM :', leftMargin + 6, nextY + 20);
-    doc.font('Helvetica').text(toAsciiTurkish(edenIsim), leftMargin + 40, nextY + 20);
-
-    doc.font('Helvetica-Bold').text('IMZA :', leftMargin + 6, nextY + 35);
+    doc.text('ISIM SOYISIM :', leftMargin + 6, nextY + 10);
+    doc.font('Helvetica').text(toAsciiTurkish(edenIsim), leftMargin + 75, nextY + 10);
+    doc.font('Helvetica-Bold').text('IMZA :', leftMargin + 6, nextY + 32);
 
     // Right Col
-    doc.font('Helvetica-Bold').text('LOKASYON/MASRAF MRK.:', leftMargin + halfWidth + 6, nextY + 5);
-    doc.font('Helvetica').text(toAsciiTurkish(alanLok), leftMargin + halfWidth + 125, nextY + 5);
-
-    doc.font('Helvetica-Bold').text('ISIM :', leftMargin + halfWidth + 6, nextY + 20);
-    doc.font('Helvetica').text(toAsciiTurkish(alanIsim), leftMargin + halfWidth + 40, nextY + 20);
-
-    doc.font('Helvetica-Bold').text('IMZA :', leftMargin + halfWidth + 6, nextY + 35);
+    doc.font('Helvetica-Bold').text('ISIM SOYISIM :', leftMargin + halfWidth + 6, nextY + 10);
+    doc.font('Helvetica').text(toAsciiTurkish(alanIsim), leftMargin + halfWidth + 75, nextY + 10);
+    doc.font('Helvetica-Bold').text('IMZA :', leftMargin + halfWidth + 6, nextY + 32);
 
     nextY += bodyH + 5;
   };

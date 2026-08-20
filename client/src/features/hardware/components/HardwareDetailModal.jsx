@@ -9,6 +9,7 @@ import BarcodePrintModal from '../../../components/common/BarcodePrintModal';
 import AttachmentList from '../../../components/common/AttachmentList';
 import AddMaintenanceModal from './AddMaintenanceModal';
 import MaintenanceDetailModal from './MaintenanceDetailModal';
+import { formatCurrency } from '../../../utils/currency';
 
 const STATUS_OPTIONS = [
   { label: 'Hazır (Boşta)', value: 'Hazir' },
@@ -259,7 +260,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                           <span className="text-slate-500">Satın Alma Tutarı:</span>
                           <span className="font-semibold text-slate-700">
                             {hardware.purchaseAmount !== null && hardware.purchaseAmount !== undefined
-                              ? `${Number(hardware.purchaseAmount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺`
+                              ? formatCurrency(hardware.purchaseAmount)
                               : '-'}
                           </span>
                         </div>
@@ -400,7 +401,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                                   <>
                                     <span>•</span>
                                     <span className="font-mono font-semibold text-[#1E2534]">
-                                      {Number(m.cost).toLocaleString('tr-TR')} ₺
+                                      {formatCurrency(m.cost)}
                                     </span>
                                   </>
                                 )}

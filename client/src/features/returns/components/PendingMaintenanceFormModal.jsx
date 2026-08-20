@@ -200,7 +200,7 @@ export default function PendingMaintenanceFormModal({
           {/* Maliyet */}
           <div>
             <label className="block text-xs font-bold text-[#1E2534] mb-1">
-              Bakım Maliyeti (₺)
+              Bakım Maliyeti ($)
             </label>
             <input
               type="number"

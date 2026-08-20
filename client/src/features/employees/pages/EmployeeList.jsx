@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   ExternalLink,
   Calendar,
+  ChevronDown,
   Phone,
   Mail,
   Building2,
@@ -75,6 +76,7 @@ export default function EmployeeList() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const [employeeDetail, setEmployeeDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [expandedAssignmentId, setExpandedAssignmentId] = useState(null);
 
   const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
   const [statusBlockedWarning, setStatusBlockedWarning] = useState(null);
@@ -237,6 +239,7 @@ export default function EmployeeList() {
 
   const openEmployeeDetail = async (id) => {
     setSelectedEmployeeId(id);
+    setExpandedAssignmentId(null);
     setDetailLoading(true);
     setStatusBlockedWarning(null);
 
@@ -847,19 +850,22 @@ export default function EmployeeList() {
                     ) : (
                       <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                         {employeeDetail.assignmentHistory.map((asm) => (
-                          <div
-                            key={asm.id}
-                            className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between"
-                          >
-                            <div className="space-y-0.5">
-                              <div className="font-semibold text-slate-800">
-                                {formatDate(asm.teslimTarihi)} — Teslim Eden: {asm.teslimEden}
+                          <div key={asm.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedAssignmentId((current) => (current === asm.id ? null : asm.id))}
+                              className="w-full p-3 text-left flex items-center justify-between gap-3 hover:bg-slate-50 transition cursor-pointer"
+                              aria-expanded={expandedAssignmentId === asm.id}
+                            >
+                              <div className="space-y-0.5 min-w-0">
+                                <div className="font-semibold text-slate-800 truncate">
+                                  {formatDate(asm.teslimTarihi)} — Teslim Eden: {asm.teslimEden}
+                                </div>
+                                <div className="text-[11px] text-slate-500">
+                                  {((asm._count?.items || 0) + (asm._count?.accessoryItems || 0) + (asm._count?.consumableItems || 0))} ürün · {asm._count?.items || 0} Varlık, {asm._count?.accessoryItems || 0} Aksesuar, {asm._count?.consumableItems || 0} Sarf
+                                </div>
                               </div>
-                              <div className="text-[11px] text-slate-500">
-                                İçerik: {asm._count?.items || 0} Donanım, {asm._count?.accessoryItems || 0} Aksesuar, {asm._count?.consumableItems || 0} Sarf
-                              </div>
-                            </div>
-                            <div>
+                              <div className="flex items-center gap-2 shrink-0">
                               {asm.status === 'Aktif' && (
                                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
                                   Aktif Zimmet
@@ -875,7 +881,43 @@ export default function EmployeeList() {
                                   İade Edildi
                                 </span>
                               )}
+                                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedAssignmentId === asm.id ? 'rotate-180' : ''}`} />
+                              </div>
+                            </button>
+                            {expandedAssignmentId === asm.id && (
+                            <div className="px-3 pb-3 pt-2 border-t border-slate-100 bg-slate-50/60 space-y-2">
+                              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Zimmet Ürün Detayları</div>
+                              {asm.items?.map((item) => (
+                                <div key={item.id} className="p-2.5 bg-white rounded-lg border border-slate-200 text-[11px]">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-semibold text-slate-800">{[item.hardware?.brand, item.hardware?.model].filter(Boolean).join(' ') || 'Varlık'}</span>
+                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${item.returned ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-700'}`}>{item.returned ? 'İade edildi' : 'Üzerinde'}</span>
+                                  </div>
+                                  <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-slate-500">
+                                    <span>Kategori: {item.hardware?.category?.name || '-'}</span>
+                                    <span>Demirbaş: {item.hardware?.demirbasNo || '-'}</span>
+                                    <span>Seri No: {item.hardware?.serialNo || '-'}</span>
+                                    {item.returnDate && <span>İade: {formatDate(item.returnDate)}</span>}
+                                  </div>
+                                </div>
+                              ))}
+                              {asm.accessoryItems?.map((item) => (
+                                <div key={item.id} className="p-2.5 bg-white rounded-lg border border-slate-200 text-[11px]">
+                                  <div className="flex items-center justify-between gap-2"><span className="font-semibold text-slate-800">{item.accessory?.name || '-'}</span><div className="flex items-center gap-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${item.quantityReturned >= item.quantityGiven ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-700'}`}>{item.quantityReturned >= item.quantityGiven ? 'İade edildi' : 'Üzerinde'}</span><span className="text-slate-500">İade: {Math.min(item.quantityReturned, item.quantityGiven)}/{item.quantityGiven} adet</span></div></div>
+                                  <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-slate-500"><span>Kategori: {item.accessory?.category?.name || '-'}</span><span>Marka: {item.accessory?.brand || '-'}</span></div>
+                                </div>
+                              ))}
+                              {asm.consumableItems?.map((item) => (
+                                <div key={item.id} className="p-2.5 bg-white rounded-lg border border-slate-200 text-[11px]">
+                                  <div className="flex items-center justify-between gap-2"><span className="font-semibold text-slate-800">{item.consumable?.name || '-'}</span><span className="text-slate-500">{item.quantityGiven} adet</span></div>
+                                  <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-slate-500"><span>Kategori: {item.consumable?.category?.name || '-'}</span><span>Üretici: {item.consumable?.manufacturer || '-'}</span></div>
+                                </div>
+                              ))}
+                              {(!asm.items?.length && !asm.accessoryItems?.length && !asm.consumableItems?.length) && (
+                                <div className="text-[11px] text-slate-400">Ürün detayı bulunamadı.</div>
+                              )}
                             </div>
+                            )}
                           </div>
                         ))}
                       </div>

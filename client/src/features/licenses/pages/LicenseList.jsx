@@ -26,6 +26,7 @@ import LicenseDetailModal from '../components/LicenseDetailModal';
 import { API_BASE_URL } from '../../../config';
 import ExcelImportModal from '../../../components/common/ExcelImportModal';
 import ExcelExportButton from '../../../components/common/ExcelExportButton';
+import { formatCurrency } from '../../../utils/currency';
 
 import { getLicenseStatusLabel } from '../../../constants/licenseStatusLabels';
 
@@ -192,7 +193,7 @@ export default function LicenseList() {
       i.paymentType === 'KREDI_KARTI' ? 'Kredi Kartı' : i.paymentType === 'NAKIT' ? 'Nakit' : 'Vadeli',
       getStatusLabel(i.status),
       i.invoiceNumber || '',
-      i.invoiceAmount ? `${i.invoiceAmount} TL` : '',
+      i.invoiceAmount ? formatCurrency(i.invoiceAmount) : '',
     ]);
     const csvContent =
       'data:text/csv;charset=utf-8,\uFEFF' +

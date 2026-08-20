@@ -6,6 +6,7 @@ import { hasPermission } from '../../../utils/permissions';
 import AttachmentList from '../../../components/common/AttachmentList';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import { getLicenseStatusLabel } from '../../../constants/licenseStatusLabels';
+import { formatCurrency } from '../../../utils/currency';
 
 export default function LicenseDetailModal({ isOpen, onClose, licenseId, onSuccess }) {
   const token = useAuthStore((state) => state.accessToken);
@@ -277,7 +278,7 @@ export default function LicenseDetailModal({ isOpen, onClose, licenseId, onSucce
                   <div className="p-3.5 bg-slate-50/50 rounded-xl border border-slate-100">
                     <div className="text-slate-400 font-semibold mb-1">Fatura Tutarı</div>
                     <div className="font-bold text-[#1E2534]">
-                      {item.invoiceAmount ? `${item.invoiceAmount} TL` : '-'}
+                      {formatCurrency(item.invoiceAmount)}
                     </div>
                   </div>
                 </div>

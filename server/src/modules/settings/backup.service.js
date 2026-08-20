@@ -51,6 +51,96 @@ const safeInt = (val, fallback = 0) => {
   return isNaN(num) ? fallback : num;
 };
 
+const RESTORABLE_MODULES = new Set([
+  'hardware',
+  'accessories',
+  'consumables',
+  'components',
+  'employees',
+  'categories',
+  'units',
+]);
+
+const CATEGORY_PARENT_TYPES = new Set([
+  'AKSESUAR',
+  'VARLIK',
+  'SARF_MALZEME',
+  'BILESEN',
+  'LISANS',
+]);
+
+const restoreValidationError = (message) => {
+  const error = new Error(message);
+  error.statusCode = 400;
+  return error;
+};
+
+/**
+ * Veritabanına dokunmadan önce geri yükleme dosyasının uygulanabilirliğini doğrular.
+ */
+const validateRestoreWorkbook = (workbook, strategies) => {
+  const modules = workbook.SheetNames
+    .map((sheetName) => SHEET_MODULE_MAP[sheetName])
+    .filter(Boolean);
+
+  if (modules.length === 0) {
+    throw restoreValidationError('Yedek dosyasında desteklenen bir çalışma sayfası bulunamadı.');
+  }
+
+  const unsupportedModules = [...new Set(modules.filter((module) => !RESTORABLE_MODULES.has(module)))];
+  const unsupportedOverwriteModules = unsupportedModules.filter((module) => strategies?.[module] === 'overwrite');
+  if (unsupportedOverwriteModules.length > 0) {
+    const names = unsupportedOverwriteModules.map((module) => MODULE_SHEET_MAP[module]).join(', ');
+    throw restoreValidationError(`Şu modüller için "Tümünü Sil ve Yükle" henüz desteklenmiyor: ${names}. Veri kaybını önlemek için işlem yapılmadı; bu modülleri "Üstüne Yaz / Güncelle" olarak seçin.`);
+  }
+
+  for (const sheetName of workbook.SheetNames) {
+    const module = SHEET_MODULE_MAP[sheetName];
+    if (!module) continue;
+
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+    rows.forEach((row, index) => {
+      const rowNumber = index + 2;
+      const value = (column) => String(row[column] ?? '').trim();
+      let valid = true;
+
+      switch (module) {
+        case 'units':
+          valid = Boolean(value('Birim Adı'));
+          break;
+        case 'categories': {
+          const parentType = value('Ana Tür').toUpperCase();
+          valid = Boolean(value('Kategori Adı')) && CATEGORY_PARENT_TYPES.has(parentType);
+          break;
+        }
+        case 'hardware':
+          valid = Boolean(value('Demirbaş No') && value('Marka'));
+          break;
+        case 'accessories':
+        case 'consumables':
+          valid = Boolean(value('Ürün Adı'));
+          break;
+        case 'components':
+          valid = Boolean(value('Bileşen Adı') || value('Ürün Adı'));
+          break;
+        case 'employees':
+          valid = Boolean(value('T.C. Kimlik / Sicil No') && value('Ad Soyad'));
+          break;
+      }
+
+      if (!valid) {
+        throw restoreValidationError(`'${sheetName}' sayfasının ${rowNumber}. satırında zorunlu alanlar eksik veya geçersiz.`);
+      }
+    });
+  }
+
+  if (Object.values(strategies || {}).some((strategy) => !['merge', 'upsert', 'overwrite'].includes(strategy))) {
+    throw restoreValidationError('Geçersiz geri yükleme stratejisi gönderildi.');
+  }
+
+  return unsupportedModules;
+};
+
 /**
  * Tüm modüller için veritabanı kayıt sayılarını döner
  */
@@ -436,18 +526,19 @@ export const generateBackupWorkbook = async (selectedModules = []) => {
 /**
  * Excel Dosyasını Yükler ve Veritabanına Aktarır (Restore)
  */
-export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
-  const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+const restoreBackupInTransaction = async (db, workbook, strategies = {}, skippedModules = []) => {
   const sheetNames = workbook.SheetNames;
 
   const results = {
     success: true,
     imported: {},
-    errors: [],
+    errors: skippedModules.map((module) =>
+      `'${MODULE_SHEET_MAP[module]}' modülü bu sürümde geri yüklenmedi; mevcut veriler korunmuştur.`
+    ),
   };
 
   // 1. Admin Kullanıcı ID'sini Bul (Zorunlu ilişkiler için)
-  const adminUser = await prisma.user.findFirst({ where: { role: 'admin' } });
+  const adminUser = await db.user.findFirst({ where: { role: 'admin' } });
   if (!adminUser) {
     throw new Error('Sistemde varsayılan Admin kullanıcısı bulunamadı.');
   }
@@ -466,49 +557,45 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
     const orderedToOverwrite = OVERWRITE_DELETE_ORDER.filter((modKey) => overwriteModules.includes(modKey));
 
     for (const modKey of orderedToOverwrite) {
-      try {
-        switch (modKey) {
+      switch (modKey) {
           case 'returns':
-            await prisma.returnItem.deleteMany({});
-            await prisma.returnAccessoryItem.deleteMany({});
-            await prisma.return.deleteMany({});
+            await db.returnItem.deleteMany({});
+            await db.returnAccessoryItem.deleteMany({});
+            await db.return.deleteMany({});
             break;
           case 'assignments':
-            await prisma.assignmentItem.deleteMany({});
-            await prisma.assignmentAccessoryItem.deleteMany({});
-            await prisma.assignmentConsumableItem.deleteMany({});
-            await prisma.assignment.deleteMany({});
+            await db.assignmentItem.deleteMany({});
+            await db.assignmentAccessoryItem.deleteMany({});
+            await db.assignmentConsumableItem.deleteMany({});
+            await db.assignment.deleteMany({});
             break;
           case 'employees':
-            await prisma.employee.deleteMany({});
+            await db.employee.deleteMany({});
             break;
           case 'accessories':
-            await prisma.accessory.deleteMany({});
+            await db.accessory.deleteMany({});
             break;
           case 'consumables':
-            await prisma.consumable.deleteMany({});
+            await db.consumable.deleteMany({});
             break;
           case 'components':
-            await prisma.component.deleteMany({});
+            await db.component.deleteMany({});
             break;
           case 'licenses':
-            await prisma.license.deleteMany({});
+            await db.license.deleteMany({});
             break;
           case 'hardware':
-            await prisma.hardware.deleteMany({});
+            await db.hardware.deleteMany({});
             break;
           case 'users':
-            await prisma.user.deleteMany({ where: { role: { not: 'admin' } } });
+            await db.user.deleteMany({ where: { role: { not: 'admin' } } });
             break;
           case 'categories':
-            await prisma.category.deleteMany({});
+            await db.category.deleteMany({});
             break;
           case 'units':
-            await prisma.unit.deleteMany({});
+            await db.unit.deleteMany({});
             break;
-        }
-      } catch (err) {
-        results.errors.push(`'${MODULE_SHEET_MAP[modKey]}' tablosu silinirken hata: ${err.message}`);
       }
     }
   }
@@ -516,19 +603,18 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
   // 3. Sheet verilerini sırayla içeri aktar
   for (const sheetName of sheetNames) {
     const modKey = SHEET_MODULE_MAP[sheetName];
-    if (!modKey) continue;
+    if (!modKey || skippedModules.includes(modKey)) continue;
 
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet);
     let count = 0;
 
     for (const row of rows) {
-      try {
-        switch (modKey) {
+      switch (modKey) {
           case 'units': {
             const name = String(row['Birim Adı'] || '').trim();
             if (name) {
-              await prisma.unit.upsert({
+              await db.unit.upsert({
                 where: { name },
                 update: {
                   address: row['Adres'] ? String(row['Adres']).trim() : null,
@@ -555,7 +641,7 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
             const name = String(row['Kategori Adı'] || '').trim();
             const parentType = String(row['Ana Tür'] || 'VARLIK').trim().toUpperCase();
             if (name && parentType) {
-              await prisma.category.upsert({
+              await db.category.upsert({
                 where: {
                   parentType_name: { parentType, name },
                 },
@@ -575,19 +661,19 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
             if (demirbasNo && brand) {
               let category = null;
               if (categoryName) {
-                category = await prisma.category.findFirst({ where: { name: categoryName, parentType: 'VARLIK' } });
+                category = await db.category.findFirst({ where: { name: categoryName, parentType: 'VARLIK' } });
               }
               if (!category) {
-                category = await prisma.category.findFirst({ where: { parentType: 'VARLIK' } });
+                category = await db.category.findFirst({ where: { parentType: 'VARLIK' } });
               }
               if (!category) {
-                category = await prisma.category.create({ data: { parentType: 'VARLIK', name: categoryName || 'Genel Varlık' } });
+                category = await db.category.create({ data: { parentType: 'VARLIK', name: categoryName || 'Genel Varlık' } });
               }
 
               const purchaseAmount = safeFloat(row['Satın Alma Tutarı'] || row['Fiyat']);
               const serialNo = row['Seri No'] && String(row['Seri No']).trim() !== '' ? String(row['Seri No']).trim() : demirbasNo;
 
-              await prisma.hardware.upsert({
+              await db.hardware.upsert({
                 where: { demirbasNo },
                 update: {
                   brand,
@@ -626,22 +712,22 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
             if (name) {
               let category = null;
               if (categoryName) {
-                category = await prisma.category.findFirst({ where: { name: categoryName, parentType: 'AKSESUAR' } });
+                category = await db.category.findFirst({ where: { name: categoryName, parentType: 'AKSESUAR' } });
               }
               if (!category) {
-                category = await prisma.category.findFirst({ where: { parentType: 'AKSESUAR' } });
+                category = await db.category.findFirst({ where: { parentType: 'AKSESUAR' } });
               }
               if (!category) {
-                category = await prisma.category.create({ data: { parentType: 'AKSESUAR', name: categoryName || 'Genel Aksesuar' } });
+                category = await db.category.create({ data: { parentType: 'AKSESUAR', name: categoryName || 'Genel Aksesuar' } });
               }
 
               const totalQuantity = safeInt(row['Toplam Stok'], 0);
               const availableQuantity = safeInt(row['Kullanılabilir Stok'], totalQuantity);
               const purchaseAmount = safeFloat(row['Satın Alma Tutarı'] || row['Birim Fiyat']);
 
-              const existing = await prisma.accessory.findFirst({ where: { name } });
+              const existing = await db.accessory.findFirst({ where: { name } });
               if (existing) {
-                await prisma.accessory.update({
+                await db.accessory.update({
                   where: { id: existing.id },
                   data: {
                     totalQuantity,
@@ -653,7 +739,7 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
                   },
                 });
               } else {
-                await prisma.accessory.create({
+                await db.accessory.create({
                   data: {
                     name,
                     totalQuantity,
@@ -679,22 +765,22 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
             if (name) {
               let category = null;
               if (categoryName) {
-                category = await prisma.category.findFirst({ where: { name: categoryName, parentType: 'SARF_MALZEME' } });
+                category = await db.category.findFirst({ where: { name: categoryName, parentType: 'SARF_MALZEME' } });
               }
               if (!category) {
-                category = await prisma.category.findFirst({ where: { parentType: 'SARF_MALZEME' } });
+                category = await db.category.findFirst({ where: { parentType: 'SARF_MALZEME' } });
               }
               if (!category) {
-                category = await prisma.category.create({ data: { parentType: 'SARF_MALZEME', name: categoryName || 'Genel Sarf' } });
+                category = await db.category.create({ data: { parentType: 'SARF_MALZEME', name: categoryName || 'Genel Sarf' } });
               }
 
               const totalQuantity = safeInt(row['Toplam Stok'], 0);
               const availableQuantity = safeInt(row['Kullanılabilir Stok'], totalQuantity);
               const purchaseAmount = safeFloat(row['Satın Alma Tutarı'] || row['Birim Fiyat']);
 
-              const existing = await prisma.consumable.findFirst({ where: { name } });
+              const existing = await db.consumable.findFirst({ where: { name } });
               if (existing) {
-                await prisma.consumable.update({
+                await db.consumable.update({
                   where: { id: existing.id },
                   data: {
                     totalQuantity,
@@ -706,7 +792,7 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
                   },
                 });
               } else {
-                await prisma.consumable.create({
+                await db.consumable.create({
                   data: {
                     name,
                     totalQuantity,
@@ -732,22 +818,22 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
             if (name) {
               let category = null;
               if (categoryName) {
-                category = await prisma.category.findFirst({ where: { name: categoryName, parentType: 'BILESEN' } });
+                category = await db.category.findFirst({ where: { name: categoryName, parentType: 'BILESEN' } });
               }
               if (!category) {
-                category = await prisma.category.findFirst({ where: { parentType: 'BILESEN' } });
+                category = await db.category.findFirst({ where: { parentType: 'BILESEN' } });
               }
               if (!category) {
-                category = await prisma.category.create({ data: { parentType: 'BILESEN', name: categoryName || 'Genel Bileşen' } });
+                category = await db.category.create({ data: { parentType: 'BILESEN', name: categoryName || 'Genel Bileşen' } });
               }
 
               const totalQuantity = safeInt(row['Toplam Stok'], 0);
               const availableQuantity = safeInt(row['Kullanılabilir Stok'], totalQuantity);
               const purchaseAmount = safeFloat(row['Satın Alma Tutarı'] || row['Birim Fiyat']);
 
-              const existing = await prisma.component.findFirst({ where: { name } });
+              const existing = await db.component.findFirst({ where: { name } });
               if (existing) {
-                await prisma.component.update({
+                await db.component.update({
                   where: { id: existing.id },
                   data: {
                     totalQuantity,
@@ -759,7 +845,7 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
                   },
                 });
               } else {
-                await prisma.component.create({
+                await db.component.create({
                   data: {
                     name,
                     totalQuantity,
@@ -784,16 +870,16 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
             if (fullName) {
               let unitId = null;
               if (row['Birim']) {
-                const u = await prisma.unit.findUnique({ where: { name: String(row['Birim']).trim() } });
+                const u = await db.unit.findUnique({ where: { name: String(row['Birim']).trim() } });
                 if (u) unitId = u.id;
               }
               if (!unitId) {
-                const defaultUnit = await prisma.unit.findFirst();
+                const defaultUnit = await db.unit.findFirst();
                 if (defaultUnit) unitId = defaultUnit.id;
               }
 
               if (tcNo && unitId) {
-                await prisma.employee.upsert({
+                await db.employee.upsert({
                   where: { tcNo },
                   update: {
                     fullName,
@@ -816,9 +902,6 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
             }
             break;
           }
-        }
-      } catch (rowErr) {
-        results.errors.push(`[${sheetName}] Satır aktarılırken hata: ${rowErr.message}`);
       }
     }
 
@@ -826,4 +909,28 @@ export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
   }
 
   return results;
+};
+
+/**
+ * Excel yedeğini atomik olarak geri yükler. Doğrulama veya aktarma sırasında
+ * hata oluşursa transaction geri alınır ve mevcut veriler korunur.
+ */
+export const restoreBackupFromBuffer = async (fileBuffer, strategies = {}) => {
+  let workbook;
+
+  try {
+    workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+  } catch {
+    throw restoreValidationError('Yedek dosyası okunamadı. Lütfen geçerli bir Excel (.xlsx) dosyası seçin.');
+  }
+
+  const skippedModules = validateRestoreWorkbook(workbook, strategies);
+
+  return prisma.$transaction(
+    (transaction) => restoreBackupInTransaction(transaction, workbook, strategies, skippedModules),
+    {
+      maxWait: 10_000,
+      timeout: 120_000,
+    }
+  );
 };

@@ -280,7 +280,7 @@ export default function ComponentList() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Bileşen adı, marka veya model ara..."
+              placeholder="Kategori, bileşen adı, marka veya model ara..."
               className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs text-[#1E2534] focus:border-[#4F8FE0]"
             />
           </div>

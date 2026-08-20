@@ -417,7 +417,7 @@ export const exportLicenses = async ({ unitId, status, paymentType, endDateFrom,
     statusText: STATUS_TEXT_MAP[item.status] || item.status,
     paymentTypeText: PAYMENT_TYPE_MAP[item.paymentType] || item.paymentType,
     invoiceNumber: item.invoiceNumber || '-',
-    invoiceAmount: item.invoiceAmount !== null && item.invoiceAmount !== undefined ? `${item.invoiceAmount} ₺` : '-',
+    invoiceAmount: item.invoiceAmount !== null && item.invoiceAmount !== undefined ? `$${item.invoiceAmount}` : '-',
   }));
 
   const { createExcelStream } = await import('../../services/excelExport.service.js');

@@ -2,6 +2,18 @@ import path from 'path';
 import * as assignmentsService from './assignments.service.js';
 import { createAssignmentSchema } from './assignments.schema.js';
 
+const makePdfFileName = (date, personName, prefix) => {
+  const datePart = new Date(date).toISOString().slice(0, 10);
+  const namePart = String(personName || 'Personel')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ğ/gi, 'g').replace(/ş/gi, 's').replace(/ı/gi, 'i')
+    .replace(/ç/gi, 'c').replace(/ö/gi, 'o').replace(/ü/gi, 'u')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'Personel';
+  return `${datePart}_${prefix}_${namePart}.pdf`;
+};
+
 export const createAssignment = async (req, res, next) => {
   try {
     const validatedData = createAssignmentSchema.parse(req.body);
@@ -56,7 +68,8 @@ export const downloadAssignmentPdf = async (req, res, next) => {
   try {
     const { id } = req.params;
     const pdfPath = await assignmentsService.getAssignmentPdfFile(id);
-    return res.download(pdfPath, `Zimmet_Formu_${id}.pdf`);
+    const assignment = await assignmentsService.getAssignmentDetail(id);
+    return res.download(pdfPath, makePdfFileName(assignment.teslimTarihi, assignment.employee?.fullName, 'Zimmet'));
   } catch (error) {
     next(error);
   }
@@ -111,5 +124,4 @@ export const exportAssignments = async (req, res, next) => {
     next(error);
   }
 };
-
 

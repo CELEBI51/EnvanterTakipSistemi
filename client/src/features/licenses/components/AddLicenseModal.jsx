@@ -325,7 +325,7 @@ export default function AddLicenseModal({ isOpen, onClose, onSuccess }) {
 
             <div>
               <label className="block text-xs font-bold text-[#1E2534] mb-1">
-                Fatura Tutarı (₺) (Opsiyonel)
+                Fatura Tutarı ($) (Opsiyonel)
               </label>
               <input
                 type="number"

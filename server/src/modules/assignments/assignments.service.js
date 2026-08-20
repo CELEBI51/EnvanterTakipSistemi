@@ -362,7 +362,26 @@ export const listAssignments = async ({
                   { model: { contains: searchTerm, mode: 'insensitive' } },
                   { serialNo: { contains: searchTerm, mode: 'insensitive' } },
                   { demirbasNo: { contains: searchTerm, mode: 'insensitive' } },
+                  { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
                 ],
+              },
+            },
+          },
+        },
+        {
+          accessoryItems: {
+            some: {
+              accessory: {
+                category: { name: { contains: searchTerm, mode: 'insensitive' } },
+              },
+            },
+          },
+        },
+        {
+          consumableItems: {
+            some: {
+              consumable: {
+                category: { name: { contains: searchTerm, mode: 'insensitive' } },
               },
             },
           },
@@ -527,13 +546,10 @@ export const getAssignmentPdfFile = async (id) => {
     throw error;
   }
 
-  if (assignment.pdfPath && fs.existsSync(assignment.pdfPath)) {
-    return assignment.pdfPath;
-  }
-
-  // Generate on the fly if not exists
-  const newPdfPath = await generateAssignmentPdf(id);
-  return newPdfPath;
+  // PDF is a projection of the current assignment and related product data.
+  // Always regenerate it so edits to names, categories, brands or specs are
+  // reflected immediately instead of serving a stale stored file.
+  return generateAssignmentPdf(id);
 };
 
 export const uploadSignedForm = async (id, file, userId) => {
@@ -653,7 +669,26 @@ export const exportAssignments = async ({ employeeId, status, unitId, dateFrom, 
                   { model: { contains: searchTerm, mode: 'insensitive' } },
                   { serialNo: { contains: searchTerm, mode: 'insensitive' } },
                   { demirbasNo: { contains: searchTerm, mode: 'insensitive' } },
+                  { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
                 ],
+              },
+            },
+          },
+        },
+        {
+          accessoryItems: {
+            some: {
+              accessory: {
+                category: { name: { contains: searchTerm, mode: 'insensitive' } },
+              },
+            },
+          },
+        },
+        {
+          consumableItems: {
+            some: {
+              consumable: {
+                category: { name: { contains: searchTerm, mode: 'insensitive' } },
               },
             },
           },
@@ -811,5 +846,3 @@ export const exportAssignments = async ({ employeeId, status, unitId, dateFrom, 
   const todayStr = new Date().toISOString().split('T')[0];
   await createExcelStream('Zimmetler', columns, rows, res, `zimmet_${todayStr}.xlsx`);
 };
-
-

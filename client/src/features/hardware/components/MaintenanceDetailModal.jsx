@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../../../config';
 import EmptyState from '../../../components/common/EmptyState';
 import AddComponentToMaintenanceModal from './AddComponentToMaintenanceModal';
 import CompleteMaintenanceModal from './CompleteMaintenanceModal';
+import { formatCurrency } from '../../../utils/currency';
 
 export default function MaintenanceDetailModal({ isOpen, onClose, maintenanceId, onUpdate }) {
   const token = useAuthStore((state) => state.accessToken);
@@ -101,7 +102,7 @@ export default function MaintenanceDetailModal({ isOpen, onClose, maintenanceId,
                   <div>
                     <span className="text-slate-500 block">Maliyet:</span>
                     <span className="font-mono font-bold text-[#1E2534]">
-                      {maintenance.cost ? `${Number(maintenance.cost).toLocaleString('tr-TR')} ₺` : '-'}
+                      {formatCurrency(maintenance.cost)}
                     </span>
                   </div>
 

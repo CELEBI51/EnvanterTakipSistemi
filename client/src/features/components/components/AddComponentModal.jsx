@@ -4,6 +4,11 @@ import useAuthStore from '../../../store/authStore';
 import { API_BASE_URL } from '../../../config';
 import FileUploadField from '../../../components/common/FileUploadField';
 
+const BRAND_OPTIONS = [
+  'Kingston', 'Samsung', 'Crucial', 'Western Digital', 'Seagate', 'Intel',
+  'AMD', 'NVIDIA', 'Corsair', 'Asus', 'MSI', 'Dell', 'HP', 'Lenovo', 'Diğer',
+];
+
 export default function AddComponentModal({ isOpen, onClose, onSuccess }) {
   const token = useAuthStore((state) => state.accessToken);
 
@@ -13,7 +18,8 @@ export default function AddComponentModal({ isOpen, onClose, onSuccess }) {
 
   const [name, setName] = useState('');
   const [initialQuantity, setInitialQuantity] = useState(10);
-  const [brand, setBrand] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [customBrand, setCustomBrand] = useState('');
   const [model, setModel] = useState('');
   const [location, setLocation] = useState('');
   const [supplier, setSupplier] = useState('');
@@ -73,11 +79,12 @@ export default function AddComponentModal({ isOpen, onClose, onSuccess }) {
 
     setLoading(true);
 
+    const finalBrand = selectedBrand === 'Diğer' ? customBrand.trim() : selectedBrand;
     const payload = {
       name: name.trim(),
       categoryId,
       initialQuantity: qtyNum,
-      brand: brand.trim() || undefined,
+      brand: finalBrand || undefined,
       model: model.trim() || undefined,
       location: location.trim() || undefined,
       supplier: supplier.trim() || undefined,
@@ -128,7 +135,8 @@ export default function AddComponentModal({ isOpen, onClose, onSuccess }) {
       setName('');
       setCategoryId('');
       setInitialQuantity(10);
-      setBrand('');
+      setSelectedBrand('');
+      setCustomBrand('');
       setModel('');
       setLocation('');
       setSupplier('');
@@ -236,13 +244,16 @@ export default function AddComponentModal({ isOpen, onClose, onSuccess }) {
               <label className="block text-xs font-bold text-[#1E2534] mb-1">
                 Marka
               </label>
-              <input
-                type="text"
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                placeholder=""
+              <select
+                value={selectedBrand}
+                onChange={(e) => setSelectedBrand(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-[#1E2534]"
-              />
+              >
+                <option value="">Seçiniz...</option>
+                {BRAND_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -258,6 +269,19 @@ export default function AddComponentModal({ isOpen, onClose, onSuccess }) {
               />
             </div>
           </div>
+
+          {selectedBrand === 'Diğer' && (
+            <div>
+              <label className="block text-xs font-bold text-[#1E2534] mb-1">Marka Adı</label>
+              <input
+                type="text"
+                value={customBrand}
+                onChange={(e) => setCustomBrand(e.target.value)}
+                placeholder="Marka adını girin..."
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-[#1E2534]"
+              />
+            </div>
+          )}
 
           {/* Lokasyon & Tedarikçi */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -317,7 +341,7 @@ export default function AddComponentModal({ isOpen, onClose, onSuccess }) {
 
             <div>
               <label className="block text-xs font-bold text-[#1E2534] mb-1">
-                Satın Alma Tutarı (₺)
+                Satın Alma Tutarı ($)
               </label>
               <input
                 type="number"

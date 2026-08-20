@@ -321,7 +321,7 @@ export default function EditHardwareModal({ isOpen, onClose, hardware, onSuccess
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Satın Alma Tutarı (₺)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Satın Alma Tutarı ($)</label>
               <input
                 type="number"
                 step="0.01"

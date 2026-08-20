@@ -165,6 +165,7 @@ export const listHardware = async ({ page = 1, pageSize = 10, category, status, 
       { location: { contains: searchTerm, mode: 'insensitive' } },
       { supplier: { contains: searchTerm, mode: 'insensitive' } },
       { invoiceNo: { contains: searchTerm, mode: 'insensitive' } },
+      { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
     ];
   }
 
@@ -357,6 +358,7 @@ export const exportHardware = async ({ category, status, q }, res) => {
       { location: { contains: searchTerm, mode: 'insensitive' } },
       { supplier: { contains: searchTerm, mode: 'insensitive' } },
       { invoiceNo: { contains: searchTerm, mode: 'insensitive' } },
+      { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
     ];
   }
 
@@ -583,5 +585,4 @@ export const generateBarcodesPdf = async (hardwareIds) => {
     doc.end();
   });
 };
-
 

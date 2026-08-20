@@ -3,6 +3,11 @@ import { X } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import { API_BASE_URL } from '../../../config';
 
+const BRAND_OPTIONS = [
+  'Kingston', 'Samsung', 'Crucial', 'Western Digital', 'Seagate', 'Intel',
+  'AMD', 'NVIDIA', 'Corsair', 'Asus', 'MSI', 'Dell', 'HP', 'Lenovo', 'Diğer',
+];
+
 export default function EditComponentModal({ isOpen, onClose, componentItem, onSuccess }) {
   const token = useAuthStore((state) => state.accessToken);
 
@@ -11,7 +16,8 @@ export default function EditComponentModal({ isOpen, onClose, componentItem, onS
 
   const [categoryId, setCategoryId] = useState('');
   const [name, setName] = useState('');
-  const [brand, setBrand] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [customBrand, setCustomBrand] = useState('');
   const [model, setModel] = useState('');
   const [serialNo, setSerialNo] = useState('');
   const [supplier, setSupplier] = useState('');
@@ -33,7 +39,17 @@ export default function EditComponentModal({ isOpen, onClose, componentItem, onS
     if (componentItem && isOpen) {
       setCategoryId(componentItem.categoryId || '');
       setName(componentItem.name || '');
-      setBrand(componentItem.brand || '');
+      const brandValue = componentItem.brand || '';
+      if (BRAND_OPTIONS.includes(brandValue) && brandValue !== 'Diğer') {
+        setSelectedBrand(brandValue);
+        setCustomBrand('');
+      } else if (brandValue) {
+        setSelectedBrand('Diğer');
+        setCustomBrand(brandValue);
+      } else {
+        setSelectedBrand('');
+        setCustomBrand('');
+      }
       setModel(componentItem.model || '');
       setSerialNo(componentItem.serialNo || '');
       setSupplier(componentItem.supplier || '');
@@ -90,10 +106,11 @@ export default function EditComponentModal({ isOpen, onClose, componentItem, onS
       }
     }
 
+    const finalBrand = selectedBrand === 'Diğer' ? customBrand.trim() : selectedBrand;
     const payload = {
       categoryId: categoryId || null,
       name: name.trim(),
-      brand: brand.trim() || null,
+      brand: finalBrand || null,
       model: model.trim() || null,
       serialNo: serialNo.trim() || null,
       supplier: supplier.trim() || null,
@@ -185,13 +202,16 @@ export default function EditComponentModal({ isOpen, onClose, componentItem, onS
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Marka</label>
-                <input
-                  type="text"
-                  placeholder="Örn: Kingston / Samsung"
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
+                <select
+                  value={selectedBrand}
+                  onChange={(e) => setSelectedBrand(e.target.value)}
                   className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#4F8FE0]"
-                />
+                >
+                  <option value="">-- Marka Seçin --</option>
+                  {BRAND_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -238,6 +258,19 @@ export default function EditComponentModal({ isOpen, onClose, componentItem, onS
                 />
               </div>
             </div>
+
+            {selectedBrand === 'Diğer' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Marka Adı</label>
+                <input
+                  type="text"
+                  placeholder="Marka adını girin..."
+                  value={customBrand}
+                  onChange={(e) => setCustomBrand(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#4F8FE0]"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Tedarikçi Firma</label>

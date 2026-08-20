@@ -301,7 +301,7 @@ export default function AccessoryList() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Aksesuar ürün adı veya marka ara..."
+              placeholder="Kategori, aksesuar adı, marka veya tedarikçi ara..."
               className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs text-[#1E2534] focus:border-[#4F8FE0]"
             />
           </div>

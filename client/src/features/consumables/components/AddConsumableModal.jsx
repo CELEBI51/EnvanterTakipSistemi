@@ -301,7 +301,7 @@ export default function AddConsumableModal({ isOpen, onClose, onSuccess }) {
 
             <div>
               <label className="block text-xs font-bold text-[#1E2534] mb-1">
-                Satın Alma Tutarı (₺)
+                Satın Alma Tutarı ($)
               </label>
               <input
                 type="number"

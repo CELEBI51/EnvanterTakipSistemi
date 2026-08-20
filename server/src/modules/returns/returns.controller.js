@@ -1,6 +1,18 @@
 import * as returnsService from './returns.service.js';
 import { createReturnSchema } from './returns.schema.js';
 
+const makePdfFileName = (date, personName) => {
+  const datePart = new Date(date).toISOString().slice(0, 10);
+  const namePart = String(personName || 'Personel')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ğ/gi, 'g').replace(/ş/gi, 's').replace(/ı/gi, 'i')
+    .replace(/ç/gi, 'c').replace(/ö/gi, 'o').replace(/ü/gi, 'u')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'Personel';
+  return `${datePart}_Iade_${namePart}.pdf`;
+};
+
 export const createReturn = async (req, res, next) => {
   try {
     const validatedData = createReturnSchema.parse(req.body);
@@ -47,7 +59,11 @@ export const downloadReturnPdf = async (req, res, next) => {
   try {
     const { id } = req.params;
     const pdfPath = await returnsService.getReturnPdfFile(id);
-    return res.download(pdfPath, `Iade_Formu_${id}.pdf`);
+    const returnRecord = await returnsService.getReturnDetail(id);
+    return res.download(
+      pdfPath,
+      makePdfFileName(returnRecord.tarih, returnRecord.assignment?.employee?.fullName)
+    );
   } catch (error) {
     next(error);
   }
@@ -90,4 +106,3 @@ export const exportReturns = async (req, res, next) => {
     next(error);
   }
 };
-

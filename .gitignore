@@ -43,3 +43,6 @@ desktop.ini
 server/storage/*
 !server/storage/**/.gitkeep
 
+# Vite temporary build files
+*.timestamp-*.mjs
+

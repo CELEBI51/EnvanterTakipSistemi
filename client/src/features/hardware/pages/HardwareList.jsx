@@ -365,7 +365,7 @@ export default function HardwareList() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Marka, model, seri no veya demirbaş no ara..."
+                placeholder="Kategori, marka, model, seri no veya demirbaş no ara..."
                 className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs text-[#1E2534] placeholder-slate-400 focus:border-[#4F8FE0]"
               />
             </div>
