@@ -8,15 +8,18 @@ import {
   ChevronRight,
   Download,
   FileSpreadsheet,
+  Edit,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import AddComponentModal from '../components/AddComponentModal';
+import EditComponentModal from '../components/EditComponentModal';
 import ComponentDetailManageModal from '../components/ComponentDetailManageModal';
 import ExcelImportModal from '../../../components/common/ExcelImportModal';
 import ExcelExportButton from '../../../components/common/ExcelExportButton';
+import { API_BASE_URL } from '../../../config';
 
 
 export default function ComponentList() {
@@ -35,6 +38,8 @@ export default function ComponentList() {
   const [totalCount, setTotalCount] = useState(0);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingComponent, setEditingComponent] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedComponent, setSelectedComponent] = useState(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [manageModalInitialTab, setManageModalInitialTab] = useState('history');
@@ -55,7 +60,7 @@ export default function ComponentList() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/components/stats', {
+      const res = await fetch(`${API_BASE_URL}/components/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -69,7 +74,7 @@ export default function ComponentList() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/categories?parentType=Bileşen', {
+      const res = await fetch(`${API_BASE_URL}/categories?parentType=Bileşen`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -96,7 +101,7 @@ export default function ComponentList() {
         params.append('q', searchQuery.trim());
       }
 
-      const res = await fetch(`http://localhost:4001/api/components?${params.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/components?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -130,7 +135,7 @@ export default function ComponentList() {
     if (!canManage || !selectedComponent) return;
     setDeleting(true);
     try {
-      const res = await fetch(`http://localhost:4001/api/components/${selectedComponent.id}`, {
+      const res = await fetch(`${API_BASE_URL}/components/${selectedComponent.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -189,7 +194,7 @@ export default function ComponentList() {
       <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-            Envanter Takip Sistemi • Bileşen Yönetimi
+            Bileşen Yönetimi
           </span>
           <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
             Donanım Bileşen Stok Listesi
@@ -377,6 +382,20 @@ export default function ComponentList() {
 
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-1">
+                          {canManage && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingComponent(item);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded transition cursor-pointer"
+                              title="Düzenle"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => {
@@ -501,6 +520,19 @@ export default function ComponentList() {
         moduleKey="component"
         moduleTitle="Bileşenler"
         onSuccess={fetchComponents}
+      />
+
+      <EditComponentModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingComponent(null);
+        }}
+        componentItem={editingComponent}
+        onSuccess={() => {
+          fetchComponents();
+          fetchStats();
+        }}
       />
     </div>
   );

@@ -121,4 +121,17 @@ export const exportConsumables = async (req, res, next) => {
   }
 };
 
+export const updateConsumable = async (req, res, next) => {
+  try {
+    const updated = await consumableService.updateConsumable(req.params.id, req.body);
+    res.json({
+      success: true,
+      message: 'Sarf malzeme başarıyla güncellendi.',
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 

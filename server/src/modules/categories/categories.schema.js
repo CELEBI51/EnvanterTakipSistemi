@@ -11,8 +11,11 @@ export const ALLOWED_PARENT_TYPES = [
 export const PARENT_TYPE_MAP = {
   Aksesuar: 'AKSESUAR',
   Varlık: 'VARLIK',
+  Varlik: 'VARLIK',
   'Sarf Malzeme': 'SARF_MALZEME',
+  Sarf_Malzeme: 'SARF_MALZEME',
   Bileşen: 'BILESEN',
+  Bilesen: 'BILESEN',
   Lisans: 'LISANS',
   // Direct DB enum fallbacks
   AKSESUAR: 'AKSESUAR',

@@ -29,7 +29,7 @@ export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:4001/api/returns/${returnId}`, {
+      const res = await fetch(`${API_BASE_URL}/returns/${returnId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -64,7 +64,7 @@ export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
       const formData = new FormData();
       formData.append('file', signedFile);
 
-      const res = await fetch(`http://localhost:4001/api/returns/${returnId}/signed-form`, {
+      const res = await fetch(`${API_BASE_URL}/returns/${returnId}/signed-form`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

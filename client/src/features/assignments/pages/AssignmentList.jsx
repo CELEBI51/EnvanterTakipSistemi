@@ -50,7 +50,7 @@ export default function AssignmentList() {
   useEffect(() => {
     const fetchUnits = async () => {
       try {
-        const res = await fetch('http://localhost:4001/api/units', {
+        const res = await fetch(`${API_BASE_URL}/units`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -67,7 +67,7 @@ export default function AssignmentList() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/assignments/stats', {
+      const res = await fetch(`${API_BASE_URL}/assignments/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -95,7 +95,7 @@ export default function AssignmentList() {
       if (dateTo) query += `&dateTo=${encodeURIComponent(dateTo)}`;
       if (debouncedSearch.trim()) query += `&q=${encodeURIComponent(debouncedSearch.trim())}`;
 
-      const res = await fetch(`http://localhost:4001/api/assignments${query}`, {
+      const res = await fetch(`${API_BASE_URL}/assignments${query}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

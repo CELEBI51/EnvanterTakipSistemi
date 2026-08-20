@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, PlusCircle, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 
 export default function RestockAccessoryModal({ isOpen, onClose, accessory, onSuccess }) {
   const token = useAuthStore((state) => state.accessToken);
@@ -25,7 +26,7 @@ export default function RestockAccessoryModal({ isOpen, onClose, accessory, onSu
     setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:4001/api/accessories/${accessory.id}/restock`, {
+      const res = await fetch(`${API_BASE_URL}/accessories/${accessory.id}/restock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -19,12 +19,12 @@ const optionalPositiveAmount = z
 
 export const createHardwareSchema = z
   .object({
-    category: z.string().optional(),
-    categoryId: z.string().uuid().optional(),
+    category: optionalString,
+    categoryId: z.string().uuid().nullable().optional().or(z.literal('')),
     brand: z.string({ required_error: 'Marka adı zorunludur.' }).min(1, 'Marka adı zorunludur.'),
     model: optionalString,
-    serial_no: z.string().optional().default(''),
-    serialNo: z.string().optional().default(''),
+    serial_no: optionalString,
+    serialNo: optionalString,
     demirbas_no: z
       .string({ required_error: 'Demirbaş numarası zorunludur.' })
       .min(1, 'Demirbaş numarası zorunludur.'),
@@ -44,11 +44,12 @@ export const createHardwareSchema = z
     warrantyEndDate: optionalString,
     specs: z
       .object({
-        cpu: z.string().optional(),
-        ram: z.string().optional(),
-        gpu: z.string().optional(),
-        dvd: z.boolean().optional(),
+        cpu: optionalString,
+        ram: optionalString,
+        gpu: optionalString,
+        dvd: z.boolean().nullable().optional(),
       })
+      .nullable()
       .optional(),
   })
   .refine(
@@ -70,12 +71,14 @@ export const createHardwareSchema = z
 
 export const updateHardwareSchema = z
   .object({
-    category: z.string().optional(),
-    categoryId: z.string().uuid().optional(),
+    category: optionalString,
+    categoryId: z.string().uuid().nullable().optional().or(z.literal('')),
     brand: z.string().min(1).optional(),
     model: optionalString,
-    serial_no: z.string().optional(),
-    serialNo: z.string().optional(),
+    serial_no: optionalString,
+    serialNo: optionalString,
+    demirbas_no: optionalString,
+    demirbasNo: optionalString,
     status: z.enum(ALLOWED_STATUSES).optional(),
     wifi_mac_address: optionalString,
     wifiMacAddress: optionalString,
@@ -93,11 +96,12 @@ export const updateHardwareSchema = z
     warrantyEndDate: optionalString,
     specs: z
       .object({
-        cpu: z.string().optional(),
-        ram: z.string().optional(),
-        gpu: z.string().optional(),
-        dvd: z.boolean().optional(),
+        cpu: optionalString,
+        ram: optionalString,
+        gpu: optionalString,
+        dvd: z.boolean().nullable().optional(),
       })
+      .nullable()
       .optional(),
   })
   .refine(

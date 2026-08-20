@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 
 export default function RestockConsumableModal({ isOpen, onClose, consumable, onSuccess }) {
   const token = useAuthStore((state) => state.accessToken);
@@ -25,7 +26,7 @@ export default function RestockConsumableModal({ isOpen, onClose, consumable, on
     setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:4001/api/consumables/${consumable.id}/restock`, {
+      const res = await fetch(`${API_BASE_URL}/consumables/${consumable.id}/restock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

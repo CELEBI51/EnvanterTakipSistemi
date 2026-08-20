@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Trash2, Barcode, Wrench, Plus, ChevronRight } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
@@ -43,13 +44,13 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
     setError('');
     try {
       const [resHw, resHist, resMaint] = await Promise.all([
-        fetch(`http://localhost:4001/api/hardware/${hardwareId}`, {
+        fetch(`${API_BASE_URL}/hardware/${hardwareId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`http://localhost:4001/api/hardware/${hardwareId}/history`, {
+        fetch(`${API_BASE_URL}/hardware/${hardwareId}/history`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`http://localhost:4001/api/maintenance?hardwareId=${hardwareId}`, {
+        fetch(`${API_BASE_URL}/maintenance?hardwareId=${hardwareId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -79,7 +80,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
     if (!canEdit || !hardware) return;
     setUpdatingStatus(true);
     try {
-      const res = await fetch(`http://localhost:4001/api/hardware/${hardware.id}`, {
+      const res = await fetch(`${API_BASE_URL}/hardware/${hardware.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +103,7 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
     if (!canEdit || !hardware) return;
     setDeleting(true);
     try {
-      const res = await fetch(`http://localhost:4001/api/hardware/${hardware.id}`, {
+      const res = await fetch(`${API_BASE_URL}/hardware/${hardware.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

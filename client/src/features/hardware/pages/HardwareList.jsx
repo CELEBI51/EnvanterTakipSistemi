@@ -10,12 +10,14 @@ import {
   Wrench,
   FileSpreadsheet,
   Loader2,
+  Edit,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import { API_BASE_URL } from '../../../config';
 import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 import AddHardwareModal from '../components/AddHardwareModal';
+import EditHardwareModal from '../components/EditHardwareModal';
 import HardwareDetailModal from '../components/HardwareDetailModal';
 import BarcodePrintModal from '../../../components/common/BarcodePrintModal';
 import AddMaintenanceModal from '../components/AddMaintenanceModal';
@@ -57,6 +59,8 @@ export default function HardwareList() {
   const [totalCount, setTotalCount] = useState(0);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingHardware, setEditingHardware] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedHardwareId, setSelectedHardwareId] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
@@ -264,7 +268,7 @@ export default function HardwareList() {
       <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-            Envanter Takip Sistemi • Bilgisayar & Ekipman Yönetimi
+            Bilgisayar & Ekipman Yönetimi
           </span>
           <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
             Bilgisayar & Ekipman Envanteri
@@ -569,6 +573,20 @@ export default function HardwareList() {
                               <Wrench className="w-4 h-4" />
                             </button>
                           )}
+                          {canCreate && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingHardware(item);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded transition cursor-pointer"
+                              title="Düzenle"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={(e) => openBarcodeModal(e, item)}
@@ -687,6 +705,16 @@ export default function HardwareList() {
         onClose={() => setIsImportModalOpen(false)}
         moduleKey="hardware"
         moduleTitle="Varlık Donanımları"
+        onSuccess={fetchHardwareList}
+      />
+
+      <EditHardwareModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingHardware(null);
+        }}
+        hardware={editingHardware}
         onSuccess={fetchHardwareList}
       />
     </div>

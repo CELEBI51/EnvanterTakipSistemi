@@ -17,6 +17,7 @@ router.get('/:id/history', accessoryController.getAccessoryHistory);
 
 // Mutation routes (Admin & IT Staff only)
 router.post('/', roleMiddleware(['admin', 'it_staff']), accessoryController.createAccessory);
+router.put('/:id', roleMiddleware(['admin', 'it_staff']), accessoryController.updateAccessory);
 router.post('/:id/restock', roleMiddleware(['admin', 'it_staff']), accessoryController.restockAccessory);
 router.post('/:id/mark-defective', roleMiddleware(['admin', 'it_staff']), accessoryController.markDefective);
 router.delete('/:id', roleMiddleware(['admin', 'it_staff']), accessoryController.deleteAccessory);

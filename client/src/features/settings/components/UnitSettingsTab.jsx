@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
+import { API_BASE_URL } from '../../../config';
 
 export default function UnitSettingsTab() {
   const token = useAuthStore((state) => state.accessToken);
@@ -59,8 +60,8 @@ export default function UnitSettingsTab() {
     setError('');
     try {
       const url = showInactive
-        ? 'http://localhost:4001/api/units?includeInactive=true'
-        : 'http://localhost:4001/api/units';
+        ? `${API_BASE_URL}/units?includeInactive=true`
+        : `${API_BASE_URL}/units`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -123,8 +124,9 @@ export default function UnitSettingsTab() {
       };
 
       let res;
-      if (modalMode === 'create') {
-        res = await fetch('http://localhost:4001/api/units', {
+      const isCreateMode = modalMode === 'create';
+      if (isCreateMode) {
+        res = await fetch(`${API_BASE_URL}/units`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -133,7 +135,7 @@ export default function UnitSettingsTab() {
           body: JSON.stringify(payload),
         });
       } else {
-        res = await fetch(`http://localhost:4001/api/units/${selectedUnit.id}`, {
+        res = await fetch(`${API_BASE_URL}/units/${selectedUnit.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -171,13 +173,13 @@ export default function UnitSettingsTab() {
     setDeleteError('');
 
     try {
-      const res = await fetch(`http://localhost:4001/api/units/${unitToDelete.id}`, {
+      const res = await fetch(`${API_BASE_URL}/units/${unitToDelete.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Birim pasife alınamadı.');
+      if (!res.ok) throw new Error(data.message || 'Birim silinemedi.');
 
       setIsDeleteOpen(false);
       setUnitToDelete(null);
@@ -201,7 +203,7 @@ export default function UnitSettingsTab() {
     setActivateLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:4001/api/units/${unitToActivate.id}`, {
+      const res = await fetch(`${API_BASE_URL}/units/${unitToActivate.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

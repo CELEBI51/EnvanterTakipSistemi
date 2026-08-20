@@ -46,6 +46,7 @@ const upload = multer({
 
 // GET /api/settings/logo - Public (Login page / App branding)
 router.get('/logo', settingsController.getLogo);
+router.get('/public', settingsController.getPublicSettings);
 
 // All routes below require authentication
 router.use(authMiddleware);

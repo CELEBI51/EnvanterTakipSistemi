@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 
 const MODULE_LIST = [
   { key: 'hardware', label: 'Varlıklar (Donanım)', sheetName: 'Varlıklar' },
@@ -65,7 +66,7 @@ export default function BackupSettingsTab() {
   const fetchCounts = async () => {
     setCountsLoading(true);
     try {
-      const res = await fetch('http://localhost:4001/api/settings/backup/counts', {
+      const res = await fetch(`${API_BASE_URL}/settings/backup/counts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -110,7 +111,7 @@ export default function BackupSettingsTab() {
 
     try {
       const queryStr = selectedExportModules.join(',');
-      const res = await fetch(`http://localhost:4001/api/settings/backup?modules=${queryStr}`, {
+      const res = await fetch(`${API_BASE_URL}/settings/backup?modules=${queryStr}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -225,7 +226,7 @@ export default function BackupSettingsTab() {
       formData.append('backupFile', restoreFile);
       formData.append('strategies', JSON.stringify(restoreStrategies));
 
-      const res = await fetch('http://localhost:4001/api/settings/restore', {
+      const res = await fetch(`${API_BASE_URL}/settings/restore`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

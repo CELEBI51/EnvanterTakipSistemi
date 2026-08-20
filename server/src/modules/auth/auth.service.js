@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import prisma from '../../config/db.js';
 import { generateResetToken, hashToken } from './token.util.js';
 import { sendEmail } from '../../services/mail.service.js';
+import * as settingsService from '../settings/settings.service.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'demirbas-secret-key-2026';
 const JWT_EXPIRES_IN = '24h';
@@ -155,11 +156,14 @@ export const requestPasswordReset = async (email) => {
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4000';
   const resetUrl = `${frontendUrl}/reset-password?token=${rawToken}`;
 
-  const subject = '🔒 Şifre Sıfırlama Talebi — Demirbaş Takip Sistemi';
+  const settings = await settingsService.getSettings();
+  const companyName = settings?.companyName || 'DİTAŞ Otomotiv';
+
+  const subject = `🔒 Şifre Sıfırlama Talebi — ${companyName}`;
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
       <div style="background: #1E2534; padding: 24px; text-align: center; color: #ffffff;">
-        <h2 style="margin: 0; font-size: 20px;">DİTAŞ Otomotiv • Demirbaş Takip Sistemi</h2>
+        <h2 style="margin: 0; font-size: 20px;">${companyName} • Demirbaş Takip Sistemi</h2>
       </div>
       <div style="padding: 24px; color: #1E2534; line-height: 1.6;">
         <h3 style="margin-top: 0; color: #1E2534;">Sayın ${user.fullName},</h3>
@@ -173,7 +177,7 @@ export const requestPasswordReset = async (email) => {
         <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">Eğer bu talebi siz yapmadıysanız bu e-postayı dikkate almayınız. Şifreniz değişmeyecektir.</p>
       </div>
       <div style="background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0;">
-        Bu e-posta otomatik olarak oluşturulmuştur. Lütfen yanıtlamayınız. © 2026 DİTAŞ Otomotiv
+        Bu e-posta otomatik olarak oluşturulmuştur. Lütfen yanıtlamayınız. © 2026 ${companyName}
       </div>
     </div>
   `;
@@ -241,5 +245,225 @@ export const resetPassword = async (rawToken, newPassword) => {
 
   return {
     message: 'Şifreniz başarıyla güncellendi.',
+  };
+};
+
+export const getUserProfile = async (userId) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      role: true,
+      permissions: true,
+      mustChangePassword: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    const error = new Error('Kullanıcı bulunamadı.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return user;
+};
+
+export const updateProfile = async (userId, { fullName, phone, currentPassword }) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    const error = new Error('Kullanıcı bulunamadı.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (currentPassword) {
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isPasswordValid) {
+      const error = new Error('Mevcut şifreniz yanlış.');
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      fullName: fullName ? fullName.trim() : user.fullName,
+      phone: phone !== undefined ? phone.trim() : user.phone,
+    },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      role: true,
+      permissions: true,
+      mustChangePassword: true,
+      createdAt: true,
+    },
+  });
+
+  const tokenPayload = {
+    id: updatedUser.id,
+    email: updatedUser.email,
+    role: updatedUser.role,
+    mustChangePassword: updatedUser.mustChangePassword,
+  };
+
+  const accessToken = jwt.sign(tokenPayload, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
+
+  return {
+    user: updatedUser,
+    accessToken,
+  };
+};
+
+export const requestEmailChange = async (userId, { newEmail, currentPassword }) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    const error = new Error('Kullanıcı bulunamadı.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!isPasswordValid) {
+    const error = new Error('Mevcut şifreniz yanlış.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalizedNewEmail = newEmail.trim().toLowerCase();
+  if (normalizedNewEmail === user.email.toLowerCase()) {
+    const error = new Error('Yeni e-posta adresi mevcut e-posta adresinizle aynı olamaz.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existing = await prisma.user.findUnique({ where: { email: normalizedNewEmail } });
+  if (existing) {
+    const error = new Error('Bu e-posta adresi başka bir kullanıcı tarafından kullanılıyor.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Invalidate previous unused codes
+  await prisma.emailVerificationCode.updateMany({
+    where: { userId, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+
+  // Generate 6-digit random code
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+  await prisma.emailVerificationCode.create({
+    data: {
+      userId,
+      newEmail: normalizedNewEmail,
+      code,
+      expiresAt,
+    },
+  });
+
+  // Send Email with 6-digit code
+  const settings = await settingsService.getSettings();
+  const companyName = settings?.companyName || 'DİTAŞ Otomotiv';
+
+  const subject = `✉️ E-posta Adresi Değişiklik Onay Kodu — ${companyName}`;
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+      <div style="background: #1E2534; padding: 24px; text-align: center; color: #ffffff;">
+        <h2 style="margin: 0; font-size: 20px;">${companyName} • Demirbaş Takip Sistemi</h2>
+      </div>
+      <div style="padding: 24px; color: #1E2534; line-height: 1.6;">
+        <h3 style="margin-top: 0; color: #1E2534;">Sayın ${user.fullName},</h3>
+        <p>Demirbaş Takip Sistemi hesabınızın e-posta adresini <strong>${normalizedNewEmail}</strong> olarak değiştirmek istediğinizi aldık.</p>
+        <p>İşlemi tamamlamak için lütfen aşağıdaki 6 haneli doğrulama kodunu sisteme giriniz:</p>
+        <div style="text-align: center; margin: 24px 0;">
+          <span style="background-color: #f1f5f9; color: #1e293b; padding: 12px 24px; font-size: 24px; font-weight: bold; letter-spacing: 6px; border-radius: 8px; border: 1px solid #cbd5e1; display: inline-block;">${code}</span>
+        </div>
+        <p style="font-size: 12px; color: #64748b;">Bu onay kodu <strong>15 dakika</strong> süreyle geçerlidir.</p>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">Eğer bu talebi siz başlatmadıysanız lütfen hesap şifrenizi derhal değiştiriniz.</p>
+      </div>
+      <div style="background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0;">
+        Bu e-posta otomatik olarak oluşturulmuştur. © 2026 ${companyName}
+      </div>
+    </div>
+  `;
+
+  await sendEmail({
+    to: normalizedNewEmail,
+    subject,
+    text: `Sayın ${user.fullName},\n\nE-posta değişikliği onay kodunuz: ${code}\nBu kod 15 dakika geçerlidir.`,
+    html: htmlContent,
+  });
+
+  return { message: 'Doğrulama kodu yeni e-posta adresinize gönderildi.' };
+};
+
+export const verifyEmailChange = async (userId, { newEmail, code }) => {
+  const normalizedNewEmail = newEmail.trim().toLowerCase();
+  const verificationRecord = await prisma.emailVerificationCode.findFirst({
+    where: {
+      userId,
+      newEmail: normalizedNewEmail,
+      code: code.trim(),
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!verificationRecord) {
+    const error = new Error('Geçersiz veya süresi dolmuş doğrulama kodu.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Update user email
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { email: normalizedNewEmail },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      role: true,
+      permissions: true,
+      mustChangePassword: true,
+      createdAt: true,
+    },
+  });
+
+  // Mark code used
+  await prisma.emailVerificationCode.update({
+    where: { id: verificationRecord.id },
+    data: { usedAt: new Date() },
+  });
+
+  // Create new JWT Token
+  const tokenPayload = {
+    id: updatedUser.id,
+    email: updatedUser.email,
+    role: updatedUser.role,
+    mustChangePassword: updatedUser.mustChangePassword,
+  };
+
+  const accessToken = jwt.sign(tokenPayload, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
+
+  return {
+    user: updatedUser,
+    accessToken,
+    message: 'E-posta adresiniz başarıyla güncellendi.',
   };
 };

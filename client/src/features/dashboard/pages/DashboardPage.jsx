@@ -93,7 +93,7 @@ export default function DashboardPage() {
       <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-            KURUMSAL ENVANTER PORTALI
+
           </span>
           <h1 className="font-heading text-2xl font-bold text-[#1E2534]">
             Sistem Genel Bakış & KPI Göstergeleri

@@ -15,6 +15,7 @@ import {
   Layers,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 
 const MODULE_OPTIONS = [
   { value: '', label: 'Tüm Modüller' },
@@ -80,7 +81,7 @@ export default function LogsSettingsTab() {
       queryParams.append('page', page);
       queryParams.append('limit', 50);
 
-      const res = await fetch(`http://localhost:4001/api/settings/logs?${queryParams.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/settings/logs?${queryParams.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -128,7 +129,7 @@ export default function LogsSettingsTab() {
       if (dateFrom) queryParams.append('dateFrom', dateFrom);
       if (dateTo) queryParams.append('dateTo', dateTo);
 
-      const res = await fetch(`http://localhost:4001/api/settings/logs/export?${queryParams.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/settings/logs/export?${queryParams.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

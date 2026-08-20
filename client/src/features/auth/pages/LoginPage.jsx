@@ -7,6 +7,7 @@ import { z } from 'zod';
 import axiosClient from '../../../api/axiosClient';
 import useAuthStore from '../../../store/authStore';
 import { API_BASE_URL } from '../../../config';
+import { fetchCompanyInfo } from '../../../utils/logoHelper';
 
 const loginSchema = z.object({
   email: z
@@ -19,14 +20,21 @@ const loginSchema = z.object({
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [logoSrc, setLogoSrc] = useState(`${API_BASE_URL}/settings/logo`);
+  const [logoSrc, setLogoSrc] = useState('/ditas-logo.png');
+  const [companyName, setCompanyName] = useState('Ditas BDY Yedek Parça İmalat ve Teknik A.Ş.');
 
   useEffect(() => {
-    const handleLogoChange = () => {
-      setLogoSrc(`${API_BASE_URL}/settings/logo?t=${Date.now()}`);
+    fetchCompanyInfo().then((info) => {
+      if (info.companyName) setCompanyName(info.companyName);
+      if (info.logoSrc) setLogoSrc(info.logoSrc);
+    });
+
+    const handleInfoChange = (e) => {
+      if (e.detail?.companyName) setCompanyName(e.detail.companyName);
+      if (e.detail?.logoSrc) setLogoSrc(e.detail.logoSrc);
     };
-    window.addEventListener('company-logo-changed', handleLogoChange);
-    return () => window.removeEventListener('company-logo-changed', handleLogoChange);
+    window.addEventListener('company-info-changed', handleInfoChange);
+    return () => window.removeEventListener('company-info-changed', handleInfoChange);
   }, []);
 
   const navigate = useNavigate();
@@ -87,6 +95,10 @@ export default function LoginPage() {
           <div className="flex flex-col items-center text-center mb-6">
             <img 
               src={logoSrc} 
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = '/ditas-logo.png';
+              }}
               alt="Logo" 
               className="h-24 w-auto max-w-full object-contain mb-3" 
             />
@@ -204,9 +216,8 @@ export default function LoginPage() {
 
       {/* Alt Dengeleme Boşluğu ve Bilgi Notu */}
       <div className="flex-1 flex flex-col justify-end pb-2 pt-6">
-        <footer className="flex items-center justify-center gap-1.5 text-xs text-slate-500 text-center font-medium">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#4C82F7]" />
-          <span>Bu sistem yalnızca kurum içi ağda kullanılır. © 2026</span>
+        <footer className="text-xs text-slate-500 text-center font-medium">
+          © Copyright 2026 | {companyName}. Tüm Hakları Saklıdır.
         </footer>
       </div>
     </div>

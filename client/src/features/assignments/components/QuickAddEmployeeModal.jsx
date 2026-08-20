@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import { formatPhoneInput, getPhoneDigits, formatTcNoInput } from '../../../utils/inputFormatters';
 
 export default function QuickAddEmployeeModal({ isOpen, onClose, onSuccess }) {
@@ -23,7 +24,7 @@ export default function QuickAddEmployeeModal({ isOpen, onClose, onSuccess }) {
     const fetchUnits = async () => {
       setUnitsLoading(true);
       try {
-        const res = await fetch('http://localhost:4001/api/units', {
+        const res = await fetch(`${API_BASE_URL}/units`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -71,7 +72,7 @@ export default function QuickAddEmployeeModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:4001/api/employees', {
+      const res = await fetch(`${API_BASE_URL}/employees`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

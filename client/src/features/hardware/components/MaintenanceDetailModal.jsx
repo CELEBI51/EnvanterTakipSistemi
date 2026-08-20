@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, CheckCircle2 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import EmptyState from '../../../components/common/EmptyState';
 import AddComponentToMaintenanceModal from './AddComponentToMaintenanceModal';
 import CompleteMaintenanceModal from './CompleteMaintenanceModal';
@@ -23,7 +24,7 @@ export default function MaintenanceDetailModal({ isOpen, onClose, maintenanceId,
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:4001/api/maintenance/${maintenanceId}`, {
+      const res = await fetch(`${API_BASE_URL}/maintenance/${maintenanceId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

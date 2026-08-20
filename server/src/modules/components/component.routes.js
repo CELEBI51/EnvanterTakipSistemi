@@ -12,6 +12,7 @@ router.get('/', componentController.getComponents);
 router.get('/stats', componentController.getComponentStats);
 
 router.post('/', roleMiddleware(['admin', 'it_staff']), componentController.createComponent);
+router.put('/:id', roleMiddleware(['admin', 'it_staff']), componentController.updateComponent);
 router.get('/:id', componentController.getComponentById);
 router.get('/:id/history', componentController.getComponentHistory);
 router.post('/:id/restock', roleMiddleware(['admin', 'it_staff']), componentController.restockComponent);

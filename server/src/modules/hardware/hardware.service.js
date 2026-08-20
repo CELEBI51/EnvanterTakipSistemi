@@ -1,9 +1,14 @@
 import prisma from '../../config/db.js';
 import bwipjs from 'bwip-js';
-import puppeteer from 'puppeteer';
+import PDFDocument from 'pdfkit';
 
 async function resolveCategoryId(categoryId, categoryName, parentType = 'VARLIK') {
-  if (categoryId) return categoryId;
+  if (categoryId && categoryId.trim() !== '') {
+    const existingCat = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (existingCat) {
+      return existingCat.id;
+    }
+  }
   const name = (categoryName || 'Diğer').trim();
 
   let cat = await prisma.category.findUnique({
@@ -488,6 +493,17 @@ export const getHardwareForBarcodes = async (hardwareIds) => {
   return items;
 };
 
+function toAsciiTurkish(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+    .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+    .replace(/ş/g, 's').replace(/Ş/g, 'S')
+    .replace(/ı/g, 'i').replace(/İ/g, 'I')
+    .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+    .replace(/ç/g, 'c').replace(/Ç/g, 'C');
+}
+
 export const generateBarcodesPdf = async (hardwareIds) => {
   const items = await getHardwareForBarcodes(hardwareIds);
 
@@ -503,117 +519,69 @@ export const generateBarcodesPdf = async (hardwareIds) => {
         backgroundcolor: 'ffffff',
       });
 
-      const barcodeBase64 = `data:image/png;base64,${pngBuffer.toString('base64')}`;
-      const rawTitle = `${hw.brand || ''} ${hw.model || ''}`.trim() || 'Donanım Varlığı';
-      const productTitle = rawTitle.length > 20 ? `${rawTitle.slice(0, 20)}...` : rawTitle;
+      const rawTitle = `${hw.brand || ''} ${hw.model || ''}`.trim() || 'Donanim Varligi';
+      const productTitle = rawTitle.length > 22 ? `${rawTitle.slice(0, 22)}...` : rawTitle;
 
       return {
         id: hw.id,
         demirbasNo: textToEncode,
-        productTitle,
-        barcodeBase64,
+        productTitle: toAsciiTurkish(productTitle),
+        pngBuffer,
       };
     })
   );
 
-  const labelCardsHtml = barcodeItems
-    .map(
-      (item) => `
-      <div class="label-card">
-        <img src="${item.barcodeBase64}" alt="Barcode" class="barcode-img" />
-        <div class="demirbas-no">${item.demirbasNo}</div>
-        <div class="product-title">${item.productTitle}</div>
-      </div>`
-    )
-    .join('');
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 24 });
+    const chunks = [];
 
-  const html = `<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <style>
-    @page {
-      size: A4;
-      margin: 8mm;
-    }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #ffffff;
-    }
-    .grid-container {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 4mm;
-    }
-    .label-card {
-      border: 1px solid #e2e8f0;
-      border-radius: 4px;
-      padding: 3mm;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-      page-break-inside: avoid;
-      break-inside: avoid;
-      height: 32mm;
-      overflow: hidden;
-    }
-    .barcode-img {
-      max-height: 35px;
-      max-width: 100%;
-      object-fit: contain;
-    }
-    .demirbas-no {
-      font-family: monospace;
-      font-size: 8pt;
-      font-weight: bold;
-      color: #0f172a;
-      margin-top: 2px;
-      line-height: 1.1;
-    }
-    .product-title {
-      font-size: 7.5pt;
-      color: #334155;
-      margin-top: 2px;
-      line-height: 1.1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 100%;
-    }
-  </style>
-</head>
-<body>
-  <div class="grid-container">
-    ${labelCardsHtml}
-  </div>
-</body>
-</html>`;
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+    const marginLeft = 24;
+    const marginTop = 24;
+    const labelWidth = 175;
+    const labelHeight = 90;
+    const gapX = 10;
+    const gapY = 10;
+    const cols = 3;
+    const rows = 8;
+    const maxPerPage = cols * rows;
 
-  try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfUint8Array = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '8mm', bottom: '8mm', left: '8mm', right: '8mm' },
+    barcodeItems.forEach((item, index) => {
+      if (index > 0 && index % maxPerPage === 0) {
+        doc.addPage();
+      }
+
+      const itemOnPage = index % maxPerPage;
+      const col = itemOnPage % cols;
+      const row = Math.floor(itemOnPage / cols);
+
+      const x = marginLeft + col * (labelWidth + gapX);
+      const y = marginTop + row * (labelHeight + gapY);
+
+      // Label border
+      doc.roundedRect(x, y, labelWidth, labelHeight, 4).strokeColor('#cbd5e1').lineWidth(0.8).stroke();
+
+      // Barcode Image
+      try {
+        doc.image(item.pngBuffer, x + (labelWidth - 130) / 2, y + 8, { width: 130, height: 38 });
+      } catch (imgErr) {
+        // Fallback if image fails
+      }
+
+      // Demirbaş No
+      doc.font('Courier-Bold').fontSize(8.5).fillColor('#0f172a');
+      doc.text(item.demirbasNo, x + 5, y + 50, { width: labelWidth - 10, align: 'center' });
+
+      // Product Title
+      doc.font('Helvetica').fontSize(7.5).fillColor('#475569');
+      doc.text(item.productTitle, x + 5, y + 66, { width: labelWidth - 10, align: 'center' });
     });
-    return Buffer.from(pdfUint8Array);
-  } finally {
-    await browser.close();
-  }
+
+    doc.end();
+  });
 };
 
 

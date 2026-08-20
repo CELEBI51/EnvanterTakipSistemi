@@ -7,7 +7,7 @@ export default function AttachmentList({ entityType, entityId, canDelete = true 
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { token } = useAuthStore();
+  const token = useAuthStore((state) => state.accessToken);
 
   const fetchAttachments = async () => {
     if (!entityType || !entityId) return;

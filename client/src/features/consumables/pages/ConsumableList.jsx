@@ -9,15 +9,18 @@ import {
   ChevronRight,
   Download,
   FileSpreadsheet,
+  Edit,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import AddConsumableModal from '../components/AddConsumableModal';
+import EditConsumableModal from '../components/EditConsumableModal';
 import ConsumableDetailManageModal from '../components/ConsumableDetailManageModal';
 import ExcelImportModal from '../../../components/common/ExcelImportModal';
 import ExcelExportButton from '../../../components/common/ExcelExportButton';
+import { API_BASE_URL } from '../../../config';
 
 
 export default function ConsumableList() {
@@ -39,6 +42,8 @@ export default function ConsumableList() {
   const [totalCount, setTotalCount] = useState(0);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingConsumable, setEditingConsumable] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedConsumable, setSelectedConsumable] = useState(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [manageModalInitialTab, setManageModalInitialTab] = useState('history');
@@ -58,7 +63,7 @@ export default function ConsumableList() {
     if (consumableIdParam && token) {
       const fetchTarget = async () => {
         try {
-          const res = await fetch(`http://localhost:4001/api/consumables/${consumableIdParam}`, {
+          const res = await fetch(`${API_BASE_URL}/consumables/${consumableIdParam}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
@@ -77,7 +82,7 @@ export default function ConsumableList() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/categories?parentType=Sarf Malzeme', {
+      const res = await fetch(`${API_BASE_URL}/categories?parentType=Sarf Malzeme`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -104,7 +109,7 @@ export default function ConsumableList() {
         params.append('q', searchQuery.trim());
       }
 
-      const res = await fetch(`http://localhost:4001/api/consumables?${params.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/consumables?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -138,7 +143,7 @@ export default function ConsumableList() {
     if (!canManage || !selectedConsumable) return;
     setDeleting(true);
     try {
-      const res = await fetch(`http://localhost:4001/api/consumables/${selectedConsumable.id}`, {
+      const res = await fetch(`${API_BASE_URL}/consumables/${selectedConsumable.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -197,7 +202,7 @@ export default function ConsumableList() {
       <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-            Envanter Takip Sistemi • Sarf Malzeme Yönetimi
+            Sarf Malzeme Yönetimi
           </span>
           <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
             Sarf Malzeme Stok Listesi
@@ -352,6 +357,20 @@ export default function ConsumableList() {
 
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-1">
+                          {canManage && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingConsumable(item);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded transition cursor-pointer"
+                              title="Düzenle"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => {
@@ -471,6 +490,16 @@ export default function ConsumableList() {
         onClose={() => setIsImportModalOpen(false)}
         moduleKey="consumable"
         moduleTitle="Sarf Malzemeler"
+        onSuccess={fetchConsumables}
+      />
+
+      <EditConsumableModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingConsumable(null);
+        }}
+        consumable={editingConsumable}
         onSuccess={fetchConsumables}
       />
     </div>

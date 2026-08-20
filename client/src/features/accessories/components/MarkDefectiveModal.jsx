@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, AlertTriangle, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 
 export default function MarkDefectiveModal({ isOpen, onClose, accessory, onSuccess }) {
   const token = useAuthStore((state) => state.accessToken);
@@ -30,7 +31,7 @@ export default function MarkDefectiveModal({ isOpen, onClose, accessory, onSucce
     setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:4001/api/accessories/${accessory.id}/mark-defective`, {
+      const res = await fetch(`${API_BASE_URL}/accessories/${accessory.id}/mark-defective`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

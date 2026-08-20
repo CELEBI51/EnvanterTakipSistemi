@@ -52,7 +52,7 @@ export default function ReturnList() {
   useEffect(() => {
     const fetchUnits = async () => {
       try {
-        const res = await fetch('http://localhost:4001/api/units', {
+        const res = await fetch(`${API_BASE_URL}/units`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -78,7 +78,7 @@ export default function ReturnList() {
       if (statusFilter) query += `&status=${encodeURIComponent(statusFilter)}`;
       if (debouncedSearch.trim()) query += `&q=${encodeURIComponent(debouncedSearch.trim())}`;
 
-      const res = await fetch(`http://localhost:4001/api/returns${query}`, {
+      const res = await fetch(`${API_BASE_URL}/returns${query}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

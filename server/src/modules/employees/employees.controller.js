@@ -97,4 +97,18 @@ export const exportEmployees = async (req, res, next) => {
   }
 };
 
+export const updateEmployee = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const updated = await employeesService.updateEmployee(id, req.body);
+    return res.status(200).json({
+      success: true,
+      message: 'Personel bilgileri başarıyla güncellendi.',
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 

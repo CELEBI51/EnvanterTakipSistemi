@@ -14,6 +14,24 @@ export const getSettings = async (req, res, next) => {
   }
 };
 
+export const getPublicSettings = async (req, res, next) => {
+  try {
+    const settings = await settingsService.getSettings();
+    return res.status(200).json({
+      success: true,
+      data: {
+        companyName: settings.companyName || 'DİTAŞ Otomotiv',
+        companyAddress: settings.companyAddress || null,
+        companyPhone: settings.companyPhone || null,
+        companyEmail: settings.companyEmail || null,
+        logoPath: settings.logoPath || null,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateSettings = async (req, res, next) => {
   try {
     const {
@@ -122,6 +140,7 @@ export const getLogo = async (req, res, next) => {
       });
     }
 
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Content-Type', logoInfo.mimeType);
     return res.send(logoInfo.buffer);
   } catch (error) {

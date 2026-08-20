@@ -292,3 +292,51 @@ export const exportEmployees = async ({ q, isActive }, res) => {
   await createExcelStream('Personeller', columns, rows, res, `personel_${todayStr}.xlsx`);
 };
 
+export const updateEmployee = async (id, data) => {
+  const existing = await prisma.employee.findUnique({ where: { id } });
+  if (!existing) {
+    const error = new Error('Güncellenecek personel bulunamadı.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const updateData = {};
+
+  if (data.tcNo !== undefined && data.tcNo.trim() !== existing.tcNo) {
+    const dup = await prisma.employee.findUnique({ where: { tcNo: data.tcNo.trim() } });
+    if (dup) {
+      const err = new Error('Bu Sicil Numarası başka bir personele kayıtlı.');
+      err.statusCode = 409;
+      throw err;
+    }
+    updateData.tcNo = data.tcNo.trim();
+  }
+
+  if (data.unitId) {
+    const unit = await prisma.unit.findUnique({ where: { id: data.unitId } });
+    if (!unit) {
+      const err = new Error('Seçilen birim bulunamadı.');
+      err.statusCode = 404;
+      throw err;
+    }
+    updateData.unitId = data.unitId;
+  }
+
+  if (data.fullName !== undefined) updateData.fullName = data.fullName.trim();
+  if (data.phone !== undefined) updateData.phone = data.phone && data.phone.trim() !== '' ? data.phone.trim() : null;
+  if (data.email !== undefined) updateData.email = data.email && data.email.trim() !== '' ? data.email.trim() : null;
+  if (data.hireDate !== undefined) updateData.hireDate = data.hireDate ? new Date(data.hireDate) : null;
+
+  const updated = await prisma.employee.update({
+    where: { id },
+    data: updateData,
+    include: {
+      unit: {
+        select: { id: true, name: true },
+      },
+    },
+  });
+
+  return updated;
+};
+

@@ -7,6 +7,8 @@ import { KeyRound, Eye, EyeOff, Loader2, AlertCircle, ShieldAlert, LogOut } from
 import axiosClient from '../../../api/axiosClient';
 import useAuthStore from '../../../store/authStore';
 
+import { fetchCompanyInfo } from '../../../utils/logoHelper';
+
 const forceChangeSchema = z
   .object({
     newPassword: z.string().min(6, 'Yeni şifre en az 6 karakter olmalıdır.'),
@@ -21,6 +23,13 @@ export default function ForceChangePasswordPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [companyName, setCompanyName] = useState('Ditas BDY Yedek Parça İmalat ve Teknik A.Ş.');
+
+  React.useEffect(() => {
+    fetchCompanyInfo().then((info) => {
+      if (info.companyName) setCompanyName(info.companyName);
+    });
+  }, []);
   
   const { user, setAuth, clearAuth } = useAuthStore();
   const navigate = useNavigate();
@@ -186,8 +195,12 @@ export default function ForceChangePasswordPage() {
         </div>
       </main>
 
-      {/* Alt Dengeleme Boşluğu */}
-      <div className="flex-1" />
+      {/* Alt Dengeleme Boşluğu ve Bilgi Notu */}
+      <div className="flex-1 flex flex-col justify-end pb-2 pt-6">
+        <footer className="text-xs text-slate-500 text-center font-medium">
+          © Copyright 2026 | {companyName}. Tüm Hakları Saklıdır.
+        </footer>
+      </div>
     </div>
   );
 }

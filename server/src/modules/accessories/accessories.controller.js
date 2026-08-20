@@ -142,6 +142,22 @@ export const deleteAccessory = async (req, res) => {
   }
 };
 
+export const updateAccessory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await accessoryService.updateAccessory(id, req.body);
+    return res.status(200).json({
+      status: 'success',
+      data: updated,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      message: error.message || 'Aksesuar güncellenirken hata oluştu.',
+    });
+  }
+};
+
 export const getAccessoryStats = async (req, res, next) => {
   try {
     const data = await accessoryService.getAccessoryStats();

@@ -7,9 +7,9 @@ async function main() {
   console.log('[SEED] Seeding database...');
 
   // 1. Create Admin & Viewer Users
-  const adminPasswordHash = await bcrypt.hash('admin123', 10);
+  const adminPasswordHash = await bcrypt.hash('Ditas_envanter.abc+123', 10);
   const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@firma.com' },
+    where: { email: 'envanteradmin@ditas.com.tr' },
     update: {
       passwordHash: adminPasswordHash,
       mustChangePassword: false,
@@ -24,29 +24,13 @@ async function main() {
   });
   console.log(`[SEED] Admin user ready: ${adminUser.email} (ID: ${adminUser.id})`);
 
-  const testPasswordHash = await bcrypt.hash('123456', 10);
-  const testUser = await prisma.user.upsert({
-    where: { email: 'muhammet@testmail.local' },
-    update: {
-      passwordHash: testPasswordHash,
-      mustChangePassword: false,
-    },
-    create: {
-      fullName: 'Muhammet Test',
-      email: 'muhammet@testmail.local',
-      passwordHash: testPasswordHash,
-      role: 'admin',
-      mustChangePassword: false,
-    },
-  });
-  console.log(`[SEED] Test admin user ready: ${testUser.email}`);
 
 
   // 2. Seed Categories per CategoryParentType
   const seedCategoriesData = [
     // Varlık
-    { parentType: 'VARLIK', name: 'Desktop' },
-    { parentType: 'VARLIK', name: 'Laptop' },
+    { parentType: 'VARLIK', name: 'Masaüstü' },
+    { parentType: 'VARLIK', name: 'Dizüstü' },
     { parentType: 'VARLIK', name: 'Monitör' },
     { parentType: 'VARLIK', name: 'Yazıcı' },
     // Aksesuar
@@ -105,7 +89,7 @@ async function main() {
     update: {},
     create: {
       id: 1,
-      companyName: 'DİTAŞ Otomotiv',
+      companyName: 'Ditaş BDY Yedek Parça İmalat ve Teknik A.Ş.',
     },
   });
   console.log('[SEED] SystemSettings (id: 1) initialized with companyName: "DİTAŞ Otomotiv".');

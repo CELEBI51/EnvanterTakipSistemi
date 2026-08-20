@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, RotateCcw, User, Calendar, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 
 export default function SelectAssignmentForReturnModal({ isOpen, onClose, initialSearch = '' }) {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export default function SelectAssignmentForReturnModal({ isOpen, onClose, initia
 
     try {
       // Fetch assignments (page 1, pageSize 100)
-      const res = await fetch('http://localhost:4001/api/assignments?pageSize=100', {
+      const res = await fetch(`${API_BASE_URL}/assignments?pageSize=100`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

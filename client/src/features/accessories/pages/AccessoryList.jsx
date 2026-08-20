@@ -9,15 +9,18 @@ import {
   ChevronRight,
   Download,
   FileSpreadsheet,
+  Edit,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import AddAccessoryModal from '../components/AddAccessoryModal';
+import EditAccessoryModal from '../components/EditAccessoryModal';
 import AccessoryDetailManageModal from '../components/AccessoryDetailManageModal';
 import ExcelImportModal from '../../../components/common/ExcelImportModal';
 import ExcelExportButton from '../../../components/common/ExcelExportButton';
+import { API_BASE_URL } from '../../../config';
 
 
 export default function AccessoryList() {
@@ -39,6 +42,8 @@ export default function AccessoryList() {
   const [totalCount, setTotalCount] = useState(0);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingAccessory, setEditingAccessory] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedAccessory, setSelectedAccessory] = useState(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [manageModalInitialTab, setManageModalInitialTab] = useState('restock');
@@ -60,7 +65,7 @@ export default function AccessoryList() {
     if (accessoryIdParam && token) {
       const fetchTarget = async () => {
         try {
-          const res = await fetch(`http://localhost:4001/api/accessories/${accessoryIdParam}`, {
+          const res = await fetch(`${API_BASE_URL}/accessories/${accessoryIdParam}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
@@ -79,7 +84,7 @@ export default function AccessoryList() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/accessories/stats', {
+      const res = await fetch(`${API_BASE_URL}/accessories/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -93,7 +98,7 @@ export default function AccessoryList() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/categories?parentType=Aksesuar', {
+      const res = await fetch(`${API_BASE_URL}/categories?parentType=Aksesuar`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -120,7 +125,7 @@ export default function AccessoryList() {
         params.append('q', searchQuery.trim());
       }
 
-      const res = await fetch(`http://localhost:4001/api/accessories?${params.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/accessories?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -152,7 +157,7 @@ export default function AccessoryList() {
     if (!canEdit || !selectedAccessory) return;
     setDeleting(true);
     try {
-      const res = await fetch(`http://localhost:4001/api/accessories/${selectedAccessory.id}`, {
+      const res = await fetch(`${API_BASE_URL}/accessories/${selectedAccessory.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -211,7 +216,7 @@ export default function AccessoryList() {
       <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-            Envanter Takip Sistemi • Aksesuar Yönetimi
+            Aksesuar Yönetimi
           </span>
           <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
             Aksesuar Stok Listesi
@@ -409,6 +414,20 @@ export default function AccessoryList() {
 
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-1">
+                          {canEdit && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingAccessory(item);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded transition cursor-pointer"
+                              title="Düzenle"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => {
@@ -533,6 +552,19 @@ export default function AccessoryList() {
         moduleKey="accessory"
         moduleTitle="Aksesuarlar"
         onSuccess={fetchAccessories}
+      />
+
+      <EditAccessoryModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingAccessory(null);
+        }}
+        accessory={editingAccessory}
+        onSuccess={() => {
+          fetchAccessories();
+          fetchStats();
+        }}
       />
     </div>
   );

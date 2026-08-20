@@ -108,4 +108,17 @@ export const exportComponents = async (req, res, next) => {
   }
 };
 
+export const updateComponent = async (req, res, next) => {
+  try {
+    const updated = await componentService.updateComponent(req.params.id, req.body);
+    res.json({
+      success: true,
+      message: 'Bileşen başarıyla güncellendi.',
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 

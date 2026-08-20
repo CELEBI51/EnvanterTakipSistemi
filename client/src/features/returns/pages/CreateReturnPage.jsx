@@ -131,7 +131,7 @@ export default function CreateReturnPage() {
     setLoadingAssignment(true);
     setAssignmentError('');
     try {
-      const res = await fetch(`http://localhost:4001/api/assignments/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/assignments/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -243,7 +243,7 @@ export default function CreateReturnPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('http://localhost:4001/api/returns', {
+      const res = await fetch(`${API_BASE_URL}/returns`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -269,7 +269,7 @@ export default function CreateReturnPage() {
         if (itemState && itemState.selected && itemState.resultStatus === 'Serviste') {
           const mData = pendingMaintenanceData[hwId];
           if (mData) {
-            const maintRes = await fetch(`http://localhost:4001/api/maintenance`, {
+            const maintRes = await fetch(`${API_BASE_URL}/maintenance`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -310,7 +310,7 @@ export default function CreateReturnPage() {
       const formData = new FormData();
       formData.append('file', signedFile);
 
-      const res = await fetch(`http://localhost:4001/api/returns/${createdReturn.id}/signed-form`, {
+      const res = await fetch(`${API_BASE_URL}/returns/${createdReturn.id}/signed-form`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

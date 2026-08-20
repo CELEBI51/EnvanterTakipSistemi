@@ -1,54 +1,266 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import puppeteer from 'puppeteer';
+import PDFDocument from 'pdfkit';
 import prisma from '../../config/db.js';
 import * as settingsService from '../settings/settings.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function injectCompanySettingsInfo(html) {
-  let updatedHtml = html;
+function toAsciiTurkish(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+    .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+    .replace(/ş/g, 's').replace(/Ş/g, 'S')
+    .replace(/ı/g, 'i').replace(/İ/g, 'I')
+    .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+    .replace(/ç/g, 'c').replace(/Ç/g, 'C');
+}
+
+async function getCompanyHeaderData() {
   const settings = await settingsService.getSettings();
   const logoInfo = await settingsService.getLogoInfo();
 
-  const companyName = settings.companyName || 'DİTAŞ Otomotiv';
-  updatedHtml = updatedHtml.replaceAll('{{companyName}}', companyName);
+  const companyName = toAsciiTurkish(settings.companyName || 'DITAS');
+  let logoPath = null;
 
-  // Logo rendering
-  if (logoInfo && logoInfo.base64) {
-    updatedHtml = updatedHtml.replace('{{#hasLogo}}', '');
-    updatedHtml = updatedHtml.replace('{{/hasLogo}}', '');
-    updatedHtml = updatedHtml.replaceAll('{{logoBase64}}', logoInfo.base64);
-  } else {
-    // Check fallback ditas-logo.png in templates if no logo in settings
-    const fallbackLogoPath = path.join(__dirname, 'templates', 'ditas-logo.png');
-    if (fs.existsSync(fallbackLogoPath)) {
-      const fallbackBase64 = `data:image/png;base64,${fs.readFileSync(fallbackLogoPath).toString('base64')}`;
-      updatedHtml = updatedHtml.replace('{{#hasLogo}}', '');
-      updatedHtml = updatedHtml.replace('{{/hasLogo}}', '');
-      updatedHtml = updatedHtml.replaceAll('{{logoBase64}}', fallbackBase64);
-    } else {
-      updatedHtml = updatedHtml.replace(/{{#hasLogo}}[\s\S]*?{{\/hasLogo}}/, '');
+  if (settings && settings.logoPath) {
+    const absolutePath = path.isAbsolute(settings.logoPath)
+      ? settings.logoPath
+      : path.join(process.cwd(), settings.logoPath);
+    if (fs.existsSync(absolutePath)) logoPath = absolutePath;
+  }
+
+  if (!logoPath) {
+    const fallbackPaths = [
+      path.join(__dirname, 'templates', 'ditas-logo.png'),
+      path.join(process.cwd(), 'client/public/ditas-logo.png'),
+      path.join(process.cwd(), 'public/ditas-logo.png'),
+    ];
+    for (const p of fallbackPaths) {
+      if (fs.existsSync(p)) {
+        logoPath = p;
+        break;
+      }
     }
   }
 
-  // Company details (address, phone)
-  const detailsParts = [];
-  if (settings.companyAddress) detailsParts.push(settings.companyAddress);
-  if (settings.companyPhone) detailsParts.push(`Tel: ${settings.companyPhone}`);
-  if (settings.companyEmail) detailsParts.push(`E-posta: ${settings.companyEmail}`);
+  return { companyName, logoPath, settings };
+}
 
-  if (detailsParts.length > 0) {
-    updatedHtml = updatedHtml.replace('{{#hasCompanyDetails}}', '');
-    updatedHtml = updatedHtml.replace('{{/hasCompanyDetails}}', '');
-    updatedHtml = updatedHtml.replaceAll('{{companyDetails}}', detailsParts.join(' • '));
+function renderEk10Pdf(doc, data) {
+  const leftMargin = 36;
+  const pageWidth = 523;
+
+  // --- Top EK10 Label ---
+  doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#000000');
+  doc.text(toAsciiTurkish(data.ek_no || 'EK10'), leftMargin, 20, { width: pageWidth, align: 'right' });
+
+  // --- Header Box (3 columns) ---
+  const headerY = 30;
+  const headerH = 40;
+  doc.rect(leftMargin, headerY, pageWidth, headerH).strokeColor('#000000').lineWidth(0.8).stroke();
+  doc.moveTo(leftMargin + 145, headerY).lineTo(leftMargin + 145, headerY + headerH).stroke();
+  doc.moveTo(leftMargin + 210, headerY).lineTo(leftMargin + 210, headerY + headerH).stroke();
+
+  // Logo / Company Name in Col 1
+  if (data.logoPath && fs.existsSync(data.logoPath)) {
+    try {
+      doc.image(data.logoPath, leftMargin + 8, headerY + 6, { fit: [130, 28] });
+    } catch (e) {
+      doc.font('Helvetica-Bold').fontSize(14).fillColor('#1c3f94').text(toAsciiTurkish(data.sirket_adi || 'DITAS'), leftMargin + 10, headerY + 12);
+    }
   } else {
-    updatedHtml = updatedHtml.replace(/{{#hasCompanyDetails}}[\s\S]*?{{\/hasCompanyDetails}}/, '');
+    doc.font('Helvetica-Bold').fontSize(14).fillColor('#1c3f94').text(toAsciiTurkish(data.sirket_adi || 'DITAS'), leftMargin + 10, headerY + 12);
   }
 
-  return updatedHtml;
+  // Hatching / Diagonal lines in Col 2 (Middle)
+  doc.save();
+  doc.lineWidth(0.5).strokeColor('#888888');
+  for (let i = 0; i < 45; i += 5) {
+    doc.moveTo(leftMargin + 145 + i, headerY).lineTo(leftMargin + 145 + i + 20, headerY + headerH).stroke();
+  }
+  doc.restore();
+
+  // Header Title in Col 3
+  doc.font('Helvetica-Bold').fontSize(13).fillColor('#000000');
+  doc.text(toAsciiTurkish(data.baslik || 'ZIMMETLEME FORMU'), leftMargin + 210, headerY + 13, { width: pageWidth - 210, align: 'center' });
+
+  // --- Demirbas No Row ---
+  const demirbasY = 76;
+  const demirbasH = 20;
+  doc.rect(leftMargin, demirbasY, pageWidth, demirbasH).strokeColor('#000000').stroke();
+  doc.moveTo(leftMargin + 190, demirbasY).lineTo(leftMargin + 190, demirbasY + demirbasH).stroke();
+
+  doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#000000');
+  doc.text('BILGI ISLEM DEMIRBAS NO :', leftMargin + 8, demirbasY + 6);
+  doc.font('Helvetica').fontSize(9);
+  doc.text(toAsciiTurkish(data.demirbas_no || ''), leftMargin + 198, demirbasY + 6);
+
+  // --- Cihaz Temel Bilgileri Tablosu ---
+  const cihazY = 102;
+  const cihazColW = pageWidth / 4; // 130.75
+  doc.rect(leftMargin, cihazY, pageWidth, 30).strokeColor('#000000').stroke();
+  doc.rect(leftMargin, cihazY, pageWidth, 14).fill('#eeeeee');
+  doc.moveTo(leftMargin, cihazY + 14).lineTo(leftMargin + pageWidth, cihazY + 14).strokeColor('#000000').stroke();
+
+  // Vertical dividers
+  for (let c = 1; c < 4; c++) {
+    doc.moveTo(leftMargin + c * cihazColW, cihazY).lineTo(leftMargin + c * cihazColW, cihazY + 30).stroke();
+  }
+
+  const cihazHeaders = ['CINSI', 'MARKASI', 'MODELI', 'SERI NUMARASI'];
+  const cihazValues = [
+    toAsciiTurkish(data.cinsi || ''),
+    toAsciiTurkish(data.markasi || ''),
+    toAsciiTurkish(data.modeli || ''),
+    toAsciiTurkish(data.seri_no || ''),
+  ];
+
+  doc.font('Helvetica-Bold').fontSize(8).fillColor('#000000');
+  cihazHeaders.forEach((h, i) => {
+    doc.text(h, leftMargin + i * cihazColW, cihazY + 3, { width: cihazColW, align: 'center' });
+  });
+
+  doc.font('Helvetica').fontSize(8).fillColor('#000000');
+  cihazValues.forEach((v, i) => {
+    doc.text(v, leftMargin + i * cihazColW, cihazY + 18, { width: cihazColW, align: 'center' });
+  });
+
+  // --- Parca Detay Tablosu (11 Rows EK10 Standard) ---
+  const parcaY = 138;
+  const colW = [105, 130, 105, 90, 93]; // Total 523
+  const colX = [
+    leftMargin,
+    leftMargin + 105,
+    leftMargin + 235,
+    leftMargin + 340,
+    leftMargin + 430,
+  ];
+
+  const parcalar = data.parcalar || [];
+  const parcaRowH = 14;
+  const parcaHeaderH = 15;
+  const totalParcaRows = Math.max(parcalar.length, 11);
+  const totalParcaH = parcaHeaderH + totalParcaRows * parcaRowH;
+
+  doc.rect(leftMargin, parcaY, pageWidth, totalParcaH).strokeColor('#000000').stroke();
+  doc.rect(leftMargin, parcaY, pageWidth, parcaHeaderH).fill('#eeeeee');
+  doc.moveTo(leftMargin, parcaY + parcaHeaderH).lineTo(leftMargin + pageWidth, parcaY + parcaHeaderH).strokeColor('#000000').stroke();
+
+  // Vertical dividers
+  for (let i = 1; i < colX.length; i++) {
+    doc.moveTo(colX[i], parcaY).lineTo(colX[i], parcaY + totalParcaH).strokeColor('#000000').stroke();
+  }
+
+  const parcaHeaders = ['PARCA CINSI', 'PARCA OZELLIGI', 'PARCA MARKASI', 'PARCA SERI NO', 'ACIKLAMA'];
+  doc.font('Helvetica-Bold').fontSize(8).fillColor('#000000');
+  parcaHeaders.forEach((h, idx) => {
+    doc.text(h, colX[idx], parcaY + 3, { width: colW[idx], align: 'center' });
+  });
+
+  doc.font('Helvetica').fontSize(8).fillColor('#000000');
+  for (let r = 0; r < totalParcaRows; r++) {
+    const rowY = parcaY + parcaHeaderH + r * parcaRowH;
+    if (r > 0) {
+      doc.moveTo(leftMargin, rowY).lineTo(leftMargin + pageWidth, rowY).strokeColor('#cccccc').stroke();
+    }
+    const p = parcalar[r] || {};
+    const c1 = toAsciiTurkish(p.cins || '');
+    const c2 = toAsciiTurkish(p.ozellik || '');
+    const c3 = toAsciiTurkish(p.marka || '');
+    const c4 = toAsciiTurkish(p.seri || '');
+    const c5 = toAsciiTurkish(p.aciklama || '');
+
+    doc.text(c1, colX[0] + 4, rowY + 3, { width: colW[0] - 8, align: 'left' });
+    doc.text(c2, colX[1] + 4, rowY + 3, { width: colW[1] - 8, align: 'left' });
+    doc.text(c3, colX[2] + 4, rowY + 3, { width: colW[2] - 8, align: 'left' });
+    doc.text(c4, colX[3] + 4, rowY + 3, { width: colW[3] - 8, align: 'left' });
+    doc.text(c5, colX[4] + 4, rowY + 3, { width: colW[4] - 8, align: 'left' });
+  }
+
+  // --- ZIMMETLEME & IADE BOLUMLERI ---
+  let nextY = parcaY + totalParcaH + 6;
+  const drawDeliveryBlock = (title, tarih, edenLok, edenIsim, alanLok, alanIsim) => {
+    const blockWidth = pageWidth;
+    const halfWidth = blockWidth / 2;
+
+    // Title & Date Row
+    doc.rect(leftMargin, nextY, blockWidth, 15).strokeColor('#000000').stroke();
+    doc.moveTo(leftMargin + halfWidth, nextY).lineTo(leftMargin + halfWidth, nextY + 15).stroke();
+    doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#000000');
+    doc.text(toAsciiTurkish(title), leftMargin + 6, nextY + 3.5);
+    doc.text(`TARIH : ${tarih || ''}`, leftMargin + halfWidth + 6, nextY + 3.5);
+    nextY += 15;
+
+    // Subheader (TESLIM EDEN / TESLIM ALAN)
+    doc.rect(leftMargin, nextY, blockWidth, 14).fill('#eeeeee');
+    doc.rect(leftMargin, nextY, blockWidth, 14).strokeColor('#000000').stroke();
+    doc.moveTo(leftMargin + halfWidth, nextY).lineTo(leftMargin + halfWidth, nextY + 14).stroke();
+    doc.font('Helvetica-Bold').fontSize(8).fillColor('#000000');
+    doc.text('TESLIM EDEN', leftMargin, nextY + 3, { width: halfWidth, align: 'center' });
+    doc.text('TESLIM ALAN', leftMargin + halfWidth, nextY + 3, { width: halfWidth, align: 'center' });
+    nextY += 14;
+
+    // Body (Lokasyon / Isim / Imza)
+    const bodyH = 50;
+    doc.rect(leftMargin, nextY, blockWidth, bodyH).strokeColor('#000000').stroke();
+    doc.moveTo(leftMargin + halfWidth, nextY).lineTo(leftMargin + halfWidth, nextY + bodyH).stroke();
+
+    // Left Col
+    doc.font('Helvetica-Bold').fontSize(8).fillColor('#000000');
+    doc.text('LOKASYON/MASRAF MRK.:', leftMargin + 6, nextY + 5);
+    doc.font('Helvetica').fontSize(8).text(toAsciiTurkish(edenLok), leftMargin + 125, nextY + 5);
+
+    doc.font('Helvetica-Bold').text('ISIM :', leftMargin + 6, nextY + 20);
+    doc.font('Helvetica').text(toAsciiTurkish(edenIsim), leftMargin + 40, nextY + 20);
+
+    doc.font('Helvetica-Bold').text('IMZA :', leftMargin + 6, nextY + 35);
+
+    // Right Col
+    doc.font('Helvetica-Bold').text('LOKASYON/MASRAF MRK.:', leftMargin + halfWidth + 6, nextY + 5);
+    doc.font('Helvetica').text(toAsciiTurkish(alanLok), leftMargin + halfWidth + 125, nextY + 5);
+
+    doc.font('Helvetica-Bold').text('ISIM :', leftMargin + halfWidth + 6, nextY + 20);
+    doc.font('Helvetica').text(toAsciiTurkish(alanIsim), leftMargin + halfWidth + 40, nextY + 20);
+
+    doc.font('Helvetica-Bold').text('IMZA :', leftMargin + halfWidth + 6, nextY + 35);
+
+    nextY += bodyH + 5;
+  };
+
+  // Zimmetleme Block
+  drawDeliveryBlock(
+    'ZIMMETLEME',
+    data.zimmet_tarihi,
+    data.zimmet_teslim_eden_lokasyon,
+    data.zimmet_teslim_eden_isim,
+    data.zimmet_teslim_alan_lokasyon,
+    data.zimmet_teslim_alan_isim
+  );
+
+  // Iade Block
+  drawDeliveryBlock(
+    'I A D E',
+    data.iade_tarihi,
+    data.iade_teslim_eden_lokasyon,
+    data.iade_teslim_eden_isim,
+    data.iade_teslim_alan_lokasyon,
+    data.iade_teslim_alan_isim
+  );
+
+  // --- Declaration Text ---
+  doc.font('Helvetica').fontSize(7.5).fillColor('#000000');
+  const onayMetni = 'Is bu zimmet formunda yer alan cihazin kullanici kaynakli hasarlarinin tarafimca karsilanacagini beyan, kabul ve taahhut ederim.';
+  doc.text(toAsciiTurkish(onayMetni), leftMargin, nextY, { width: pageWidth });
+  nextY += 18;
+
+  // --- Right Aligned Footer Signature Block ---
+  doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#000000');
+  doc.text('Ad/Soyad', leftMargin, nextY, { width: pageWidth, align: 'right' });
+  doc.text('Imza', leftMargin, nextY + 12, { width: pageWidth, align: 'right' });
 }
 
 export const generateAssignmentPdf = async (assignmentId) => {
@@ -89,129 +301,6 @@ export const generateAssignmentPdf = async (assignmentId) => {
     throw error;
   }
 
-  // Load HTML template
-  const templatePath = path.join(__dirname, 'templates', 'assignment-form.html');
-  let html = fs.readFileSync(templatePath, 'utf8');
-
-  // Inject Company Settings Info (Logo, Name, Address)
-  html = await injectCompanySettingsInfo(html);
-
-  // Format Date
-  const dateStr = new Date(assignment.teslimTarihi).toLocaleDateString('tr-TR');
-
-  // Replace Basic Info
-  html = html.replaceAll('{{employeeName}}', assignment.employee.fullName || '-');
-  html = html.replaceAll('{{employeeTcNo}}', assignment.employee.tcNo || '-');
-  html = html.replaceAll('{{employeeDepartment}}', assignment.employee.unit?.name || '-');
-  html = html.replaceAll('{{teslimTarihi}}', dateStr);
-  html = html.replaceAll('{{teslimEden}}', assignment.teslimEden || '-');
-
-  // Hardware Items rendering
-  const hasHardwareItems = assignment.items && assignment.items.length > 0;
-  if (hasHardwareItems) {
-    html = html.replace('{{#hasHardwareItems}}', '');
-    html = html.replace('{{/hasHardwareItems}}', '');
-
-    let hwRowsHtml = '';
-    for (const item of assignment.items) {
-      const hw = item.hardware;
-      const specs = hw.specs || {};
-
-      hwRowsHtml += `
-      <div class="hardware-block">
-        <table class="data-table" style="margin-bottom: 0;">
-          <thead>
-            <tr>
-              <th>Cinsi (Kategori)</th>
-              <th>Markası</th>
-              <th>Modeli</th>
-              <th>Seri No</th>
-              <th>Demirbaş No</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><b>${hw.category?.name || 'Varlık'}</b></td>
-              <td>${hw.brand || '-'}</td>
-              <td>${hw.model || '-'}</td>
-              <td>${hw.serialNo || '-'}</td>
-              <td><b>${hw.demirbasNo || '-'}</b></td>
-            </tr>
-          </tbody>
-        </table>
-        <table class="specs-table">
-          <tr>
-            <td class="specs-label">İşlemci (CPU)</td>
-            <td style="width: 17%;">${specs.cpu || '-'}</td>
-            <td class="specs-label">Sabit Disk</td>
-            <td style="width: 17%;">${specs.disk || specs.storage || '-'}</td>
-            <td class="specs-label">Hafıza (RAM)</td>
-            <td style="width: 17%;">${specs.ram || '-'}</td>
-          </tr>
-          <tr>
-            <td class="specs-label">CD Sürücü</td>
-            <td>${specs.dvd ? 'Var' : (specs.cd || 'Yok')}</td>
-            <td class="specs-label">Ekran (GPU)</td>
-            <td>${specs.gpu || specs.screen || '-'}</td>
-            <td class="specs-label">Diğer / Ek</td>
-            <td>${specs.other || '-'}</td>
-          </tr>
-        </table>
-      </div>`;
-    }
-
-    const hwBlockRegex = /{{#hardwareItems}}[\s\S]*{{\/hardwareItems}}/;
-    html = html.replace(hwBlockRegex, hwRowsHtml);
-  } else {
-    html = html.replace(/{{#hasHardwareItems}}[\s\S]*{{\/hasHardwareItems}}/, '');
-  }
-
-  // Additional Items rendering (Accessories, Consumables)
-  const additionalList = [];
-  if (assignment.accessoryItems) {
-    for (const accItem of assignment.accessoryItems) {
-      additionalList.push({
-        name: accItem.accessory?.name || 'Aksesuar',
-        category: accItem.accessory?.category?.name || 'Aksesuar',
-        typeLabel: 'Aksesuar',
-        quantity: accItem.quantityGiven,
-      });
-    }
-  }
-  if (assignment.consumableItems) {
-    for (const conItem of assignment.consumableItems) {
-      additionalList.push({
-        name: conItem.consumable?.name || 'Sarf Malzeme',
-        category: conItem.consumable?.category?.name || 'Sarf Malzeme',
-        typeLabel: 'Sarf Malzeme (İadesiz)',
-        quantity: conItem.quantityGiven,
-      });
-    }
-  }
-
-  const hasAdditionalItems = additionalList.length > 0;
-  if (hasAdditionalItems) {
-    html = html.replace('{{#hasAdditionalItems}}', '');
-    html = html.replace('{{/hasAdditionalItems}}', '');
-
-    let addRowsHtml = '';
-    for (const add of additionalList) {
-      addRowsHtml += `
-      <tr>
-        <td><b>${add.name}</b></td>
-        <td>${add.category}</td>
-        <td>${add.typeLabel}</td>
-        <td style="text-align: center; font-weight: bold;">${add.quantity} adet</td>
-      </tr>`;
-    }
-
-    const addBlockRegex = /{{#additionalItems}}[\s\S]*{{\/additionalItems}}/;
-    html = html.replace(addBlockRegex, addRowsHtml);
-  } else {
-    html = html.replace(/{{#hasAdditionalItems}}[\s\S]*{{\/hasAdditionalItems}}/, '');
-  }
-
-  // Storage Dir
   const storageDir = path.resolve(__dirname, '..', '..', '..', 'storage', 'assignment-pdfs');
   if (!fs.existsSync(storageDir)) {
     fs.mkdirSync(storageDir, { recursive: true });
@@ -220,27 +309,84 @@ export const generateAssignmentPdf = async (assignmentId) => {
   const pdfFileName = `${assignmentId}.pdf`;
   const pdfFilePath = path.join(storageDir, pdfFileName);
 
-  // Puppeteer Render
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  const headerData = await getCompanyHeaderData();
+  const primaryHw = assignment.items[0]?.hardware || {};
+  const specs = primaryHw.specs || {};
 
-  try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.pdf({
-      path: pdfFilePath,
-      format: 'A4',
-      preferCSSPageSize: true,
-      printBackground: true,
-      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
-    });
-  } finally {
-    await browser.close();
+  // Build EK10 parts array
+  const parcalar = [
+    { cins: 'ISLEMCI', ozellik: specs.cpu || '-', marka: specs.cpuBrand || '', seri: '', aciklama: '' },
+    { cins: 'SABIT DISK', ozellik: specs.disk || specs.storage || '-', marka: '', seri: '', aciklama: '' },
+    { cins: 'HAFIZA', ozellik: specs.ram || '-', marka: '', seri: '', aciklama: '' },
+    { cins: 'CD SURUCU', ozellik: specs.dvd ? 'Var' : (specs.cd || '-'), marka: '', seri: '', aciklama: '' },
+    { cins: 'EKRAN', ozellik: specs.gpu || specs.screen || '-', marka: '', seri: '', aciklama: '' },
+    { cins: 'HARICI BELLEK', ozellik: specs.externalDrive || '-', marka: '', seri: '', aciklama: '' },
+    { cins: 'TARAYICI', ozellik: specs.scanner || '-', marka: '', seri: '', aciklama: '' },
+    { cins: 'YAZICI', ozellik: specs.printer || '-', marka: '', seri: '', aciklama: '' },
+  ];
+
+  if (assignment.accessoryItems) {
+    for (const a of assignment.accessoryItems) {
+      parcalar.push({
+        cins: 'DIGER',
+        ozellik: `${a.accessory?.name || 'Aksesuar'} (${a.quantityGiven} adet)`,
+        marka: a.accessory?.brand || '',
+        seri: '',
+        aciklama: a.accessory?.category?.name || 'Aksesuar',
+      });
+    }
+  }
+  if (assignment.consumableItems) {
+    for (const c of assignment.consumableItems) {
+      parcalar.push({
+        cins: 'DIGER',
+        ozellik: `${c.consumable?.name || 'Sarf Malzeme'} (${c.quantityGiven} adet)`,
+        marka: '',
+        seri: '',
+        aciklama: 'Sarf Malzeme',
+      });
+    }
+  }
+  if (specs.other && parcalar.length < 11) {
+    parcalar.push({ cins: 'DIGER', ozellik: specs.other, marka: '', seri: '', aciklama: '' });
   }
 
-  // Update DB
+  const ek10Data = {
+    sirket_adi: headerData.companyName,
+    logoPath: headerData.logoPath,
+    baslik: 'ZIMMETLEME FORMU',
+    ek_no: 'EK10',
+    demirbas_no: primaryHw.demirbasNo || '-',
+    cinsi: primaryHw.category?.name || 'LAPTOP',
+    markasi: primaryHw.brand || '-',
+    modeli: primaryHw.model || '-',
+    seri_no: primaryHw.serialNo || '-',
+    parcalar,
+    zimmet_tarihi: new Date(assignment.teslimTarihi).toLocaleDateString('tr-TR'),
+    zimmet_teslim_eden_lokasyon: '',
+    zimmet_teslim_eden_isim: assignment.teslimEden || '',
+    zimmet_teslim_alan_lokasyon: assignment.employee?.unit?.name || '',
+    zimmet_teslim_alan_isim: assignment.employee?.fullName || '',
+    iade_tarihi: '',
+    iade_teslim_eden_lokasyon: '',
+    iade_teslim_eden_isim: '',
+    iade_teslim_alan_lokasyon: '',
+    iade_teslim_alan_isim: '',
+  };
+
+  await new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 36 });
+    const writeStream = fs.createWriteStream(pdfFilePath);
+    doc.pipe(writeStream);
+
+    writeStream.on('finish', resolve);
+    writeStream.on('error', reject);
+    doc.on('error', reject);
+
+    renderEk10Pdf(doc, ek10Data);
+    doc.end();
+  });
+
   await prisma.assignment.update({
     where: { id: assignmentId },
     data: {
@@ -279,155 +425,6 @@ export const generateReturnPdf = async (returnId) => {
 
   const assignment = returnRecord.assignment;
 
-  // Load HTML template
-  const templatePath = path.join(__dirname, 'templates', 'assignment-form.html');
-  let html = fs.readFileSync(templatePath, 'utf8');
-
-  // Inject Company Settings Info (Logo, Name, Address)
-  html = await injectCompanySettingsInfo(html);
-
-  // Replace Titles for Return Form
-  html = html.replace('ZİMMETLEME FORMU', 'ZİMMET İADE FORMU');
-  html = html.replace('1. ZİMMET SAHİBİ & TESLİMAT BİLGİLERİ', '1. ZİMMET SAHİBİ & İADE BİLGİLERİ');
-  html = html.replace('2. VARLIK / DONANIM BİLGİLERİ', '2. İADE EDİLEN VARLIK / DONANIMLAR');
-  html = html.replace('3. DİĞER EK ZİMMET KALEMLERİ', '3. İADE EDİLEN DİĞER KALEMLER');
-
-  // Format Dates
-  const assignDateStr = new Date(assignment.teslimTarihi).toLocaleDateString('tr-TR');
-  const returnDateStr = new Date(returnRecord.tarih).toLocaleDateString('tr-TR');
-
-  // Replace Basic Info
-  html = html.replaceAll('{{employeeName}}', assignment.employee.fullName || '-');
-  html = html.replaceAll('{{employeeTcNo}}', assignment.employee.tcNo || '-');
-  html = html.replaceAll('{{employeeDepartment}}', assignment.employee.unit?.name || '-');
-  html = html.replaceAll('{{teslimTarihi}}', returnDateStr); // show return date as date
-  html = html.replaceAll('{{teslimEden}}', returnRecord.teslimAlanIc || '-');
-
-  // Hardware Items rendering
-  const returnedHwItems = returnRecord.items && returnRecord.items.length > 0 ? returnRecord.items : [];
-  const hasHardwareItems = returnedHwItems.length > 0;
-
-  if (hasHardwareItems) {
-    html = html.replace('{{#hasHardwareItems}}', '');
-    html = html.replace('{{/hasHardwareItems}}', '');
-
-    let hwRowsHtml = '';
-    for (const item of returnedHwItems) {
-      const hw = item.hardware;
-      const specs = hw.specs || {};
-
-      hwRowsHtml += `
-      <div class="hardware-block">
-        <table class="data-table" style="margin-bottom: 0;">
-          <thead>
-            <tr>
-              <th>Cinsi (Kategori)</th>
-              <th>Markası</th>
-              <th>Modeli</th>
-              <th>Seri No</th>
-              <th>Demirbaş No</th>
-              <th>İade Sonuç Durumu</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><b>${hw.category?.name || 'Varlık'}</b></td>
-              <td>${hw.brand || '-'}</td>
-              <td>${hw.model || '-'}</td>
-              <td>${hw.serialNo || '-'}</td>
-              <td><b>${hw.demirbasNo || '-'}</b></td>
-              <td><b style="color: ${item.resultStatus === 'Arızalı' ? '#B91C1C' : '#047857'}">${item.resultStatus || 'Hazır'}</b></td>
-            </tr>
-          </tbody>
-        </table>
-        <table class="specs-table">
-          <tr>
-            <td class="specs-label">İşlemci (CPU)</td>
-            <td style="width: 17%;">${specs.cpu || '-'}</td>
-            <td class="specs-label">Sabit Disk</td>
-            <td style="width: 17%;">${specs.disk || specs.storage || '-'}</td>
-            <td class="specs-label">Hafıza (RAM)</td>
-            <td style="width: 17%;">${specs.ram || '-'}</td>
-          </tr>
-          <tr>
-            <td class="specs-label">CD Sürücü</td>
-            <td>${specs.dvd ? 'Var' : (specs.cd || 'Yok')}</td>
-            <td class="specs-label">Ekran (GPU)</td>
-            <td>${specs.gpu || specs.screen || '-'}</td>
-            <td class="specs-label">Diğer / Ek</td>
-            <td>${specs.other || '-'}</td>
-          </tr>
-        </table>
-      </div>`;
-    }
-
-    const hwBlockRegex = /{{#hardwareItems}}[\s\S]*{{\/hardwareItems}}/;
-    html = html.replace(hwBlockRegex, hwRowsHtml);
-  } else {
-    html = html.replace(/{{#hasHardwareItems}}[\s\S]*{{\/hasHardwareItems}}/, '');
-  }
-
-  // Additional Returned Items rendering
-  const additionalList = [];
-  if (returnRecord.accessoryItems) {
-    for (const accItem of returnRecord.accessoryItems) {
-      additionalList.push({
-        name: accItem.accessory?.name || 'Aksesuar',
-        category: accItem.accessory?.category?.name || 'Aksesuar',
-        typeLabel: `Aksesuar İadesi (${accItem.resultStatus || 'Hazır'})`,
-        quantity: accItem.quantityReturned,
-      });
-    }
-  }
-  const hasAdditionalItems = additionalList.length > 0;
-  if (hasAdditionalItems) {
-    html = html.replace('{{#hasAdditionalItems}}', '');
-    html = html.replace('{{/hasAdditionalItems}}', '');
-
-    let addRowsHtml = '';
-    for (const add of additionalList) {
-      addRowsHtml += `
-      <tr>
-        <td><b>${add.name}</b></td>
-        <td>${add.category}</td>
-        <td>${add.typeLabel}</td>
-        <td style="text-align: center; font-weight: bold;">${add.quantity} adet</td>
-      </tr>`;
-    }
-
-    const addBlockRegex = /{{#additionalItems}}[\s\S]*{{\/additionalItems}}/;
-    html = html.replace(addBlockRegex, addRowsHtml);
-  } else {
-    html = html.replace(/{{#hasAdditionalItems}}[\s\S]*{{\/hasAdditionalItems}}/, '');
-  }
-
-  // Replace Signature Table for Return Form (Exactly 1 table, 2 boxes)
-  const returnSignatureHtml = `
-  <div class="section-title">4. İADE TESLİM - TESLİM ALMA ONAYI</div>
-  <table class="signatures-table">
-    <tr>
-      <td>
-        <div class="sig-title">İADE EDEN (KULLANICI)</div>
-        <div class="sig-row"><span class="label">Adı Soyadı:</span> ${assignment.employee.fullName || '-'}</div>
-        <div class="sig-row"><span class="label">Departman:</span> ${assignment.employee.unit?.name || '-'}</div>
-        <div class="sig-row"><span class="label">İade Tarihi:</span> ${returnDateStr}</div>
-        <div class="sig-row"><span class="label">İmza:</span></div>
-        <div class="sig-line"></div>
-      </td>
-      <td>
-        <div class="sig-title">İADE ALAN (BİLGİ TEKNOLOJİLERİ)</div>
-        <div class="sig-row"><span class="label">Teslim Alan IT:</span> ${returnRecord.teslimAlanIc || '-'}</div>
-        <div class="sig-row"><span class="label">İade Tarihi:</span> ${returnDateStr}</div>
-        <div class="sig-row"><span class="label">İmza:</span></div>
-        <div class="sig-line"></div>
-      </td>
-    </tr>
-  </table>`;
-
-  const sigBlockRegex = /<div class="section-title"[^>]*id="sig-section-title"[\s\S]*?<\/table>/;
-  html = html.replace(sigBlockRegex, returnSignatureHtml);
-
-  // Storage Dir
   const storageDir = path.resolve(__dirname, '..', '..', '..', 'storage', 'return-pdfs');
   if (!fs.existsSync(storageDir)) {
     fs.mkdirSync(storageDir, { recursive: true });
@@ -436,25 +433,68 @@ export const generateReturnPdf = async (returnId) => {
   const pdfFileName = `${returnId}.pdf`;
   const pdfFilePath = path.join(storageDir, pdfFileName);
 
-  // Puppeteer Render
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  const headerData = await getCompanyHeaderData();
+  const returnedHw = returnRecord.items[0]?.hardware || assignment.items[0]?.hardware || {};
+  const specs = returnedHw.specs || {};
 
-  try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.pdf({
-      path: pdfFilePath,
-      format: 'A4',
-      preferCSSPageSize: true,
-      printBackground: true,
-      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
-    });
-  } finally {
-    await browser.close();
+  const parcalar = [
+    { cins: 'ISLEMCI', ozellik: specs.cpu || '-', marka: specs.cpuBrand || '', seri: '', aciklama: '' },
+    { cins: 'SABIT DISK', ozellik: specs.disk || specs.storage || '-', marka: '', seri: '', aciklama: '' },
+    { cins: 'HAFIZA', ozellik: specs.ram || '-', marka: '', seri: '', aciklama: '' },
+    { cins: 'CD SURUCU', ozellik: specs.dvd ? 'Var' : (specs.cd || '-'), marka: '', seri: '', aciklama: '' },
+    { cins: 'EKRAN', ozellik: specs.gpu || specs.screen || '-', marka: '', seri: '', aciklama: '' },
+    { cins: 'HARICI BELLEK', ozellik: specs.externalDrive || '-', marka: '', seri: '', aciklama: '' },
+    { cins: 'TARAYICI', ozellik: specs.scanner || '-', marka: '', seri: '', aciklama: '' },
+    { cins: 'YAZICI', ozellik: specs.printer || '-', marka: '', seri: '', aciklama: '' },
+  ];
+
+  if (returnRecord.accessoryItems) {
+    for (const a of returnRecord.accessoryItems) {
+      parcalar.push({
+        cins: 'DIGER',
+        ozellik: `${a.accessory?.name || 'Aksesuar'} (${a.quantityReturned} adet iade)`,
+        marka: a.accessory?.brand || '',
+        seri: '',
+        aciklama: a.resultStatus || 'Iade',
+      });
+    }
   }
+
+  const ek10Data = {
+    sirket_adi: headerData.companyName,
+    logoPath: headerData.logoPath,
+    baslik: 'ZIMMET IADE FORMU',
+    ek_no: 'EK10',
+    demirbas_no: returnedHw.demirbasNo || '-',
+    cinsi: returnedHw.category?.name || 'LAPTOP',
+    markasi: returnedHw.brand || '-',
+    modeli: returnedHw.model || '-',
+    seri_no: returnedHw.serialNo || '-',
+    parcalar,
+    zimmet_tarihi: new Date(assignment.teslimTarihi).toLocaleDateString('tr-TR'),
+    zimmet_teslim_eden_lokasyon: '',
+    zimmet_teslim_eden_isim: assignment.teslimEden || '',
+    zimmet_teslim_alan_lokasyon: assignment.employee?.unit?.name || '',
+    zimmet_teslim_alan_isim: assignment.employee?.fullName || '',
+    iade_tarihi: new Date(returnRecord.tarih).toLocaleDateString('tr-TR'),
+    iade_teslim_eden_lokasyon: assignment.employee?.unit?.name || '',
+    iade_teslim_eden_isim: assignment.employee?.fullName || '',
+    iade_teslim_alan_lokasyon: '',
+    iade_teslim_alan_isim: returnRecord.teslimAlanIc || '',
+  };
+
+  await new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 36 });
+    const writeStream = fs.createWriteStream(pdfFilePath);
+    doc.pipe(writeStream);
+
+    writeStream.on('finish', resolve);
+    writeStream.on('error', reject);
+    doc.on('error', reject);
+
+    renderEk10Pdf(doc, ek10Data);
+    doc.end();
+  });
 
   await prisma.return.update({
     where: { id: returnId },

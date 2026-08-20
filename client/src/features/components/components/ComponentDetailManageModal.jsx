@@ -10,6 +10,7 @@ import {
   Layers,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import AttachmentList from '../../../components/common/AttachmentList';
 import { getStockMovementInfo } from '../../../utils/stockMovementLabels';
 
@@ -58,7 +59,7 @@ export default function ComponentDetailManageModal({
   const fetchLatestComponent = async () => {
     if (!component?.id || !token) return;
     try {
-      const res = await fetch(`http://localhost:4001/api/components/${component.id}`, {
+      const res = await fetch(`${API_BASE_URL}/components/${component.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -75,7 +76,7 @@ export default function ComponentDetailManageModal({
     setHistoryLoading(true);
     setHistoryError('');
     try {
-      const res = await fetch(`http://localhost:4001/api/components/${component.id}/history`, {
+      const res = await fetch(`${API_BASE_URL}/components/${component.id}/history`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -103,7 +104,7 @@ export default function ComponentDetailManageModal({
 
     setRestockLoading(true);
     try {
-      const res = await fetch(`http://localhost:4001/api/components/${component.id}/restock`, {
+      const res = await fetch(`${API_BASE_URL}/components/${component.id}/restock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, Printer } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import BarcodeLabel from '../../../components/common/BarcodeLabel';
 import BarcodePrintModal from '../../../components/common/BarcodePrintModal';
 import FileUploadField from '../../../components/common/FileUploadField';
@@ -75,7 +76,7 @@ export default function AddHardwareModal({ isOpen, onClose, onSuccess }) {
   const fetchCategories = async () => {
     setLoadingCategories(true);
     try {
-      const res = await fetch('http://localhost:4001/api/categories?parentType=Varlık', {
+      const res = await fetch(`${API_BASE_URL}/categories?parentType=Varlık`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -190,7 +191,7 @@ export default function AddHardwareModal({ isOpen, onClose, onSuccess }) {
     }
 
     try {
-      const res = await fetch('http://localhost:4001/api/hardware', {
+      const res = await fetch(`${API_BASE_URL}/hardware`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -220,7 +221,7 @@ export default function AddHardwareModal({ isOpen, onClose, onSuccess }) {
           formData.append('entityId', createdItem.id);
           formData.append('fileType', 'invoice');
 
-          await fetch('http://localhost:4001/api/attachments', {
+          await fetch(`${API_BASE_URL}/attachments`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: formData,

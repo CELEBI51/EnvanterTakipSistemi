@@ -17,8 +17,10 @@ import CreateAssignmentPage from './features/assignments/pages/CreateAssignmentP
 import ReturnList from './features/returns/pages/ReturnList';
 import CreateReturnPage from './features/returns/pages/CreateReturnPage';
 import SettingsLayout from './features/settings/pages/SettingsLayout';
+import ProfilePage from './features/profile/pages/ProfilePage';
 import useAuthStore from './store/authStore';
 import { API_BASE_URL } from './config';
+import { fetchCompanyInfo } from './utils/logoHelper';
 import { hasPermission } from './utils/permissions';
 import {
   LayoutDashboard,
@@ -76,15 +78,28 @@ function MainLayout({ children }) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [notificationsData, setNotificationsData] = useState(null);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
-  const [logoSrc, setLogoSrc] = useState(`${API_BASE_URL}/settings/logo?t=${Date.now()}`);
+  const [logoSrc, setLogoSrc] = useState('/ditas-logo.png');
+  const [companyName, setCompanyName] = useState('Ditas BDY Yedek Parça İmalat ve Teknik A.Ş.');
   const popoverRef = useRef(null);
 
   useEffect(() => {
-    const handleLogoChange = () => {
-      setLogoSrc(`${API_BASE_URL}/settings/logo?t=${Date.now()}`);
+    fetchCompanyInfo().then((info) => {
+      if (info.companyName) {
+        setCompanyName(info.companyName);
+        document.title = `${info.companyName} - Demirbaş Takip Sistemi`;
+      }
+      if (info.logoSrc) setLogoSrc(info.logoSrc);
+    });
+
+    const handleInfoChange = (e) => {
+      if (e.detail?.companyName) {
+        setCompanyName(e.detail.companyName);
+        document.title = `${e.detail.companyName} - Demirbaş Takip Sistemi`;
+      }
+      if (e.detail?.logoSrc) setLogoSrc(e.detail.logoSrc);
     };
-    window.addEventListener('company-logo-changed', handleLogoChange);
-    return () => window.removeEventListener('company-logo-changed', handleLogoChange);
+    window.addEventListener('company-info-changed', handleInfoChange);
+    return () => window.removeEventListener('company-info-changed', handleInfoChange);
   }, []);
 
   const isAdmin = user?.role === 'admin';
@@ -148,93 +163,34 @@ function MainLayout({ children }) {
 
 
   return (
-    <div className="min-h-screen flex font-sans transition-colors duration-300" style={{ backgroundColor: 'var(--theme-page-bg)', color: 'var(--theme-text-primary)' }}>
-      {/* 1. PERMANENT LEFT SIDEBAR */}
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-0 h-screen shadow-xl z-20 transition-colors duration-300" style={{ backgroundColor: 'var(--theme-sidebar-bg)', color: 'var(--theme-sidebar-text)' }}>
-        {/* Corporate Logo */}
-        <div className="p-4 flex items-center justify-center" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
-          <img 
-            src={logoSrc} 
-            alt="Logo" 
-            className="h-20 w-auto max-w-full object-contain transition-transform duration-200 hover:scale-105" 
-          />
-        </div>
+    <div className="min-h-screen flex flex-col font-sans transition-colors duration-300" style={{ backgroundColor: 'var(--theme-page-bg)', color: 'var(--theme-text-primary)' }}>
+      {/* 1. SINGLE UNIFIED FULL-WIDTH TOP HEADER */}
+      <header className="h-20 sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 shadow-xs transition-colors duration-300 shrink-0" style={{ backgroundColor: 'var(--theme-header-bg)', borderBottom: '1px solid var(--theme-header-border)' }}>
+        {/* Left Side: Mobile Menu Button & Corporate Logo */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setMobileSidebarOpen((prev) => !prev)}
+            className="lg:hidden p-2 rounded-xl border border-slate-200 text-[#1E2534] hover:bg-slate-100 transition cursor-pointer"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
 
-        {/* Sidebar Navigation */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto text-sm font-medium">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname.startsWith(item.path);
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${isActive
-                  ? 'font-bold shadow-xs'
-                  : ''
-                  }`}
-              style={isActive
-                ? { backgroundColor: 'var(--theme-accent)', color: '#fff', boxShadow: `0 2px 8px var(--theme-accent-shadow)` }
-                : { color: 'var(--theme-sidebar-muted)' }
-              }
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-
-          {/* Users (Admin Only) */}
-          {isAdmin && (
-            <Link
-              to="/admin/users"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${location.pathname.startsWith('/admin/users') ? 'font-bold shadow-xs' : ''}`}
-              style={location.pathname.startsWith('/admin/users')
-                ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
-                : { color: 'var(--theme-sidebar-muted)' }
-              }
-            >
-              <Users className="w-4 h-4 shrink-0" />
-              <span>Kullanıcı Yönetimi</span>
-            </Link>
-          )}
-
-          {/* System Settings (Admin Only) */}
-          {isAdmin && (
-            <Link
-              to="/settings"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${location.pathname.startsWith('/settings') ? 'font-bold shadow-xs' : ''}`}
-              style={location.pathname.startsWith('/settings')
-                ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
-                : { color: 'var(--theme-sidebar-muted)' }
-              }
-            >
-              <Settings className="w-4 h-4 shrink-0" />
-              <span>Sistem Ayarları</span>
-            </Link>
-          )}
-        </nav>
-
-        {/* Sidebar Footer */}
-        <div className="p-4 text-[11px] flex items-center gap-2" style={{ borderTop: '1px solid var(--theme-sidebar-border)', color: 'var(--theme-sidebar-muted)' }}>
-          <span>Envanter Takip Sistemi © 2026</span>
-        </div>
-      </aside>
-
-      {/* 2. MAIN CONTENT WRAPPER */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* TOP NAVIGATION BAR */}
-        <header className="h-16 sticky top-0 z-10 flex items-center justify-between px-4 sm:px-6 shadow-xs transition-colors duration-300" style={{ backgroundColor: 'var(--theme-header-bg)', borderBottom: '1px solid var(--theme-header-border)' }}>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setMobileSidebarOpen((prev) => !prev)}
-              className="lg:hidden p-2 rounded-xl border border-slate-200 text-[#1E2534] hover:bg-slate-100 transition cursor-pointer"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+          {/* Logo Container on far left of top panel (shifted right & enlarged) */}
+          <div className="pl-4 sm:pl-6 flex items-center justify-start">
+            <img 
+              src={logoSrc} 
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = '/ditas-logo.png';
+              }}
+              alt="Logo" 
+              className="h-14 w-auto max-w-full object-contain transition-transform duration-200 hover:scale-105" 
+            />
           </div>
+        </div>
 
-          <div className="flex items-center gap-4 pl-4">
+        {/* Right Side: Notifications & User Profile */}
+        <div className="flex items-center gap-4 pl-4">
             <div className="relative" ref={popoverRef}>
               <button
                 onClick={() => {
@@ -401,17 +357,23 @@ function MainLayout({ children }) {
             </div>
 
             <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-xs" style={{ backgroundColor: 'var(--theme-user-badge-bg)', color: 'var(--theme-user-badge-text)' }}>
-                {user?.fullName ? user.fullName.substring(0, 2).toUpperCase() : 'US'}
-              </div>
-              <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs font-semibold truncate max-w-[140px]" style={{ color: 'var(--theme-text-primary)' }}>
-                  {user?.fullName}
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-accent)' }}>
-                  {user?.role}
-                </span>
-              </div>
+              <Link
+                to="/profile"
+                className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-slate-100 transition group"
+                title="Profilim / Hesabım"
+              >
+                <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-xs group-hover:scale-105 transition" style={{ backgroundColor: 'var(--theme-user-badge-bg)', color: 'var(--theme-user-badge-text)' }}>
+                  {user?.fullName ? user.fullName.substring(0, 2).toUpperCase() : 'US'}
+                </div>
+                <div className="hidden sm:flex flex-col text-left">
+                  <span className="text-xs font-semibold truncate max-w-[140px] group-hover:text-[#4F8FE0]" style={{ color: 'var(--theme-text-primary)' }}>
+                    {user?.fullName}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-accent)' }}>
+                    {user?.role}
+                  </span>
+                </div>
+              </Link>
 
               <button
                 onClick={clearAuth}
@@ -424,89 +386,164 @@ function MainLayout({ children }) {
           </div>
         </header>
 
-        {/* Mobile Sidebar Overlay */}
-        {mobileSidebarOpen && (
-          <div className="lg:hidden fixed inset-0 z-40 flex">
-            <div
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
-              onClick={() => setMobileSidebarOpen(false)}
-            ></div>
-            <div className="relative w-64 flex flex-col h-full shadow-2xl z-50" style={{ backgroundColor: 'var(--theme-sidebar-bg)', color: 'var(--theme-sidebar-text)' }}>
-              <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
-                <img 
-                  src={logoSrc} 
-                  alt="Logo" 
-                  className="h-14 w-auto max-w-[180px] object-contain" 
-                />
-                <button
-                  onClick={() => setMobileSidebarOpen(false)}
-                  className="text-slate-300 hover:text-white"
+        {/* BODY WRAPPER: PERMANENT SIDEBAR + MAIN CONTENT */}
+        <div className="flex-1 flex min-h-0">
+          {/* PERMANENT LEFT SIDEBAR (Starts below the full-width top panel) */}
+          <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-20 h-[calc(100vh-5rem)] shadow-xl z-20 transition-colors duration-300" style={{ backgroundColor: 'var(--theme-sidebar-bg)', color: 'var(--theme-sidebar-text)' }}>
+            {/* Sidebar Navigation */}
+            <nav className="flex-1 p-4 space-y-1 overflow-y-auto text-sm font-medium">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname.startsWith(item.path);
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${isActive ? 'font-bold shadow-xs' : ''}`}
+                    style={isActive
+                      ? { backgroundColor: 'var(--theme-accent)', color: '#fff', boxShadow: `0 2px 8px var(--theme-accent-shadow)` }
+                      : { color: 'var(--theme-sidebar-muted)' }
+                    }
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+
+              {/* Users (Admin Only) */}
+              {isAdmin && (
+                <Link
+                  to="/admin/users"
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${location.pathname.startsWith('/admin/users') ? 'font-bold shadow-xs' : ''}`}
+                  style={location.pathname.startsWith('/admin/users')
+                    ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
+                    : { color: 'var(--theme-sidebar-muted)' }
+                  }
                 >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+                  <Users className="w-4 h-4 shrink-0" />
+                  <span>Kullanıcı Yönetimi</span>
+                </Link>
+              )}
 
-              <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto text-sm font-medium">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname.startsWith(item.path);
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setMobileSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${isActive ? 'font-bold' : ''}`}
-                      style={isActive
-                        ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
-                        : { color: 'var(--theme-sidebar-muted)' }
-                      }
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
+              {/* System Settings (Admin Only) */}
+              {isAdmin && (
+                <Link
+                  to="/settings"
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all ${location.pathname.startsWith('/settings') ? 'font-bold shadow-xs' : ''}`}
+                  style={location.pathname.startsWith('/settings')
+                    ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
+                    : { color: 'var(--theme-sidebar-muted)' }
+                  }
+                >
+                  <Settings className="w-4 h-4 shrink-0" />
+                  <span>Sistem Ayarları</span>
+                </Link>
+              )}
+            </nav>
 
-                {isAdmin && (
-                  <>
-                    <Link
-                      to="/admin/users"
-                      onClick={() => setMobileSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${location.pathname.startsWith('/admin/users') ? 'font-bold' : ''}`}
-                      style={location.pathname.startsWith('/admin/users')
-                        ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
-                        : { color: 'var(--theme-sidebar-muted)' }
-                      }
-                    >
-                      <Users className="w-4 h-4" />
-                      <span>Kullanıcı Yönetimi</span>
-                    </Link>
-
-                    <Link
-                      to="/settings"
-                      onClick={() => setMobileSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${location.pathname.startsWith('/settings') ? 'font-bold' : ''}`}
-                      style={location.pathname.startsWith('/settings')
-                        ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
-                        : { color: 'var(--theme-sidebar-muted)' }
-                      }
-                    >
-                      <Settings className="w-4 h-4" />
-                      <span>Sistem Ayarları</span>
-                    </Link>
-                  </>
-                )}
-              </nav>
+            {/* Sidebar Footer */}
+            <div className="p-3 text-[10px] leading-tight text-center font-medium" style={{ borderTop: '1px solid var(--theme-sidebar-border)', color: 'var(--theme-sidebar-muted)' }}>
+              <span>© Copyright 2026 | {companyName}. Tüm Hakları Saklıdır.</span>
             </div>
-          </div>
-        )}
+          </aside>
 
-        {/* MAIN BODY CONTENT AREA */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">{children}</main>
+          {/* Mobile Sidebar Overlay */}
+          {mobileSidebarOpen && (
+            <div className="lg:hidden fixed inset-0 z-40 flex">
+              <div
+                className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
+                onClick={() => setMobileSidebarOpen(false)}
+              ></div>
+              <div className="relative w-64 flex flex-col h-full shadow-2xl z-50" style={{ backgroundColor: 'var(--theme-sidebar-bg)', color: 'var(--theme-sidebar-text)' }}>
+                <div className="h-16 px-4 flex items-center justify-between bg-white shrink-0" style={{ borderBottom: '1px solid var(--theme-header-border)' }}>
+                  <img 
+                    src={logoSrc} 
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/ditas-logo.png';
+                    }}
+                    alt="Logo" 
+                    className="h-10 w-auto max-w-[160px] object-contain" 
+                  />
+                  <button
+                    onClick={() => setMobileSidebarOpen(false)}
+                    className="text-slate-600 hover:text-slate-900"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto text-sm font-medium">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname.startsWith(item.path);
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setMobileSidebarOpen(false)}
+                        className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${isActive ? 'font-bold' : ''}`}
+                        style={isActive
+                          ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
+                          : { color: 'var(--theme-sidebar-muted)' }
+                        }
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+
+                  {isAdmin && (
+                    <>
+                      <Link
+                        to="/admin/users"
+                        onClick={() => setMobileSidebarOpen(false)}
+                        className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${location.pathname.startsWith('/admin/users') ? 'font-bold' : ''}`}
+                        style={location.pathname.startsWith('/admin/users')
+                          ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
+                          : { color: 'var(--theme-sidebar-muted)' }
+                        }
+                      >
+                        <Users className="w-4 h-4" />
+                        <span>Kullanıcı Yönetimi</span>
+                      </Link>
+
+                      <Link
+                        to="/settings"
+                        onClick={() => setMobileSidebarOpen(false)}
+                        className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl ${location.pathname.startsWith('/settings') ? 'font-bold' : ''}`}
+                        style={location.pathname.startsWith('/settings')
+                          ? { backgroundColor: 'var(--theme-accent)', color: '#fff' }
+                          : { color: 'var(--theme-sidebar-muted)' }
+                        }
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Sistem Ayarları</span>
+                      </Link>
+                    </>
+                  )}
+                </nav>
+
+                <div className="p-3 text-[10px] leading-tight text-center font-medium" style={{ borderTop: '1px solid var(--theme-sidebar-border)', color: 'var(--theme-sidebar-muted)' }}>
+                  <span>© Copyright 2026 | Ditas BDY Yedek Parça İmalat ve Teknik A.Ş. Tüm Hakları Saklıdır.</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MAIN BODY CONTENT AREA */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">{children}</main>
+            <footer className="py-3 px-6 text-center text-xs text-slate-500 font-medium border-t border-slate-200/80 bg-slate-50/50 shrink-0">
+              © Copyright 2026 | {companyName}. Tüm Hakları Saklıdır.
+            </footer>
+          </div>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
 export default function App() {
   // Load saved theme from localStorage on mount
@@ -678,6 +715,17 @@ export default function App() {
             <ProtectedRoute allowedRoles={['admin']}>
               <MainLayout>
                 <SettingsLayout />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <ProfilePage />
               </MainLayout>
             </ProtectedRoute>
           }

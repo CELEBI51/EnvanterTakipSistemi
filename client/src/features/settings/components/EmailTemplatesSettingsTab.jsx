@@ -13,6 +13,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 
 const TEMPLATE_DEFINITIONS = [
   {
@@ -83,7 +84,7 @@ export default function EmailTemplatesSettingsTab() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:4001/api/settings/email-templates', {
+      const res = await fetch(`${API_BASE_URL}/settings/email-templates`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -183,7 +184,7 @@ export default function EmailTemplatesSettingsTab() {
     setSuccess('');
 
     try {
-      const res = await fetch(`http://localhost:4001/api/settings/email-templates/${activeType}`, {
+      const res = await fetch(`${API_BASE_URL}/settings/email-templates/${activeType}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -218,7 +219,7 @@ export default function EmailTemplatesSettingsTab() {
     setSuccess('');
 
     try {
-      const res = await fetch(`http://localhost:4001/api/settings/email-templates/${activeType}/test`, {
+      const res = await fetch(`${API_BASE_URL}/settings/email-templates/${activeType}/test`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

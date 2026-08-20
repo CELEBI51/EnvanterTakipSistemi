@@ -13,6 +13,7 @@ router.get('/', employeesController.getEmployees);
 
 router.post('/', roleMiddleware(['admin', 'it_staff']), employeesController.createEmployee);
 router.get('/:id', employeesController.getEmployeeById);
+router.put('/:id', roleMiddleware(['admin', 'it_staff']), employeesController.updateEmployee);
 router.patch('/:id/status', roleMiddleware(['admin', 'it_staff']), employeesController.updateEmployeeStatus);
 
 export default router;

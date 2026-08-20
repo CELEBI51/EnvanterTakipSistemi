@@ -100,3 +100,67 @@ export const logout = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const profile = await authService.getUserProfile(userId);
+    return res.status(200).json({
+      status: 'success',
+      data: profile,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { fullName, phone, currentPassword } = req.body;
+    const result = await authService.updateProfile(userId, { fullName, phone, currentPassword });
+    return res.status(200).json({
+      status: 'success',
+      message: 'Profil bilgileriniz başarıyla güncellendi.',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const requestEmailChange = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { newEmail, currentPassword } = req.body;
+    if (!newEmail || !currentPassword) {
+      return res.status(400).json({ message: 'Yeni e-posta ve mevcut şifreniz gereklidir.' });
+    }
+    const result = await authService.requestEmailChange(userId, { newEmail, currentPassword });
+    return res.status(200).json({
+      status: 'success',
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyEmailChange = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { newEmail, code } = req.body;
+    if (!newEmail || !code) {
+      return res.status(400).json({ message: 'Yeni e-posta ve 6 haneli onay kodu gereklidir.' });
+    }
+    const result = await authService.verifyEmailChange(userId, { newEmail, code });
+    return res.status(200).json({
+      status: 'success',
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

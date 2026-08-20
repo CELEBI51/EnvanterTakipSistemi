@@ -68,7 +68,7 @@ export default function CreateAssignmentPage() {
     const timer = setTimeout(async () => {
       setLoadingEmployees(true);
       try {
-        const res = await fetch(`http://localhost:4001/api/employees?isActive=true&q=${encodeURIComponent(employeeSearch.trim())}`, {
+        const res = await fetch(`${API_BASE_URL}/employees?isActive=true&q=${encodeURIComponent(employeeSearch.trim())}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -97,11 +97,11 @@ export default function CreateAssignmentPage() {
       setLoadingProducts(true);
       try {
         let endpoint = '';
-        if (activeTab === 'hardware') endpoint = `/api/hardware?q=${encodeURIComponent(productSearch.trim())}`;
-        else if (activeTab === 'accessory') endpoint = `/api/accessories?q=${encodeURIComponent(productSearch.trim())}`;
-        else if (activeTab === 'consumable') endpoint = `/api/consumables?q=${encodeURIComponent(productSearch.trim())}`;
+        if (activeTab === 'hardware') endpoint = `/hardware?q=${encodeURIComponent(productSearch.trim())}`;
+        else if (activeTab === 'accessory') endpoint = `/accessories?q=${encodeURIComponent(productSearch.trim())}`;
+        else if (activeTab === 'consumable') endpoint = `/consumables?q=${encodeURIComponent(productSearch.trim())}`;
 
-        const res = await fetch(`http://localhost:4001${endpoint}`, {
+        const res = await fetch(`${API_BASE_URL}${endpoint}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -231,7 +231,7 @@ export default function CreateAssignmentPage() {
         consumableItems,
       };
 
-      const res = await fetch('http://localhost:4001/api/assignments', {
+      const res = await fetch(`${API_BASE_URL}/assignments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -263,7 +263,7 @@ export default function CreateAssignmentPage() {
       const formData = new FormData();
       formData.append('file', signedFile);
 
-      const res = await fetch(`http://localhost:4001/api/assignments/${createdAssignment.id}/signed-form`, {
+      const res = await fetch(`${API_BASE_URL}/assignments/${createdAssignment.id}/signed-form`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

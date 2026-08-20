@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Calendar, Key, CheckCircle, Ban, FileText, Building2, CreditCard, Clock } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import { hasPermission } from '../../../utils/permissions';
 import AttachmentList from '../../../components/common/AttachmentList';
 import ConfirmModal from '../../../components/common/ConfirmModal';
@@ -37,7 +38,7 @@ export default function LicenseDetailModal({ isOpen, onClose, licenseId, onSucce
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:4001/api/licenses/${licenseId}`, {
+      const res = await fetch(`${API_BASE_URL}/licenses/${licenseId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -63,7 +64,7 @@ export default function LicenseDetailModal({ isOpen, onClose, licenseId, onSucce
 
     setActionLoading(true);
     try {
-      const res = await fetch(`http://localhost:4001/api/licenses/${licenseId}/status`, {
+      const res = await fetch(`${API_BASE_URL}/licenses/${licenseId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -91,7 +92,7 @@ export default function LicenseDetailModal({ isOpen, onClose, licenseId, onSucce
     setActionError('');
     setActionLoading(true);
     try {
-      const res = await fetch(`http://localhost:4001/api/licenses/${licenseId}/status`, {
+      const res = await fetch(`${API_BASE_URL}/licenses/${licenseId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

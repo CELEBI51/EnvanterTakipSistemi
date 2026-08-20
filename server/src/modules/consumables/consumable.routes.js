@@ -11,6 +11,7 @@ router.get('/export', consumableController.exportConsumables);
 router.get('/', consumableController.getConsumables);
 
 router.post('/', roleMiddleware(['admin', 'it_staff']), consumableController.createConsumable);
+router.put('/:id', roleMiddleware(['admin', 'it_staff']), consumableController.updateConsumable);
 router.get('/:id', consumableController.getConsumableById);
 router.get('/:id/history', consumableController.getConsumableHistory);
 router.post('/:id/restock', roleMiddleware(['admin', 'it_staff']), consumableController.restockConsumable);

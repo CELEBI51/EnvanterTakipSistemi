@@ -19,6 +19,7 @@ import {
 import useAuthStore from '../../../store/authStore';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
+import { API_BASE_URL } from '../../../config';
 
 const PARENT_TYPES = [
   {
@@ -87,7 +88,7 @@ export default function CategorySettingsTab() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:4001/api/categories', {
+      const res = await fetch(`${API_BASE_URL}/categories`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -136,7 +137,7 @@ export default function CategorySettingsTab() {
 
     try {
       if (modalMode === 'create') {
-        const res = await fetch('http://localhost:4001/api/categories', {
+        const res = await fetch(`${API_BASE_URL}/categories`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -151,7 +152,7 @@ export default function CategorySettingsTab() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Kategori eklenemedi.');
       } else {
-        const res = await fetch(`http://localhost:4001/api/categories/${selectedCategory.id}`, {
+        const res = await fetch(`${API_BASE_URL}/categories/${selectedCategory.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -191,7 +192,7 @@ export default function CategorySettingsTab() {
     setDeleteError('');
 
     try {
-      const res = await fetch(`http://localhost:4001/api/categories/${categoryToDelete.id}`, {
+      const res = await fetch(`${API_BASE_URL}/categories/${categoryToDelete.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

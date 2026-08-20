@@ -7,6 +7,8 @@ import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, KeyRound, ShieldCheck 
 import axiosClient from '../../../api/axiosClient';
 import { API_BASE_URL } from '../../../config';
 
+import { fetchCompanyInfo } from '../../../utils/logoHelper';
+
 const resetPasswordSchema = z
   .object({
     newPassword: z.string().min(8, 'Yeni şifre en az 8 karakter olmalıdır.'),
@@ -26,7 +28,15 @@ export default function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [logoSrc, setLogoSrc] = useState(`${API_BASE_URL}/settings/logo`);
+  const [logoSrc, setLogoSrc] = useState('/ditas-logo.png');
+  const [companyName, setCompanyName] = useState('Ditas BDY Yedek Parça İmalat ve Teknik A.Ş.');
+
+  React.useEffect(() => {
+    fetchCompanyInfo().then((info) => {
+      if (info.companyName) setCompanyName(info.companyName);
+      if (info.logoSrc) setLogoSrc(info.logoSrc);
+    });
+  }, []);
 
   const {
     register,
@@ -225,9 +235,8 @@ export default function ResetPasswordPage() {
 
       {/* Alt Dengeleme Boşluğu ve Bilgi Notu */}
       <div className="flex-1 flex flex-col justify-end pb-2 pt-6">
-        <footer className="flex items-center justify-center gap-1.5 text-xs text-slate-500 text-center font-medium">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#4C82F7]" />
-          <span>Bu sistem yalnızca kurum içi ağda kullanılır. © 2026</span>
+        <footer className="text-xs text-slate-500 text-center font-medium">
+          © Copyright 2026 | {companyName}. Tüm Hakları Saklıdır.
         </footer>
       </div>
     </div>

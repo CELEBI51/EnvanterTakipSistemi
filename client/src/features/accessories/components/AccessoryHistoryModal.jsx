@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, History, PlusCircle, AlertTriangle, User, Calendar, RotateCcw, PackageCheck } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import EmptyState from '../../../components/common/EmptyState';
 import { getStockMovementInfo } from '../../../utils/stockMovementLabels';
 
@@ -18,7 +19,7 @@ export default function AccessoryHistoryModal({ isOpen, onClose, accessoryId, ac
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`http://localhost:4001/api/accessories/${accessoryId}/history`, {
+        const res = await fetch(`${API_BASE_URL}/accessories/${accessoryId}/history`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

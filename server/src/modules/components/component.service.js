@@ -235,6 +235,44 @@ export const deleteComponent = async (id) => {
   return { message: 'Bileşen başarıyla silindi.' };
 };
 
+export const updateComponent = async (id, data) => {
+  const existing = await prisma.component.findUnique({ where: { id } });
+  if (!existing) {
+    const error = new Error('Güncellenecek bileşen bulunamadı.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const updateData = {};
+  if (data.categoryId || data.category) {
+    updateData.categoryId = await resolveCategoryId(data.categoryId, data.category, 'BILESEN');
+  }
+
+  if (data.name !== undefined) updateData.name = data.name.trim();
+  if (data.brand !== undefined) updateData.brand = data.brand ? data.brand.trim() : null;
+  if (data.model !== undefined) updateData.model = data.model ? data.model.trim() : null;
+  if (data.serialNo !== undefined) updateData.serialNo = data.serialNo ? data.serialNo.trim() : null;
+  if (data.supplier !== undefined) updateData.supplier = data.supplier ? data.supplier.trim() : null;
+  if (data.minThreshold !== undefined) updateData.minThreshold = parseInt(data.minThreshold, 10) || 0;
+  if (data.specs !== undefined) updateData.specs = data.specs ? data.specs : null;
+  if (data.notes !== undefined) updateData.notes = data.notes ? data.notes.trim() : null;
+
+  if (data.totalQuantity !== undefined) {
+    const newTotal = Math.max(0, parseInt(data.totalQuantity, 10) || 0);
+    const diff = newTotal - existing.totalQuantity;
+    updateData.totalQuantity = newTotal;
+    updateData.availableQuantity = Math.max(0, existing.availableQuantity + diff);
+  }
+
+  const updated = await prisma.component.update({
+    where: { id },
+    data: updateData,
+    include: { category: true },
+  });
+
+  return formatComponent(updated);
+};
+
 export const exportComponents = async ({ categoryId, q }, res) => {
   const where = {};
 

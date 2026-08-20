@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sliders, Save, CheckCircle2, AlertCircle, AlertTriangle, Clock, Info } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 
 export default function ThresholdsSettingsTab() {
   const token = useAuthStore((state) => state.accessToken);
@@ -22,7 +23,7 @@ export default function ThresholdsSettingsTab() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:4001/api/settings', {
+      const res = await fetch(`${API_BASE_URL}/settings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -65,7 +66,7 @@ export default function ThresholdsSettingsTab() {
     setSuccess('');
 
     try {
-      const res = await fetch('http://localhost:4001/api/settings', {
+      const res = await fetch(`${API_BASE_URL}/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

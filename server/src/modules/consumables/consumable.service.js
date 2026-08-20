@@ -301,6 +301,42 @@ export const deleteConsumable = async (id) => {
   return { message: 'Sarf malzeme başarıyla silindi.' };
 };
 
+export const updateConsumable = async (id, data) => {
+  const existing = await prisma.consumable.findUnique({ where: { id } });
+  if (!existing) {
+    const error = new Error('Güncellenecek sarf malzeme bulunamadı.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const updateData = {};
+  if (data.categoryId || data.category) {
+    updateData.categoryId = await resolveCategoryId(data.categoryId, data.category, 'SARF_MALZEME');
+  }
+
+  if (data.name !== undefined) updateData.name = data.name.trim();
+  if (data.brand !== undefined) updateData.brand = data.brand ? data.brand.trim() : null;
+  if (data.supplier !== undefined) updateData.supplier = data.supplier ? data.supplier.trim() : null;
+  if (data.location !== undefined) updateData.location = data.location ? data.location.trim() : null;
+  if (data.minThreshold !== undefined) updateData.minThreshold = parseInt(data.minThreshold, 10) || 0;
+  if (data.notes !== undefined) updateData.notes = data.notes ? data.notes.trim() : null;
+
+  if (data.totalQuantity !== undefined) {
+    const newTotal = Math.max(0, parseInt(data.totalQuantity, 10) || 0);
+    const diff = newTotal - existing.totalQuantity;
+    updateData.totalQuantity = newTotal;
+    updateData.availableQuantity = Math.max(0, existing.availableQuantity + diff);
+  }
+
+  const updated = await prisma.consumable.update({
+    where: { id },
+    data: updateData,
+    include: { category: true },
+  });
+
+  return formatConsumable(updated);
+};
+
 export const exportConsumables = async ({ categoryId, q }, res) => {
   const where = {};
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, CheckCircle2 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 
 const RESULT_STATUS_OPTIONS = [
   { label: 'Hazır (Boşta / Sağlam)', value: 'Hazır' },
@@ -44,7 +45,7 @@ export default function CompleteMaintenanceModal({ isOpen, onClose, maintenance,
     setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:4001/api/maintenance/${maintenance.id}/complete`, {
+      const res = await fetch(`${API_BASE_URL}/maintenance/${maintenance.id}/complete`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

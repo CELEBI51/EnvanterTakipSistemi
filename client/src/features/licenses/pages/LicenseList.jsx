@@ -14,13 +14,16 @@ import {
   AlertTriangle,
   RefreshCw,
   FileSpreadsheet,
+  Edit,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import { hasPermission } from '../../../utils/permissions';
 import EmptyState from '../../../components/common/EmptyState';
 
 import AddLicenseModal from '../components/AddLicenseModal';
+import EditLicenseModal from '../components/EditLicenseModal';
 import LicenseDetailModal from '../components/LicenseDetailModal';
+import { API_BASE_URL } from '../../../config';
 import ExcelImportModal from '../../../components/common/ExcelImportModal';
 import ExcelExportButton from '../../../components/common/ExcelExportButton';
 
@@ -70,6 +73,8 @@ export default function LicenseList() {
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingLicense, setEditingLicense] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedLicenseId, setSelectedLicenseId] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -92,7 +97,7 @@ export default function LicenseList() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/licenses/stats', {
+      const res = await fetch(`${API_BASE_URL}/licenses/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -106,7 +111,7 @@ export default function LicenseList() {
 
   const fetchUnits = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/units', {
+      const res = await fetch(`${API_BASE_URL}/units`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -131,7 +136,7 @@ export default function LicenseList() {
       if (selectedPaymentType) params.append('paymentType', selectedPaymentType);
       if (searchQuery.trim()) params.append('q', searchQuery.trim());
 
-      const res = await fetch(`http://localhost:4001/api/licenses?${params.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/licenses?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -252,7 +257,7 @@ export default function LicenseList() {
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-            Envanter Takip Sistemi • Yazılım Lisans Yönetimi
+            Yazılım Lisans Yönetimi
           </span>
           <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
             Lisans Takip & Yenileme
@@ -517,18 +522,34 @@ export default function LicenseList() {
 
                       {/* İşlemler */}
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedLicenseId(item.id);
-                            setIsDetailModalOpen(true);
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-[#4F8FE0] hover:bg-[#EAF2FC] rounded-lg transition"
-                          title="Detay Görüntüle"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        <div className="inline-flex items-center justify-end gap-1">
+                          {canCreate && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingLicense(item);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                              title="Düzenle"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLicenseId(item.id);
+                              setIsDetailModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-[#4F8FE0] hover:bg-[#EAF2FC] rounded-lg transition"
+                            title="Detay Görüntüle"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -604,6 +625,19 @@ export default function LicenseList() {
         moduleKey="license"
         moduleTitle="Yazılım Lisansları"
         onSuccess={fetchLicenses}
+      />
+
+      <EditLicenseModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingLicense(null);
+        }}
+        license={editingLicense}
+        onSuccess={() => {
+          fetchLicenses();
+          fetchStats();
+        }}
       />
     </div>
   );

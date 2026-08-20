@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, History } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
+import { API_BASE_URL } from '../../../config';
 import EmptyState from '../../../components/common/EmptyState';
 import AttachmentList from '../../../components/common/AttachmentList';
 import { getStockMovementInfo } from '../../../utils/stockMovementLabels';
@@ -19,7 +20,7 @@ export default function ComponentHistoryModal({ isOpen, onClose, componentId, co
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`http://localhost:4001/api/components/${componentId}/history`, {
+        const res = await fetch(`${API_BASE_URL}/components/${componentId}/history`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

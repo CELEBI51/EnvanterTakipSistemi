@@ -30,7 +30,7 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:4001/api/assignments/${assignmentId}`, {
+      const res = await fetch(`${API_BASE_URL}/assignments/${assignmentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -41,7 +41,7 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
       }
 
       // Fetch Returns History
-      const returnRes = await fetch(`http://localhost:4001/api/returns?assignmentId=${assignmentId}`, {
+      const returnRes = await fetch(`${API_BASE_URL}/returns?assignmentId=${assignmentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (returnRes.ok) {
@@ -74,7 +74,7 @@ export default function AssignmentDetailModal({ isOpen, onClose, assignmentId, o
       const formData = new FormData();
       formData.append('file', signedFile);
 
-      const res = await fetch(`http://localhost:4001/api/assignments/${assignmentId}/signed-form`, {
+      const res = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/signed-form`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

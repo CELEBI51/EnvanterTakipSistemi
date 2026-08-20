@@ -9,6 +9,11 @@ router.post('/login', authController.login);
 router.post('/logout', authMiddleware, authController.logout);
 router.put('/change-password', authMiddleware, authController.changePassword);
 
+router.get('/profile', authMiddleware, authController.getProfile);
+router.put('/profile', authMiddleware, authController.updateProfile);
+router.post('/request-email-change', authMiddleware, authController.requestEmailChange);
+router.post('/verify-email-change', authMiddleware, authController.verifyEmailChange);
+
 router.post('/forgot-password', forgotPasswordLimiter, authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 

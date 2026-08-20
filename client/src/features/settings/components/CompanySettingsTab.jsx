@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import { API_BASE_URL } from '../../../config';
+import { fetchCompanyLogo, updateLogoCache, updateCompanyInfoCache } from '../../../utils/logoHelper';
 import FileUploadField from '../../../components/common/FileUploadField';
 
 export default function CompanySettingsTab() {
@@ -121,7 +122,8 @@ export default function CompanySettingsTab() {
 
       setSuccess('Şirket logosu başarıyla yüklendi.');
       setSelectedLogoFile(null);
-      window.dispatchEvent(new CustomEvent('company-logo-changed'));
+      const newLogo = await fetchCompanyLogo(true);
+      updateLogoCache(newLogo);
       fetchSettings();
     } catch (err) {
       setError(err.message);
@@ -154,7 +156,8 @@ export default function CompanySettingsTab() {
       setLogoPath(null);
       setLogoBase64(null);
       setSuccess('Şirket logosu kaldırıldı.');
-      window.dispatchEvent(new CustomEvent('company-logo-changed'));
+      const newLogo = await fetchCompanyLogo(true);
+      updateLogoCache(newLogo);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -194,6 +197,7 @@ export default function CompanySettingsTab() {
       if (!res.ok) throw new Error(data.message || 'Şirket bilgileri kaydedilemedi.');
 
       setSuccess('Şirket bilgileri başarıyla kaydedildi.');
+      updateCompanyInfoCache({ companyName: companyName.trim() });
       fetchSettings();
     } catch (err) {
       setError(err.message);

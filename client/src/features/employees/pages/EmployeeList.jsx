@@ -18,14 +18,17 @@ import {
   Building2,
   X,
   CheckCircle,
+  Edit,
 } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import { hasPermission } from '../../../utils/permissions';
 import { formatPhoneInput, getPhoneDigits, formatTcNoInput } from '../../../utils/inputFormatters';
 import EmptyState from '../../../components/common/EmptyState';
 import ConfirmModal from '../../../components/common/ConfirmModal';
+import EditEmployeeModal from '../components/EditEmployeeModal';
 import ExcelImportModal from '../../../components/common/ExcelImportModal';
 import ExcelExportButton from '../../../components/common/ExcelExportButton';
+import { API_BASE_URL } from '../../../config';
 
 
 export default function EmployeeList() {
@@ -55,6 +58,8 @@ export default function EmployeeList() {
   // Modals state
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Add Form state
   const [addFullName, setAddFullName] = useState('');
@@ -94,7 +99,7 @@ export default function EmployeeList() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/employees/stats', {
+      const res = await fetch(`${API_BASE_URL}/employees/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -108,7 +113,7 @@ export default function EmployeeList() {
 
   const fetchUnits = async () => {
     try {
-      const res = await fetch('http://localhost:4001/api/units', {
+      const res = await fetch(`${API_BASE_URL}/units`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -129,7 +134,7 @@ export default function EmployeeList() {
       if (debouncedSearch.trim()) query += `&q=${encodeURIComponent(debouncedSearch.trim())}`;
       if (statusFilter !== '') query += `&isActive=${statusFilter}`;
 
-      const res = await fetch(`http://localhost:4001/api/employees${query}`, {
+      const res = await fetch(`${API_BASE_URL}/employees${query}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -191,7 +196,7 @@ export default function EmployeeList() {
     setAddLoading(true);
 
     try {
-      const res = await fetch('http://localhost:4001/api/employees', {
+      const res = await fetch(`${API_BASE_URL}/employees`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -236,7 +241,7 @@ export default function EmployeeList() {
     setStatusBlockedWarning(null);
 
     try {
-      const res = await fetch(`http://localhost:4001/api/employees/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/employees/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -275,7 +280,7 @@ export default function EmployeeList() {
     setStatusUpdating(true);
 
     try {
-      const res = await fetch(`http://localhost:4001/api/employees/${selectedEmployeeId}/status`, {
+      const res = await fetch(`${API_BASE_URL}/employees/${selectedEmployeeId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -321,7 +326,7 @@ export default function EmployeeList() {
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-            Envanter Takip Sistemi • İnsan Kaynakları & Şirket Kadrosu
+            İnsan Kaynakları & Şirket Kadrosu
           </span>
           <h1 className="text-2xl font-bold font-heading text-[#1E2534]">
             Personel Yönetimi
@@ -535,16 +540,31 @@ export default function EmployeeList() {
                       )}
                     </td>
                     <td className="p-4 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEmployeeDetail(emp.id);
-                        }}
-                        className="p-1.5 text-slate-500 hover:text-[#4F8FE0] hover:bg-slate-100 rounded-lg transition"
-                        title="Detay / Düzenle"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      <div className="inline-flex items-center justify-end gap-1">
+                        {canEdit && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingEmployee(emp);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                            title="Düzenle"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEmployeeDetail(emp.id);
+                          }}
+                          className="p-1.5 text-slate-500 hover:text-[#4F8FE0] hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                          title="Detay Görüntüle"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -925,6 +945,19 @@ export default function EmployeeList() {
         onClose={() => setIsImportModalOpen(false)}
         moduleKey="employee"
         moduleTitle="Personel"
+        onSuccess={() => {
+          fetchEmployees();
+          fetchStats();
+        }}
+      />
+
+      <EditEmployeeModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingEmployee(null);
+        }}
+        employee={editingEmployee}
         onSuccess={() => {
           fetchEmployees();
           fetchStats();
