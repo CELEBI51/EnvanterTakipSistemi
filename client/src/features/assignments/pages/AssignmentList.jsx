@@ -381,6 +381,11 @@ export default function AssignmentList() {
 
                       <td className="px-4 py-3.5 font-bold text-[#1E2534]">
                         {item.employee?.fullName}
+                        {item.notes && (
+                          <div className="text-[11px] text-slate-500 font-normal italic mt-0.5 truncate max-w-[200px]" title={item.notes}>
+                            Not: {item.notes}
+                          </div>
+                        )}
                       </td>
 
                       <td className="px-4 py-3.5 text-slate-600 font-medium">

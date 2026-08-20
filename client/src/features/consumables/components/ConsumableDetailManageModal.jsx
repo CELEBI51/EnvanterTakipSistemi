@@ -313,6 +313,14 @@ export default function ConsumableDetailManageModal({
           </div>
         </div>
 
+        {/* Notlar */}
+        {item.notes && (
+          <div className="mx-4 mt-3 px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Notlar</span>
+            <p className="text-slate-700 font-medium whitespace-pre-wrap">{item.notes}</p>
+          </div>
+        )}
+
         {/* Tab Header Buttons */}
         <div className="flex border-b border-slate-200 bg-white px-4 shrink-0 gap-2 pt-2">
           {canEdit && (

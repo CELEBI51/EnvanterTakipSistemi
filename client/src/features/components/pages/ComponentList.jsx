@@ -352,6 +352,11 @@ export default function ComponentList() {
                     <tr key={item.id} className="hover:bg-slate-50/80 transition">
                       <td className="py-3 px-4">
                         <div className="font-bold text-[#1E2534]">{item.name}</div>
+                        {item.notes && (
+                          <div className="text-[11px] text-slate-500 italic mt-0.5 truncate max-w-[200px]" title={item.notes}>
+                            Not: {item.notes}
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-3 px-4">

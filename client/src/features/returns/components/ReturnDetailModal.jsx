@@ -271,6 +271,16 @@ export default function ReturnDetailModal({ isOpen, onClose, returnId }) {
 
               </div>
 
+              {/* İade Notu / Nedeni */}
+              {(returnRecord.reason || returnRecord.notes) && (
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                    İade Nedeni / Notu
+                  </span>
+                  <p className="text-slate-700 font-medium whitespace-pre-wrap">{returnRecord.reason || returnRecord.notes}</p>
+                </div>
+              )}
+
               {/* İMZALI FORM YÜKLEME / GÖRÜNTÜLEME BÖLÜMÜ */}
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
                 <h4 className="text-xs font-bold text-[#1E2534] uppercase tracking-wider">

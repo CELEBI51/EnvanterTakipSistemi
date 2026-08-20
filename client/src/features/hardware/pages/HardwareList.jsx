@@ -537,6 +537,11 @@ export default function HardwareList() {
                             {[item.specs.cpu, item.specs.ram, item.specs.gpu].filter(Boolean).join(' • ')}
                           </div>
                         )}
+                        {item.notes && (
+                          <div className="text-[11px] text-slate-500 italic mt-0.5 truncate max-w-[200px]" title={item.notes}>
+                            Not: {item.notes}
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-3 px-4">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Trash2, Barcode, Wrench, Plus, ChevronRight } from 'lucide-react';
+import { X, Trash2, Barcode, Wrench, Plus, ChevronRight, FileText } from 'lucide-react';
 import useAuthStore from '../../../store/authStore';
 import { API_BASE_URL } from '../../../config';
 import { hasPermission } from '../../../utils/permissions';
@@ -338,6 +338,19 @@ export default function HardwareDetailModal({ hardwareId, isOpen, onClose, onUpd
                           <span className="text-xs font-bold text-[#1E2534]">{hardware.specs.dvd ? 'Var' : 'Yok'}</span>
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Notlar */}
+                  {hardware.notes && (
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                      <div className="text-xs font-bold text-[#1E2534] flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-[#4F8FE0]" />
+                        Notlar
+                      </div>
+                      <p className="text-xs text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">
+                        {hardware.notes}
+                      </p>
                     </div>
                   )}
 

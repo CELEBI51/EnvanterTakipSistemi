@@ -261,6 +261,11 @@ export default function ReturnList() {
 
                       <td className="px-4 py-3.5 font-bold text-[#1E2534]">
                         {item.assignment?.employee?.fullName || 'Bilinmeyen Personel'}
+                        {(item.reason || item.notes) && (
+                          <div className="text-[11px] text-slate-500 font-normal italic mt-0.5 truncate max-w-[200px]" title={item.reason || item.notes}>
+                            Not: {item.reason || item.notes}
+                          </div>
+                        )}
                       </td>
 
                       <td className="px-4 py-3.5 text-slate-600 font-medium">

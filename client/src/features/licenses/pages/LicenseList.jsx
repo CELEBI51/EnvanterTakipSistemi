@@ -491,6 +491,11 @@ export default function LicenseList() {
                             Key: {item.licenseKey}
                           </div>
                         )}
+                        {item.notes && (
+                          <div className="text-[11px] text-slate-500 italic mt-0.5 truncate max-w-[220px]" title={item.notes}>
+                            Not: {item.notes}
+                          </div>
+                        )}
                       </td>
 
                       {/* Bitiş Tarihi & Yaklaşan Uyarı Vurgusu */}
