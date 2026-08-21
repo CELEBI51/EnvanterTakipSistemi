@@ -16,7 +16,7 @@ async function main() {
     },
     create: {
       fullName: 'Sistem Yöneticisi',
-      email: 'admin@firma.com',
+      email: 'envanteradmin@ditas.com.tr',
       passwordHash: adminPasswordHash,
       role: 'admin',
       mustChangePassword: false,
@@ -29,8 +29,8 @@ async function main() {
   // 2. Seed Categories per CategoryParentType
   const seedCategoriesData = [
     // Varlık
-    { parentType: 'VARLIK', name: 'Masaüstü' },
-    { parentType: 'VARLIK', name: 'Dizüstü' },
+    { parentType: 'VARLIK', name: 'Desktop' },
+    { parentType: 'VARLIK', name: 'Notebook' },
     { parentType: 'VARLIK', name: 'Monitör' },
     { parentType: 'VARLIK', name: 'Yazıcı' },
     // Aksesuar
