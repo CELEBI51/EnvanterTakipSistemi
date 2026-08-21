@@ -8,7 +8,7 @@ export const fetchCompanyInfo = async (forceRefresh = false) => {
     return { companyName: cachedCompanyName, logoSrc: cachedLogo };
   }
   try {
-    const res = await fetch(`${API_BASE_URL}/settings/public`);
+    const res = await fetch(`${API_BASE_URL}/settings/public?t=${Date.now()}`);
     const data = await res.json();
     if (res.ok && data.data?.companyName) {
       cachedCompanyName = data.data.companyName;
@@ -18,7 +18,7 @@ export const fetchCompanyInfo = async (forceRefresh = false) => {
   }
 
   try {
-    const resLogo = await fetch(`${API_BASE_URL}/settings/logo?format=base64`);
+    const resLogo = await fetch(`${API_BASE_URL}/settings/logo?format=base64&t=${Date.now()}`);
     const dataLogo = await resLogo.json();
     if (resLogo.ok && dataLogo.data?.base64) {
       cachedLogo = dataLogo.data.base64;

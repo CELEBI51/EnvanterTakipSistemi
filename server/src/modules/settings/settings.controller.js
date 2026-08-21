@@ -120,6 +120,10 @@ export const uploadLogo = async (req, res, next) => {
 
 export const getLogo = async (req, res, next) => {
   try {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     const logoInfo = await settingsService.getLogoInfo();
 
     if (!logoInfo) {
