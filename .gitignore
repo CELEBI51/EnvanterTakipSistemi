@@ -39,10 +39,18 @@ deploy/installers/
 Thumbs.db
 desktop.ini
 
-# Storage uploads (Yerel dosya depolama)
+# Storage & Uploads (Yerel dosya depolama ve yuklemeler)
 server/storage/*
 !server/storage/**/.gitkeep
+server/uploads/*
+!server/uploads/**/.gitkeep
 
 # Vite temporary build files
 *.timestamp-*.mjs
+
+# Gecici / Test PDF ve Excel dosyalari
+*.xlsx
+*.xls
+*.pdf
+
 
