@@ -11,16 +11,18 @@ async function main() {
   const adminUser = await prisma.user.upsert({
     where: { email: 'envanteradmin@ditas.com.tr' },
     update: {
-      fullName: 'Sistem Yöneticisi',
+      fullName: 'Hasan Bozok',
       passwordHash: adminPasswordHash,
       role: 'admin',
+      permissions: [],
       mustChangePassword: false,
     },
     create: {
-      fullName: 'Sistem Yöneticisi',
+      fullName: 'Hasan Bozok',
       email: 'envanteradmin@ditas.com.tr',
       passwordHash: adminPasswordHash,
       role: 'admin',
+      permissions: [],
       mustChangePassword: false,
     },
   });
