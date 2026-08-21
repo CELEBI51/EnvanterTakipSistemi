@@ -6,12 +6,14 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('[SEED] Seeding database...');
 
-  // 1. Create Admin & Viewer Users
+  // 1. Create Admin User
   const adminPasswordHash = await bcrypt.hash('Ditas_envanter.abc+123', 10);
   const adminUser = await prisma.user.upsert({
     where: { email: 'envanteradmin@ditas.com.tr' },
     update: {
+      fullName: 'Sistem Yöneticisi',
       passwordHash: adminPasswordHash,
+      role: 'admin',
       mustChangePassword: false,
     },
     create: {
