@@ -86,7 +86,7 @@ function MainLayout({ children }) {
     fetchCompanyInfo().then((info) => {
       if (info.companyName) {
         setCompanyName(info.companyName);
-        document.title = `${info.companyName} - Demirbaş Takip Sistemi`;
+        document.title = info.companyName;
       }
       if (info.logoSrc) setLogoSrc(info.logoSrc);
     });
@@ -94,7 +94,7 @@ function MainLayout({ children }) {
     const handleInfoChange = (e) => {
       if (e.detail?.companyName) {
         setCompanyName(e.detail.companyName);
-        document.title = `${e.detail.companyName} - Demirbaş Takip Sistemi`;
+        document.title = e.detail.companyName;
       }
       if (e.detail?.logoSrc) setLogoSrc(e.detail.logoSrc);
     };
